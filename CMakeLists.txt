@@ -24,6 +24,7 @@ file(GLOB_RECURSE SOURCES
 include_directories(src)
 
 add_executable(${PROJECT_NAME} 
+	WIN32
 	${SOURCES}
 )
 
