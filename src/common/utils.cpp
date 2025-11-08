@@ -3,6 +3,8 @@
 #include <chrono>
 #include <iomanip>
 #include <windows.h>
+#include <comdef.h>
+#include <filesystem>
 
 namespace dt
 {
@@ -68,5 +70,35 @@ namespace dt
             return "";
         }
         return WStringToString(std::wstring(wstr));
+    }
+
+    std::wstring Utils::StringToWString(crstr str)
+    {
+        if (str.empty())
+        {
+            return L"";
+        }
+    
+        int charsNeeded = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, nullptr, 0);
+        if (charsNeeded == 0)
+        {
+            return L"";
+        }
+    
+        std::wstring result(charsNeeded - 1, 0); // -1 因为包含null终止符
+        MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, &result[0], charsNeeded);
+        return result;
+    }
+
+    str Utils::ToString(const long hr)
+    {
+        _com_error err(hr);
+        auto errMsg = err.ErrorMessage();
+        return errMsg;
+    }
+
+    str Utils::ToAbsPath(crstr relativePath)
+    {
+        return (std::filesystem::current_path() / relativePath).generic_string();
     }
 }

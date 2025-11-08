@@ -3,6 +3,7 @@
 
 namespace dt
 {
+    class RenderPipeline;
     class GameResource;
 
     class Game
@@ -10,7 +11,7 @@ namespace dt
     public:
         Game() = default;
 
-        void Init(HWND windowHwnd);
+        void Init(HWND windowHwnd, uint32_t screenWidth, uint32_t screenHeight);
         void Release();
         
         void Update();
@@ -19,8 +20,8 @@ namespace dt
     private:
         void UpdateTime();
         
-        sp<DirectX> m_directx;
         sp<GameResource> m_gameResource;
+        sp<RenderPipeline> m_renderPipeline;
 
         uint64_t m_frameCount = 0;
         LARGE_INTEGER m_timeCount;

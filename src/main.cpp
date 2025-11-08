@@ -3,7 +3,6 @@
 
 #include "window.h"
 
-// 使用示例
 int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
     dt::Window window(hInstance, "现代Windows窗口", 1600, 900);

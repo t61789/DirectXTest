@@ -5,12 +5,13 @@
 #include <wrl/client.h>
 
 #include "common/const.h"
+#include "common/utils.h"
 
 namespace dt
 {
     using namespace Microsoft::WRL;
     
-    class DirectX
+    class DirectX : public Singleton<DirectX>
     {
     public:
         DirectX() = default;
@@ -18,8 +19,11 @@ namespace dt
         void Init(HWND windowHwnd);
         void Release();
 
+        ComPtr<ID3D12Device> GetDevice() const { return m_device; }
         cr<DXGI_SWAP_CHAIN_DESC> GetSwapChainDesc() const { return m_swapChainDesc; }
+        ComPtr<ID3D12Resource> GetBackBuffer() const { return m_swapChainBuffers[m_swapChainBufferIndex]; }
         CD3DX12_CPU_DESCRIPTOR_HANDLE GetBackBufferHandle();
+        
 
         template <typename F>
         void AddCommand(F&& func);
@@ -29,6 +33,8 @@ namespace dt
         void WaitForFence();
         
         void PresentSwapChain();
+
+        static ComPtr<ID3DBlob> CompileShader(crstr filePath, crstr entryPoint, crstr target);
 
     private:
         void LoadFactory();
@@ -81,4 +87,6 @@ namespace dt
     {
         func(m_commandList.Get());
     }
+
+    static DirectX* Dx() { return DirectX::Ins(); }
 }

@@ -36,7 +36,7 @@ namespace dt
             return false;
         }
         
-        m_game->Init(m_hwnd);
+        m_game->Init(m_hwnd, m_width, m_height);
 
         return true;
     }

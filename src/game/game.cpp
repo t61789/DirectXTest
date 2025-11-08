@@ -1,24 +1,27 @@
 #include "game/game.h"
 
 #include "game_resource.h"
+#include "render/render_pipeline.h"
 
 namespace dt
 {
-    void Game::Init(const HWND windowHwnd)
+    void Game::Init(const HWND windowHwnd, const uint32_t screenWidth, const uint32_t screenHeight)
     {
         QueryPerformanceFrequency(&m_timeFrequency);
         QueryPerformanceCounter(&m_timeCount);
         m_gameStartTimeCount = m_timeCount;
 
         m_gameResource = msp<GameResource>();
-        m_directx = msp<DirectX>();
-        m_directx->Init(windowHwnd);
+        m_gameResource->m_screenWidth = screenWidth;
+        m_gameResource->m_screenHeight = screenHeight;
+        m_gameResource->m_windowHwnd = windowHwnd;
+
+        m_renderPipeline = msp<RenderPipeline>();
     }
 
     void Game::Release()
     {
-        m_directx->Release();
-        m_directx.reset();
+        m_renderPipeline.reset();
         m_gameResource.reset();
     }
 
@@ -29,27 +32,7 @@ namespace dt
 
     void Game::Render()
     {
-        m_directx->AddCommand([this](ID3D12GraphicsCommandList* cmdList)
-        {
-            D3D12_VIEWPORT viewport = {};
-            viewport.TopLeftX = 0.0f;
-            viewport.TopLeftY = 0.0f;
-            viewport.Width = static_cast<float>(this->m_directx->GetSwapChainDesc().BufferDesc.Width);
-            viewport.Height = static_cast<float>(this->m_directx->GetSwapChainDesc().BufferDesc.Height);
-            viewport.MinDepth = 0.0f;
-            viewport.MaxDepth = 1.0f;
-            
-            cmdList->RSSetViewports(1, &viewport);
-
-            auto backBufferTexHandle = this->m_directx->GetBackBufferHandle();
-
-            cmdList->OMSetRenderTargets(1, &backBufferTexHandle, false, nullptr);
-        });
-        
-        m_directx->FlushCommand();
-        m_directx->IncreaseFence();
-        m_directx->WaitForFence();
-        m_directx->PresentSwapChain();
+        m_renderPipeline->Render();
     }
 
     void Game::UpdateTime()
@@ -57,10 +40,10 @@ namespace dt
         auto timePrev = m_timeCount;
         QueryPerformanceCounter(&m_timeCount);
         
-        GetGR()->m_time = static_cast<double>(m_timeCount.QuadPart - m_gameStartTimeCount.QuadPart) / static_cast<double>(m_timeFrequency.QuadPart);
-        GetGR()->m_deltaTime = static_cast<double>(m_timeCount.QuadPart - timePrev.QuadPart) / static_cast<double>(m_timeFrequency.QuadPart);
+        GR()->m_time = static_cast<double>(m_timeCount.QuadPart - m_gameStartTimeCount.QuadPart) / static_cast<double>(m_timeFrequency.QuadPart);
+        GR()->m_deltaTime = static_cast<double>(m_timeCount.QuadPart - timePrev.QuadPart) / static_cast<double>(m_timeFrequency.QuadPart);
         
         m_frameCount++;
-        GetGR()->m_frameCount = m_frameCount;
+        GR()->m_frameCount = m_frameCount;
     }
 }

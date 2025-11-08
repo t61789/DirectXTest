@@ -24,9 +24,12 @@ namespace dt
         static vec<str> s_logs;
         static std::mutex s_logMutex;
         
-        static std::string GetCurrentTimeFormatted();
+        static str GetCurrentTimeFormatted();
         static str WStringToString(cr<std::wstring> wstr);
         static str WStringToString(wchar_t* wstr);
+        static std::wstring StringToWString(crstr str);
+        static str ToString(long hr);
+        static str ToAbsPath(crstr relativePath);
     };
     
     template <typename... Args>

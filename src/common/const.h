@@ -3,13 +3,16 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <wrl/client.h>
 
 namespace dt
 {
     #define THROW_ERROR(msg) throw std::runtime_error(format_log(Error, msg));
     #define THROW_ERRORF(msg, ...) throw std::runtime_error(format_log(LOG_ERROR, msg, __VA_ARGS__));
     #define THROW_IF(cond, msg) if (cond) throw std::runtime_error(msg)
-    #define THROW_IF_FAILED(cond) if (auto hr = (cond); FAILED(hr)) throw std::runtime_error("The execution of d3d command failed." + std::to_string(hr))
+    #define THROW_IF_FAILED(cond) if (auto hr = (cond); FAILED(hr)) throw std::runtime_error("The execution of d3d command failed: " + Utils::ToString(hr))
+    
+    using namespace Microsoft::WRL;
     
     template <typename T>
     using up = std::unique_ptr<T>;

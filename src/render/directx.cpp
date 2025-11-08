@@ -18,7 +18,7 @@ namespace dt
     void DirectX::Init(const HWND windowHwnd)
     {
         m_windowHwnd = windowHwnd;
-        
+
         LoadFactory();
         LoadAdapter();
         LoadOutput();
@@ -54,6 +54,39 @@ namespace dt
         THROW_IF_FAILED(m_dxgiSwapChain->Present(1, 0));
 
         m_swapChainBufferIndex = (m_swapChainBufferIndex + 1) % m_swapChainDesc.BufferCount;
+    }
+
+    ComPtr<ID3DBlob> DirectX::CompileShader(crstr filePath, crstr entryPoint, crstr target)
+    {
+        ComPtr<ID3DBlob> shaderBlob;
+        ComPtr<ID3DBlob> errorBlob;
+
+        uint32_t compileFlags = 0;
+        compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+
+        auto absFilePath = Utils::StringToWString(Utils::ToAbsPath(filePath));
+        auto result = D3DCompileFromFile(
+            absFilePath.c_str(),
+            nullptr,
+            D3D_COMPILE_STANDARD_FILE_INCLUDE,
+            entryPoint.c_str(),
+            target.c_str(),
+            compileFlags,
+            0,
+            &shaderBlob,
+            &errorBlob);
+
+        if (FAILED(result))
+        {
+            if (errorBlob)
+            {
+                log_error("Compile shader error: %s", static_cast<const char*>(errorBlob->GetBufferPointer()));
+            }
+
+            throw std::runtime_error("Failed to compile shader.");
+        }
+
+        return shaderBlob;
     }
 
     void DirectX::FlushCommand()

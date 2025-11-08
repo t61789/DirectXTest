@@ -11,7 +11,7 @@ class ImGuiExample(ConanFile):
 
     def requirements(self):
         self.requires("nlohmann_json/3.12.0")
-        self.requires("directx-headers/1.618.2")
+        self.requires("directx-headers/1.614.0")
         
     def layout(self):
         cmake_layout(self)
