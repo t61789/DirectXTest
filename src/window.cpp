@@ -36,7 +36,7 @@ namespace dt
             return false;
         }
         
-        m_game->Init();
+        m_game->Init(m_hwnd);
 
         return true;
     }
@@ -99,7 +99,8 @@ namespace dt
             pWindow = static_cast<Window*>(pCreate->lpCreateParams);
             SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWindow));
             
-            if (pWindow) {
+            if (pWindow)
+            {
                 pWindow->m_hwnd = hwnd;
             }
         }
@@ -125,24 +126,13 @@ namespace dt
             return 0;
             
         case WM_PAINT:
-            {
-                PAINTSTRUCT ps;
-                HDC hdc = BeginPaint(m_hwnd, &ps);
-                
-                RECT rect;
-                GetClientRect(m_hwnd, &rect);
-                
-                DrawText(hdc, "现代C++ Windows窗口", -1, &rect, 
-                        DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-                
-                EndPaint(m_hwnd, &ps);
-            }
+            ValidateRect(m_hwnd, nullptr);
             return 0;
             
         case WM_SIZE:
-            // 处理窗口大小改变
             InvalidateRect(m_hwnd, nullptr, TRUE);
             return 0;
+            
         default:
             return DefWindowProc(m_hwnd, uMsg, wParam, lParam);
         }

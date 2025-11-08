@@ -30,15 +30,18 @@ add_executable(${PROJECT_NAME}
 
 # 查找依赖包
 find_package(nlohmann_json REQUIRED)
+find_package(DirectX-Headers REQUIRED)
 
 # 链接依赖库
 target_link_libraries(${PROJECT_NAME} 
     PRIVATE 
-		d3d12 
-		dxgi 
+		dxguid
+		d3d12
+		dxgi
 		d3dcompiler
 		windowscodecs
 		nlohmann_json::nlohmann_json
+		Microsoft::DirectX-Headers
 )
 
 # 安装目标

@@ -4,9 +4,9 @@
 #include "window.h"
 
 // 使用示例
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int WINAPI WinMain(const HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
-    dt::Window window(hInstance, "现代Windows窗口", 800, 600);
+    dt::Window window(hInstance, "现代Windows窗口", 1600, 900);
     
     if (!window.Create())
     {

@@ -10,6 +10,7 @@
 
 namespace dt
 {
+    
     enum LogType : uint8_t
     {
         LOG_INFO,
@@ -82,18 +83,38 @@ namespace dt
     template <typename... Args>
     static void log_info(const std::string& msg, Args... args)
     {
-        return log(LogType::LOG_INFO, msg, args...);
+        return log(LOG_INFO, msg, args...);
     }
 
     template <typename... Args>
     static void log_warning(const std::string& msg, Args... args)
     {
-        return log(LogType::LOG_WARNING, msg, args...);
+        return log(LOG_WARNING, msg, args...);
     }
 
     template <typename... Args>
     static void log_error(const std::string& msg, Args... args)
     {
-        return log(LogType::LOG_ERROR, msg, args...);
+        return log(LOG_ERROR, msg, args...);
     }
+    
+    template<typename T>
+    class Singleton
+    {
+    public:
+        Singleton(const Singleton& other) = delete;
+        Singleton(Singleton&& other) noexcept = delete;
+        Singleton& operator=(const Singleton& other) = delete;
+        Singleton& operator=(Singleton&& other) noexcept = delete;
+
+        ~Singleton() { m_instance = nullptr; }
+        static T* Ins() { return m_instance; }
+        
+    private:
+        Singleton() { m_instance = static_cast<T*>(this); }
+        
+        inline static T* m_instance = nullptr;
+        
+        friend T;
+    };
 }

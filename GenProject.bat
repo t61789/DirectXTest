@@ -1,6 +1,8 @@
 @echo off
 
-cd /D %~dp0%
+cd /D %~dp0
+
+md build
 
 cd build
 
