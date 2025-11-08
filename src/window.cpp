@@ -1,5 +1,7 @@
 ﻿#include "window.h"
 
+#include <iostream>
+
 namespace dt
 {
     Window::Window(
@@ -14,10 +16,13 @@ namespace dt
         m_height(height)
     {
         m_className = "ModernWindowClass_" + std::to_string(GetTickCount());
+        m_game = std::make_unique<Game>();
     }
     
     Window::~Window()
     {
+        m_game.reset();
+        
         if (m_hwnd)
         {
             DestroyWindow(m_hwnd);
@@ -25,6 +30,41 @@ namespace dt
     }
 
     bool Window::Create()
+    {
+        if (!InitWindow())
+        {
+            return false;
+        }
+        
+        m_game->Init();
+
+        return true;
+    }
+
+    int Window::Run()
+    {
+        ShowWindow(m_hwnd, SW_SHOW);
+        UpdateWindow(m_hwnd);
+        
+        MSG msg = {};
+        while (msg.message != WM_QUIT)
+        {
+            if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
+            else
+            {
+                m_game->Update();
+                m_game->Render();
+            }
+        }
+        
+        return static_cast<int>(msg.wParam);
+    }
+
+    bool Window::InitWindow()
     {
         WNDCLASS wc = {};
         wc.lpfnWndProc = WindowProcStatic;
@@ -45,23 +85,8 @@ namespace dt
             m_width, m_height,
             nullptr, nullptr, m_hInstance, this
         );
-        
-        return m_hwnd != nullptr;
-    }
 
-    int Window::Run()
-    {
-        ShowWindow(m_hwnd, SW_SHOW);
-        UpdateWindow(m_hwnd);
-        
-        MSG msg = {};
-        while (GetMessage(&msg, nullptr, 0, 0))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        
-        return static_cast<int>(msg.wParam);
+        return m_hwnd != nullptr;
     }
 
     LRESULT CALLBACK Window::WindowProcStatic(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)

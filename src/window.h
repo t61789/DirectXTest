@@ -1,7 +1,10 @@
 ﻿#pragma once
 
+#include <memory>
 #include <windows.h>
 #include <string>
+
+#include "game/game.h"
 
 namespace dt
 {
@@ -21,6 +24,7 @@ namespace dt
         int Run();
         
     private:
+        bool InitWindow();
         LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
         
         static LRESULT CALLBACK WindowProcStatic(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -30,5 +34,6 @@ namespace dt
         std::string m_title;
         std::string m_className;
         int m_width, m_height;
+        std::unique_ptr<Game> m_game;
     };
 }
