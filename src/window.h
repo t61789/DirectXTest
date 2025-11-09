@@ -8,7 +8,7 @@
 
 namespace dt
 {
-    class Window
+    class Window : public Singleton<Window>
     {
     public:
         Window(HINSTANCE hInstance, std::string title, int width, int height);

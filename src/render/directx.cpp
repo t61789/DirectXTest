@@ -10,8 +10,10 @@
 #include <dxgi.h>
 #include <directx/d3dx12_root_signature.h>
 #include <directx/d3dx12_barriers.h>
+#include <directx/d3dx12_core.h>
 
 #include "common/utils.h"
+#include "common/math.h"
 
 namespace dt
 {
@@ -54,6 +56,46 @@ namespace dt
         THROW_IF_FAILED(m_dxgiSwapChain->Present(1, 0));
 
         m_swapChainBufferIndex = (m_swapChainBufferIndex + 1) % m_swapChainDesc.BufferCount;
+    }
+
+    void DirectX::DelayRelease(const ComPtr<ID3D12Resource>&& obj)
+    {
+        m_delayedReleaseObjs.push_back(std::move(obj));
+    }
+
+    ComPtr<ID3D12Resource> DirectX::CreateUploadBuffer(const void* data, const size_t sizeB)
+    {
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeB);
+        
+        ComPtr<ID3D12Resource> buffer = CreateCommittedResource(heapProps, bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+        void* mappedData;
+        THROW_IF_FAILED(buffer->Map(0, nullptr, &mappedData));
+        memcpy(mappedData, data, sizeB);
+        buffer->Unmap(0, nullptr);
+
+        return buffer;
+    }
+    
+    ComPtr<ID3D12Resource> DirectX::CreateCommittedResource(
+        cr<D3D12_HEAP_PROPERTIES> pHeapProperties,
+        cr<D3D12_RESOURCE_DESC> pDesc,
+        const D3D12_RESOURCE_STATES initialResourceState,
+        const D3D12_CLEAR_VALUE* pOptimizedClearValue,
+        const D3D12_HEAP_FLAGS heapFlags)
+    {
+        ComPtr<ID3D12Resource> resource;
+        THROW_IF_FAILED(m_device->CreateCommittedResource(
+            &pHeapProperties,
+            heapFlags,
+            &pDesc,
+            initialResourceState,
+            pOptimizedClearValue,
+            IID_ID3D12Resource,
+            &resource));
+
+        return resource;
     }
 
     ComPtr<ID3DBlob> DirectX::CompileShader(crstr filePath, crstr entryPoint, crstr target)
@@ -113,6 +155,8 @@ namespace dt
 
         THROW_IF_FAILED(m_commandAllocator->Reset());
         THROW_IF_FAILED(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
+
+        m_delayedReleaseObjs.clear();
     }
 
     void DirectX::LoadFactory()
@@ -279,6 +323,7 @@ namespace dt
 
     void DirectX::CreateTextures()
     {
+        
         D3D12_RESOURCE_DESC depthTexDesc = {};
         depthTexDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
         depthTexDesc.Alignment = 0;

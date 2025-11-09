@@ -1,11 +1,12 @@
 ﻿#pragma once
 
-#include <window.h>
-
+#include "common/string_handle.h"
 #include "common/utils.h"
 
 namespace dt
 {
+    class IResource;
+
     class GameResource : public Singleton<GameResource>
     {
     public:
@@ -13,7 +14,12 @@ namespace dt
         double GetTime() const { return m_time; }
         double GetDeltaTime() const { return m_deltaTime; }
         void GetScreenSize(uint32_t& width, uint32_t& height) const { width = m_screenWidth; height = m_screenHeight; }
-        HWND GetWindowHwnd() const { return m_windowHwnd; }
+        
+        void RegisterResource(cr<StringHandle> path, crsp<IResource> resource);
+        void UnregisterResource(cr<StringHandle> path);
+        sp<IResource> GetResource(cr<StringHandle> path);
+        template <typename T>
+        sp<T> GetResource(cr<StringHandle> path);
 
     private:
         uint64_t m_frameCount;
@@ -23,10 +29,28 @@ namespace dt
         uint32_t m_screenWidth;
         uint32_t m_screenHeight;
 
-        HWND m_windowHwnd;
+        umap<string_hash, wp<IResource>> m_resources;
 
         friend class Game;
     };
+
+    template <typename T>
+    sp<T> GameResource::GetResource(cr<StringHandle> path)
+    {
+        auto result = GetResource(path);
+        if (!result)
+        {
+            return nullptr;
+        }
+
+        auto result0 = std::dynamic_pointer_cast<T>(result);
+        if (!result0)
+        {
+            THROW_ERRORF("Resource type miss match: %s", path.CStr());
+        }
+
+        return result0;
+    }
 
     static GameResource* GR() { return GameResource::Ins(); }
 }

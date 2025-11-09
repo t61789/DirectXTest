@@ -12,6 +12,9 @@ class ImGuiExample(ConanFile):
     def requirements(self):
         self.requires("nlohmann_json/3.12.0")
         self.requires("directx-headers/1.614.0")
+        self.requires("assimp/5.4.3")
+        self.requires("tracy/0.12.1")
+        self.requires("boost/1.88.0")
         
     def layout(self):
         cmake_layout(self)

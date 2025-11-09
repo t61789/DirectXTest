@@ -1,11 +1,17 @@
 ﻿#pragma once
+#include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <optional>
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include "nlohmann/json.hpp"
 #include "const.h"
 
 namespace dt
@@ -30,6 +36,23 @@ namespace dt
         static std::wstring StringToWString(crstr str);
         static str ToString(long hr);
         static str ToAbsPath(crstr relativePath);
+        static str ToRelativePath(crstr absPath);
+
+        static size_t GetFileHash(const std::string& path);
+        static size_t CombineHash(size_t hash1, size_t hash2);
+        
+        static nlohmann::json GetResourceMeta(const std::string& assetPath);
+        static str GetResourceMetaPath(crstr assetPath);
+        static std::vector<uint8_t> Base64ToBinary(const std::string& base64Str);
+        static std::vector<uint32_t> Binary8To32(const std::vector<uint8_t>& data);
+        
+        static nlohmann::json LoadJson(const std::string& assetPath);
+        static void MergeJson(nlohmann::json& json1, const nlohmann::json& json2, bool combineArray = false);
+        
+        template <typename T>
+        static void BinarySerialize(T& obj, crstr path);
+        template <class T>
+        static void BinaryDeserialize(T& obj, crstr path);
     };
     
     template <typename... Args>
@@ -99,6 +122,262 @@ namespace dt
     static void log_error(const std::string& msg, Args... args)
     {
         return log(LOG_ERROR, msg, args...);
+    }
+    
+    template <typename T, size_t N>
+    static std::optional<size_t> find_index(const std::array<T, N>& arr, const T& value)
+    {
+        auto it = std::find(arr.begin(), arr.end(), value);
+        if (it == arr.end())
+        {
+            return std::nullopt;
+        }
+
+        return std::distance(arr.begin(), it);
+    }
+    
+    template <typename T>
+    static std::optional<size_t> find_index(const std::vector<T>& vec, const T& value)
+    {
+        auto it = std::find(vec.begin(), vec.end(), value);
+        if (it == vec.end())
+        {
+            return std::nullopt;
+        }
+
+        return std::distance(vec.begin(), it);
+    }
+
+    template <typename T, typename Predicate>
+    static std::optional<size_t> find_index_if(const std::vector<T>& vec, Predicate&& predicate)
+    {
+        auto it = std::find_if(vec.begin(), vec.end(), predicate);
+        if (it == vec.end())
+        {
+            return std::nullopt;
+        }
+
+        return std::distance(vec.begin(), it);
+    }
+    
+    template <typename T, typename Predicate>
+    static const T* find_if(const std::vector<T*>& vec, Predicate&& predicate)
+    {
+        auto it = std::find_if(vec.begin(), vec.end(), predicate);
+        if (it == vec.end())
+        {
+            return nullptr;
+        }
+
+        return *it;
+    }
+    
+    template <typename T, typename Predicate>
+    static const T* find_if(const std::vector<T>& vec, Predicate&& predicate)
+    {
+        auto it = std::find_if(vec.begin(), vec.end(), predicate);
+        if (it == vec.end())
+        {
+            return nullptr;
+        }
+
+        return &*it;
+    }
+    
+    template <typename T, typename Predicate>
+    static T* find_if(std::vector<T*>& vec, Predicate&& predicate)
+    {
+        auto it = std::find_if(vec.begin(), vec.end(), predicate);
+        if (it == vec.end())
+        {
+            return nullptr;
+        }
+
+        return *it;
+    }
+    
+    template <typename T, typename Predicate>
+    static T* find_if(std::vector<T>& vec, Predicate&& predicate)
+    {
+        auto it = std::find_if(vec.begin(), vec.end(), predicate);
+        if (it == vec.end())
+        {
+            return nullptr;
+        }
+
+        return &*it;
+    }
+    
+    template <typename T, typename V>
+    static const T* find(const std::vector<T*>& vec, V T::* field, const V& value)
+    {
+        auto it = std::find_if(vec.begin(), vec.end(), [field, &value](T* t)
+        {
+            return t->*field == value;
+        });
+        if (it == vec.end())
+        {
+            return nullptr;
+        }
+
+        return *it;
+    }
+
+    template <typename T, typename V>
+    static const T* find(const std::vector<T>& vec, V T::* field, const V& value)
+    {
+        auto it = std::find_if(vec.begin(), vec.end(), [field, &value](const T& t)
+        {
+            return t.*field == value;
+        });
+        if (it == vec.end())
+        {
+            return nullptr;
+        }
+
+        return &*it;
+    }
+    
+    template <typename T, typename V>
+    static T* find(std::vector<T*>& vec, V T::* field, const V& value)
+    {
+        auto it = std::find_if(vec.begin(), vec.end(), [field, &value](T* t)
+        {
+            return t->*field == value;
+        });
+        if (it == vec.end())
+        {
+            return nullptr;
+        }
+
+        return *it;
+    }
+
+    template <typename T, typename V>
+    static T* find(std::vector<T>& vec, V T::* field, const V& value)
+    {
+        auto it = std::find_if(vec.begin(), vec.end(), [field, &value](T& t)
+        {
+            return t.*field == value;
+        });
+        if (it == vec.end())
+        {
+            return nullptr;
+        }
+
+        return &*it;
+    }
+    
+    template <typename T>
+    static T* find(std::vector<std::pair<string_hash, T>>& vec, const string_hash nameId)
+    {
+        auto p = find_if(vec, [nameId](const std::pair<string_hash, T>& pair)
+        {
+            return pair.first == nameId;
+        });
+        if (p)
+        {
+            return &p->second;
+        }
+
+        return nullptr;
+    }
+
+    template <typename T>
+    static bool exists(const std::vector<T>& vec, const T& value)
+    {
+        return std::find(vec.begin(), vec.end(), value) != vec.end();
+    }
+
+    template <typename T, typename Predicate>
+    static bool exists_if(const std::vector<T>& vec, Predicate&& predicate)
+    {
+        return std::find_if(vec.begin(), vec.end(), predicate) != vec.end();
+    }
+    
+    template <typename T, typename Predicate>
+    static void insert(std::vector<T>& v, const T& o, Predicate&& p)
+    {
+        // predicate: return true when element is on the left of o
+        
+        auto it = std::partition_point(v.begin(), v.end(), p);
+
+        if (it == v.end())
+        {
+            v.push_back(o);
+        }
+        else
+        {
+            v.insert(it, o);
+        }
+    }
+
+    template <typename T>
+    static void insert(std::vector<std::pair<string_hash, T>>& vec, const string_hash& nameId, const T& o)
+    {
+        if (auto p = find(vec, nameId))
+        {
+            *p = o;
+        }
+        else
+        {
+            vec.emplace_back(nameId, o);
+        }
+    }
+    
+    template <typename T>
+    static void remove(std::vector<T>& vec, const T& obj)
+    {
+        vec.erase(std::remove(vec.begin(), vec.end(), obj), vec.end());
+    }
+    
+    template <typename T>
+    static void remove(std::vector<std::pair<string_hash, T>>& vec, const string_hash nameId)
+    {
+        vec.erase(std::remove_if(vec.begin(), vec.end(), [nameId](const std::pair<string_hash, T>& pair)
+        {
+            return pair.first == nameId;
+        }), vec.end());
+    }
+
+    template <typename T, typename Predicate>
+    static void remove_if(std::vector<T>& vec, Predicate&& p)
+    {
+        vec.erase(std::remove_if(vec.begin(), vec.end(), p), vec.end());
+    }
+
+    template <typename T>
+    void Utils::BinarySerialize(T& obj, crstr path)
+    {
+        auto absPath = ToAbsPath(path);
+        auto parentDirPath = std::filesystem::path(absPath).parent_path();
+        if (!exists(parentDirPath))
+        {
+            create_directories(parentDirPath);
+        }
+        
+        std::ofstream ofs(absPath, std::ios::binary);
+        if (!ofs)
+        {
+            throw std::runtime_error(format_log(LOG_ERROR, "Unable to serialize: %s", path.c_str()));
+        }
+        
+        boost::archive::binary_oarchive oa(ofs);
+        oa << obj;
+    }
+
+    template <typename T>
+    void Utils::BinaryDeserialize(T& obj, crstr path)
+    {
+        auto absPath = ToAbsPath(path);
+        std::ifstream ifs(absPath, std::ios::binary);
+        if (!ifs)
+        {
+            throw std::runtime_error(format_log(LOG_ERROR, "Unable to deserialize: %s", path.c_str()));
+        }
+    
+        boost::archive::binary_iarchive ia(ifs);
+        ia >> obj;
     }
     
     template<typename T>

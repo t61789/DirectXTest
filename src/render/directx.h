@@ -23,7 +23,6 @@ namespace dt
         cr<DXGI_SWAP_CHAIN_DESC> GetSwapChainDesc() const { return m_swapChainDesc; }
         ComPtr<ID3D12Resource> GetBackBuffer() const { return m_swapChainBuffers[m_swapChainBufferIndex]; }
         CD3DX12_CPU_DESCRIPTOR_HANDLE GetBackBufferHandle();
-        
 
         template <typename F>
         void AddCommand(F&& func);
@@ -33,6 +32,16 @@ namespace dt
         void WaitForFence();
         
         void PresentSwapChain();
+
+        void DelayRelease(const ComPtr<ID3D12Resource>&& obj);
+
+        ComPtr<ID3D12Resource> CreateUploadBuffer(const void* data, size_t sizeB);
+        ComPtr<ID3D12Resource> CreateCommittedResource(
+            cr<D3D12_HEAP_PROPERTIES> pHeapProperties,
+            cr<D3D12_RESOURCE_DESC> pDesc,
+            D3D12_RESOURCE_STATES initialResourceState,
+            const D3D12_CLEAR_VALUE* pOptimizedClearValue = nullptr,
+            D3D12_HEAP_FLAGS heapFlags = D3D12_HEAP_FLAG_NONE);
 
         static ComPtr<ID3DBlob> CompileShader(crstr filePath, crstr entryPoint, crstr target);
 
@@ -76,6 +85,8 @@ namespace dt
         ComPtr<ID3D12Fence> m_fence;
         HANDLE m_fenceEvent;
         uint64_t m_fenceValue = 0;
+
+        vec<ComPtr<ID3D12Resource>> m_delayedReleaseObjs;
 
         uint32_t m_swapChainBufferIndex = 0;
 

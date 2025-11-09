@@ -5,7 +5,7 @@
 
 namespace dt
 {
-    void Game::Init(const HWND windowHwnd, const uint32_t screenWidth, const uint32_t screenHeight)
+    void Game::Init(const uint32_t screenWidth, const uint32_t screenHeight)
     {
         QueryPerformanceFrequency(&m_timeFrequency);
         QueryPerformanceCounter(&m_timeCount);
@@ -14,7 +14,6 @@ namespace dt
         m_gameResource = msp<GameResource>();
         m_gameResource->m_screenWidth = screenWidth;
         m_gameResource->m_screenHeight = screenHeight;
-        m_gameResource->m_windowHwnd = windowHwnd;
 
         m_renderPipeline = msp<RenderPipeline>();
     }

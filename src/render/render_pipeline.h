@@ -1,12 +1,17 @@
 ﻿#pragma once
 #include <d3d12.h>
 #include <d3dcommon.h>
+#include <wrl/client.h>
 
 #include "common/const.h"
 
 namespace dt
 {
+    class Mesh;
     class DirectX;
+    class Shader;
+    
+    using namespace Microsoft::WRL;
 
     class RenderPipeline
     {
@@ -26,14 +31,10 @@ namespace dt
         void CreatePso();
         
         sp<DirectX> m_directx;
-        ComPtr<ID3DBlob> m_vertexShader;
-        ComPtr<ID3DBlob> m_pixelShader;
+        sp<Shader> m_testShader;
+        sp<Mesh> m_testMesh;
+        
         ComPtr<ID3D12RootSignature> m_rootSignature;
         ComPtr<ID3D12PipelineState> m_pso;
-        vec<D3D12_INPUT_ELEMENT_DESC> m_layout;
-        ComPtr<ID3D12Resource> m_vertexBuffer;
-        D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-        ComPtr<ID3D12Resource> m_indexBuffer;
-        D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
     };
 }

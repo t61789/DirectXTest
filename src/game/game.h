@@ -11,7 +11,7 @@ namespace dt
     public:
         Game() = default;
 
-        void Init(HWND windowHwnd, uint32_t screenWidth, uint32_t screenHeight);
+        void Init(uint32_t screenWidth, uint32_t screenHeight);
         void Release();
         
         void Update();

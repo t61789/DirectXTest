@@ -3,6 +3,7 @@ project(DirectXTest LANGUAGES C CXX)
 
 # 在 include(conanbuildinfo.cmake) 之前添加
 list(APPEND CMAKE_PREFIX_PATH "build/Debug/generators")
+include(E:/Programming/DirectXTest/build/generators/conan_toolchain.cmake)
 
 
 # 设置 C++ 标准
@@ -31,6 +32,9 @@ add_executable(${PROJECT_NAME}
 # 查找依赖包
 find_package(nlohmann_json REQUIRED)
 find_package(DirectX-Headers REQUIRED)
+find_package(assimp REQUIRED)
+find_package(Tracy REQUIRED)
+find_package(Boost REQUIRED)
 
 # 链接依赖库
 target_link_libraries(${PROJECT_NAME} 
@@ -42,6 +46,9 @@ target_link_libraries(${PROJECT_NAME}
 		windowscodecs
 		nlohmann_json::nlohmann_json
 		Microsoft::DirectX-Headers
+		assimp::assimp
+		Tracy::TracyClient
+		boost::boost
 )
 
 # 安装目标

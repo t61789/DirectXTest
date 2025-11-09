@@ -7,6 +7,9 @@
 #include <directx/d3dx12_barriers.h>
 
 #include "directx.h"
+#include "window.h"
+#include "common/mesh.h"
+#include "common/shader.h"
 #include "game/game_resource.h"
 
 namespace dt
@@ -14,19 +17,13 @@ namespace dt
     RenderPipeline::RenderPipeline()
     {
         m_directx = msp<DirectX>();
-        m_directx->Init(GR()->GetWindowHwnd());
+        m_directx->Init(Window::Ins()->GetHandle());
 
-        m_vertexShader = DirectX::CompileShader("shaders/pbr_basic.shader", "VS_Main", "vs_5_0");
-        m_pixelShader = DirectX::CompileShader("shaders/pbr_basic.shader", "PS_Main", "ps_5_0");
+        m_testShader = Shader::LoadFromFile("shaders/pbr_basic.shader");
 
-        m_layout = vec<D3D12_INPUT_ELEMENT_DESC>
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        };
-
+        CreateMesh();
         CreateRootSignature();
         CreatePso();
-        CreateMesh();
     }
 
     RenderPipeline::~RenderPipeline()
@@ -42,14 +39,14 @@ namespace dt
             D3D12_VIEWPORT viewport = {};
             viewport.TopLeftX = 0.0f;
             viewport.TopLeftY = 0.0f;
-            viewport.Width = static_cast<float>(this->m_directx->GetSwapChainDesc().BufferDesc.Width);
-            viewport.Height = static_cast<float>(this->m_directx->GetSwapChainDesc().BufferDesc.Height);
+            viewport.Width = static_cast<float>(m_directx->GetSwapChainDesc().BufferDesc.Width);
+            viewport.Height = static_cast<float>(m_directx->GetSwapChainDesc().BufferDesc.Height);
             viewport.MinDepth = 0.0f;
             viewport.MaxDepth = 1.0f;
             
             cmdList->RSSetViewports(1, &viewport);
 
-            auto backBufferTexHandle = this->m_directx->GetBackBufferHandle();
+            auto backBufferTexHandle = m_directx->GetBackBufferHandle();
             auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_directx->GetBackBuffer().Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
             cmdList->ResourceBarrier(1, &barrier);
 
@@ -59,11 +56,11 @@ namespace dt
 
             cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            cmdList->IASetIndexBuffer(&m_indexBufferView);
+            cmdList->IASetIndexBuffer(&m_testMesh->GetIndexBufferView());
 
-            cmdList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+            cmdList->IASetVertexBuffers(0, 1, &m_testMesh->GetVertexBufferView());
 
-            cmdList->DrawInstanced(3, 1, 0, 0);
+            cmdList->DrawIndexedInstanced(m_testMesh->GetIndicesCount(), 1, 0, 0, 0);
 
             barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_directx->GetBackBuffer().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
             cmdList->ResourceBarrier(1, &barrier);
@@ -77,57 +74,7 @@ namespace dt
 
     void RenderPipeline::CreateMesh()
     {
-        auto mesh = vec<::DirectX::XMFLOAT3>{
-            { 0.0f, 0.0f, 0.0f },
-            {  0.0f, 1.0f, 0.0f },
-            {  1.0f,  0.0f, 0.0f }
-        };
-
-        CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_UPLOAD);
-        CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh.size() * sizeof(::DirectX::XMFLOAT3));
-
-        THROW_IF_FAILED(m_directx->GetDevice()->CreateCommittedResource(
-            &heapProperties,
-            D3D12_HEAP_FLAG_NONE,
-            &bufferDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_ID3D12Resource,
-            &m_vertexBuffer));
-
-        void* vertexDataBegin = nullptr;
-        CD3DX12_RANGE readRange(0, 0);
-        THROW_IF_FAILED(m_vertexBuffer->Map(0, &readRange, &vertexDataBegin));
-        std::memcpy(vertexDataBegin, mesh.data(), mesh.size() * sizeof(::DirectX::XMFLOAT3));
-        m_vertexBuffer->Unmap(0, nullptr);
-
-        m_vertexBufferView.StrideInBytes = sizeof(::DirectX::XMFLOAT3);
-        m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-        m_vertexBufferView.SizeInBytes = mesh.size() * sizeof(::DirectX::XMFLOAT3);
-
-        auto indexData = vec<uint16_t>{ 0, 1, 2 };
-
-        CD3DX12_HEAP_PROPERTIES heapProperties2(D3D12_HEAP_TYPE_UPLOAD);
-        CD3DX12_RESOURCE_DESC bufferDesc2 = CD3DX12_RESOURCE_DESC::Buffer(indexData.size() * sizeof(uint16_t));
-
-        THROW_IF_FAILED(m_directx->GetDevice()->CreateCommittedResource(
-            &heapProperties2,
-            D3D12_HEAP_FLAG_NONE,
-            &bufferDesc2,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_ID3D12Resource,
-            &m_indexBuffer));
-
-        void* indexDataBegin = nullptr;
-        CD3DX12_RANGE readRange2(0, 0);
-        THROW_IF_FAILED(m_indexBuffer->Map(0, &readRange2, &indexDataBegin));
-        std::memcpy(indexDataBegin, indexData.data(), indexData.size() * sizeof(uint16_t));
-        m_indexBuffer->Unmap(0, nullptr);
-
-        m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-        m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-        m_indexBufferView.SizeInBytes = indexData.size() * sizeof(uint16_t);
+        m_testMesh = Mesh::LoadFromFile("meshes/quad.obj");
     }
 
     void RenderPipeline::CreateRootSignature()
@@ -164,10 +111,11 @@ namespace dt
     {
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
         psoDesc.pRootSignature = m_rootSignature.Get();
-        psoDesc.VS = { m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize() };
-        psoDesc.PS = { m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize() };
-        psoDesc.InputLayout = { m_layout.data(), static_cast<UINT>(m_layout.size()) };
+        psoDesc.VS = { m_testShader->GetVSPointer(), m_testShader->GetVSSize() };
+        psoDesc.PS = { m_testShader->GetPSPointer(), m_testShader->GetPSSize() };
+        psoDesc.InputLayout = { m_testMesh->GetInputLayout().data(), static_cast<UINT>(m_testMesh->GetInputLayout().size()) };
         psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+        psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
         psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         psoDesc.DepthStencilState.DepthEnable = FALSE;
         psoDesc.DepthStencilState.StencilEnable = FALSE;

@@ -3,7 +3,8 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <wrl/client.h>
+
+#include "string_handle.h"
 
 namespace dt
 {
@@ -11,8 +12,6 @@ namespace dt
     #define THROW_ERRORF(msg, ...) throw std::runtime_error(format_log(LOG_ERROR, msg, __VA_ARGS__));
     #define THROW_IF(cond, msg) if (cond) throw std::runtime_error(msg)
     #define THROW_IF_FAILED(cond) if (auto hr = (cond); FAILED(hr)) throw std::runtime_error("The execution of d3d command failed: " + Utils::ToString(hr))
-    
-    using namespace Microsoft::WRL;
     
     template <typename T>
     using up = std::unique_ptr<T>;
@@ -61,6 +60,7 @@ namespace dt
     using arr = std::array<T, N>;
     using str = std::string;
     using crstr = cr<std::string>;
+    using string_hash = size_t;
     
     template <typename T, typename... Args>
     std::unique_ptr<T> mup(Args&&... args)
@@ -72,4 +72,52 @@ namespace dt
     {
         return std::make_shared<T>(std::forward<Args>(args)...);
     }
+    
+    enum class VertexAttr : std::uint8_t
+    {
+        POSITION_OS,
+        NORMAL_OS,
+        TANGENT_OS,
+        UV0,
+        UV1,
+        COUNT
+    };
+
+    struct VertexAttrDefine
+    {
+        VertexAttr attr;
+        uint32_t index;
+        uint32_t strideF;
+        uint32_t offsetF;
+        StringHandle name;
+    };
+
+    inline std::vector<VertexAttrDefine> VERTEX_ATTR_DEFINES =
+    {
+        {VertexAttr::POSITION_OS, static_cast<uint32_t>(VertexAttr::POSITION_OS), 4, 0, "positionOS"},
+        {VertexAttr::NORMAL_OS, static_cast<uint32_t>(VertexAttr::NORMAL_OS), 4, 4, "normalOS"},
+        {VertexAttr::TANGENT_OS, static_cast<uint32_t>(VertexAttr::TANGENT_OS), 4, 8, "tangentOS"},
+        {VertexAttr::UV0, static_cast<uint32_t>(VertexAttr::UV0), 2, 12, "uv0"},
+        {VertexAttr::UV1, static_cast<uint32_t>(VertexAttr::UV1), 2, 14, "uv1"},
+    };
+    
+    static constexpr uint32_t MAX_VERTEX_ATTR_STRIDE_F = 16;
+
+    inline std::unordered_map<VertexAttr, uint32_t> VERTEX_ATTR_STRIDE =
+    {
+        {VertexAttr::POSITION_OS, 4},
+        {VertexAttr::NORMAL_OS, 4},
+        {VertexAttr::TANGENT_OS, 4},
+        {VertexAttr::UV0, 2},
+        {VertexAttr::UV1, 2},
+    };
+
+    inline std::unordered_map<VertexAttr, std::string> VERTEX_ATTR_NAME =
+    {
+        {VertexAttr::POSITION_OS, "positionOS"},
+        {VertexAttr::NORMAL_OS, "normalOS"},
+        {VertexAttr::TANGENT_OS, "tangentOS"},
+        {VertexAttr::UV0, "uv0"},
+        {VertexAttr::UV1, "uv1"},
+    };
 }

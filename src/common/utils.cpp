@@ -5,6 +5,8 @@
 #include <windows.h>
 #include <comdef.h>
 #include <filesystem>
+#include <fstream>
+#include <boost/beast/core/detail/base64.hpp>
 
 namespace dt
 {
@@ -100,5 +102,140 @@ namespace dt
     str Utils::ToAbsPath(crstr relativePath)
     {
         return (std::filesystem::current_path() / relativePath).generic_string();
+    }
+    
+    str Utils::ToRelativePath(crstr absPath)
+    {
+        return relative(absPath, std::filesystem::current_path()).generic_string();
+    }
+    
+    size_t Utils::GetFileHash(const std::string& path)
+    {
+        auto filename = ToAbsPath(path);
+        if (std::filesystem::is_directory(filename))
+        {
+            size_t result = 0;
+            for (const auto& entry : std::filesystem::directory_iterator(filename))
+            {
+                if (entry.is_regular_file())
+                {
+                    auto hash = GetFileHash(ToRelativePath(entry.path().generic_string()));
+                    result = CombineHash(result, hash);
+                }
+            }
+
+            return result;
+        }
+        
+        std::ifstream file(filename, std::ios::binary);
+        if (!file)
+        {
+            throw std::runtime_error("无法打开文件");
+        }
+    
+        std::hash<std::string> hasher;
+        size_t finalHash = 0;
+        char buffer[4096];
+    
+        while (file.read(buffer, sizeof(buffer)))
+        {
+            std::string chunk(buffer, sizeof(buffer));
+            size_t chunkHash = hasher(chunk);
+            finalHash = CombineHash(finalHash, chunkHash);
+        }
+    
+        if (file.gcount() > 0)
+        {
+            std::string lastChunk(buffer, file.gcount());
+            size_t chunkHash = hasher(lastChunk);
+            finalHash = CombineHash(finalHash, chunkHash);
+        }
+    
+        return finalHash;
+    }
+
+    size_t Utils::CombineHash(const size_t hash1, const size_t hash2)
+    {
+        return hash1 ^ (hash2 + 0x9e3779b9 + (hash1 << 6) + (hash2 >> 2));
+    }
+
+    nlohmann::json Utils::GetResourceMeta(const std::string& assetPath)
+    {
+        auto metaPath = GetResourceMetaPath(assetPath);
+        if (!std::filesystem::exists(ToAbsPath(metaPath)))
+        {
+            return nlohmann::json::object();
+        }
+
+        return LoadJson(metaPath);
+    }
+    
+    str Utils::GetResourceMetaPath(crstr assetPath)
+    {
+        return assetPath + ".meta";
+    }
+
+    std::vector<uint8_t> Utils::Base64ToBinary(const std::string& base64Str)
+    {
+        std::size_t decodedSize = boost::beast::detail::base64::decoded_size(base64Str.size());
+        std::vector<uint8_t> binaryData(decodedSize);
+    
+        auto result = boost::beast::detail::base64::decode(
+            binaryData.data(), 
+            base64Str.data(), 
+            base64Str.size());
+    
+        binaryData.resize(result.first);
+        return binaryData;
+    }
+    
+    std::vector<uint32_t> Utils::Binary8To32(const std::vector<uint8_t>& data)
+    {
+        std::vector<uint32_t> result;
+        result.resize(data.size() / 4);
+        memcpy(result.data(), data.data(), data.size());
+        return result;
+    }
+    
+    nlohmann::json Utils::LoadJson(const std::string& assetPath)
+    {
+        auto s = std::ifstream(ToAbsPath(assetPath));
+        nlohmann::json json;
+        s >> json;
+        s.close();
+
+        return json;
+    }
+
+    void Utils::MergeJson(nlohmann::json& json1, const nlohmann::json& json2, bool combineArray)
+    {
+        for (auto& it : json2.items())
+        {
+            const auto& key = it.key();
+            const auto& value = it.value();
+
+            if (!json1.contains(key))
+            {
+                // 1里没这个key，就直接添加
+                json1[key] = value;
+                continue;
+            }
+
+            if (combineArray && value.type() == nlohmann::json::value_t::array && json1[key].type() == nlohmann::json::value_t::array)
+            {
+                // 是数组就将2的加在1的后面
+                json1[key].insert(json1[key].end(), value.begin(), value.end());
+                continue;
+            }
+
+            if (value.type() == nlohmann::json::value_t::object && json1[key].type() == nlohmann::json::value_t::object)
+            {
+                // 是dict就递归合并
+                MergeJson(json1[key], value);
+                continue;
+            }
+
+            json1[key] = value;
+        }
     }
 }

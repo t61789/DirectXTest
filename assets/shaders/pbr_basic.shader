@@ -1,6 +1,8 @@
 struct VSInput 
 {
-    float3 positionOS : POSITION;
+    float4 positionOS : POSITION;
+    float4 normalOS : NORMAL;
+    float2 uv0 : TEXCOORD0;
 };
 
 struct PSInput
