@@ -36,5 +36,6 @@ namespace dt
         
         ComPtr<ID3D12RootSignature> m_rootSignature;
         ComPtr<ID3D12PipelineState> m_pso;
+        ComPtr<ID3D12Resource> m_testCb;
     };
 }

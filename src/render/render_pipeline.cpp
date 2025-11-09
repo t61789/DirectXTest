@@ -52,6 +52,10 @@ namespace dt
 
             cmdList->OMSetRenderTargets(1, &backBufferTexHandle, false, nullptr);
 
+            cmdList->SetGraphicsRootSignature(m_rootSignature.Get());
+
+            cmdList->SetGraphicsRootConstantBufferView(0, m_testCb->GetGPUVirtualAddress());
+
             cmdList->SetPipelineState(m_pso.Get());
 
             cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -79,9 +83,21 @@ namespace dt
 
     void RenderPipeline::CreateRootSignature()
     {
+        CD3DX12_HEAP_PROPERTIES cbHeapProps(D3D12_HEAP_TYPE_UPLOAD);
+        CD3DX12_RESOURCE_DESC cbHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(4 * sizeof(float));
+        m_testCb = Dx()->CreateCommittedResource(cbHeapProps, cbHeapDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+        void* cbData;
+        CD3DX12_RANGE range(0, 0);
+        THROW_IF_FAILED(m_testCb->Map(0, &range, &cbData));
+        XMFLOAT4 color = { 0.0f, 1.0f, 0.0f, 1.0f};
+        memcpy(cbData, &color, sizeof(color));
+
+        CD3DX12_ROOT_PARAMETER rootParameters[1];
+        rootParameters[0].InitAsConstantBufferView(0);
+        
         D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-        rootSignatureDesc.NumParameters = 0;
-        rootSignatureDesc.pParameters = nullptr;
+        rootSignatureDesc.NumParameters = 1;
+        rootSignatureDesc.pParameters = rootParameters;
         rootSignatureDesc.NumStaticSamplers = 0;
         rootSignatureDesc.pStaticSamplers = nullptr;
         rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;

@@ -10,6 +10,11 @@ struct PSInput
     float4 positionCS : SV_POSITION;
 };
 
+cbuffer TestBuffer : register(b0)
+{
+    float4 color;
+};
+
 PSInput VS_Main(VSInput input)
 {
     PSInput output = (PSInput)0;
@@ -21,5 +26,5 @@ PSInput VS_Main(VSInput input)
 
 float4 PS_Main(PSInput input) : SV_TARGET
 {
-    return float4(1.0f, 0.0f, 0.0f, 1.0f);
+    return color;
 }
