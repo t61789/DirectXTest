@@ -159,6 +159,12 @@ namespace dt
         return hash1 ^ (hash2 + 0x9e3779b9 + (hash1 << 6) + (hash2 >> 2));
     }
 
+    size_t Utils::GetMemoryHash(const void* data, const size_t sizeB)
+    {
+        static std::hash<std::string> hasher;
+        return hasher(std::string(static_cast<const char*>(data), sizeB));
+    }
+
     nlohmann::json Utils::GetResourceMeta(const std::string& assetPath)
     {
         auto metaPath = GetResourceMetaPath(assetPath);
@@ -237,5 +243,30 @@ namespace dt
 
             json1[key] = value;
         }
+    }
+    
+    bool Utils::IsVec(cr<nlohmann::json> jsonValue, const size_t components)
+    {
+        if (jsonValue.is_array() && jsonValue.size() == components)
+        {
+            bool allFloat = true;
+            for (auto& e : jsonValue)
+            {
+                allFloat &= e.is_number();
+            }
+            return allFloat;
+        }
+
+        return false;
+    }
+    
+    bool Utils::IsVec3(cr<nlohmann::json> jsonValue)
+    {
+        return IsVec(jsonValue, 3);
+    }
+    
+    bool Utils::IsVec4(cr<nlohmann::json> jsonValue)
+    {
+        return IsVec(jsonValue, 4);
     }
 }

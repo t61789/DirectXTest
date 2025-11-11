@@ -40,6 +40,7 @@ namespace dt
 
         static size_t GetFileHash(const std::string& path);
         static size_t CombineHash(size_t hash1, size_t hash2);
+        static size_t GetMemoryHash(const void* data, size_t sizeB);
         
         static nlohmann::json GetResourceMeta(const std::string& assetPath);
         static str GetResourceMetaPath(crstr assetPath);
@@ -48,6 +49,10 @@ namespace dt
         
         static nlohmann::json LoadJson(const std::string& assetPath);
         static void MergeJson(nlohmann::json& json1, const nlohmann::json& json2, bool combineArray = false);
+        
+        static bool IsVec(cr<nlohmann::json> jsonValue, size_t components);
+        static bool IsVec3(cr<nlohmann::json> jsonValue);
+        static bool IsVec4(cr<nlohmann::json> jsonValue);
         
         template <typename T>
         static void BinarySerialize(T& obj, crstr path);

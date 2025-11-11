@@ -131,6 +131,17 @@ namespace dt
         return shaderBlob;
     }
 
+    void DirectX::ThrowErrorBlob(cr<ComPtr<ID3DBlob>> blob)
+    {
+        if (!blob)
+        {
+            throw std::runtime_error("Failed to parse error blob.");
+        }
+        
+        auto msg = format_log(LOG_ERROR, "Error: %s", static_cast<const char*>(blob->GetBufferPointer()));
+        throw std::runtime_error(msg);
+    }
+
     void DirectX::FlushCommand()
     {
         THROW_IF_FAILED(m_commandList->Close());

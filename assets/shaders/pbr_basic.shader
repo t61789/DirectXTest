@@ -12,7 +12,7 @@ struct PSInput
 
 cbuffer TestBuffer : register(b0)
 {
-    float4 color;
+    float4 _Color;
 };
 
 PSInput VS_Main(VSInput input)
@@ -26,5 +26,5 @@ PSInput VS_Main(VSInput input)
 
 float4 PS_Main(PSInput input) : SV_TARGET
 {
-    return color;
+    return _Color;
 }

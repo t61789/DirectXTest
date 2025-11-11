@@ -5,6 +5,7 @@
 
 namespace dt
 {
+    class Cbuffer;
     class IResource;
 
     class GameResource : public Singleton<GameResource>
@@ -30,8 +31,11 @@ namespace dt
         uint32_t m_screenHeight;
 
         umap<string_hash, wp<IResource>> m_resources;
+        vecsp<Cbuffer> m_predefinedCbuffers = vecsp<Cbuffer>(PREDEFINED_CBUFFER.size());
 
         friend class Game;
+        friend class Cbuffer;
+        friend class Shader;
     };
 
     template <typename T>

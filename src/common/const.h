@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "string_handle.h"
 
@@ -12,6 +13,16 @@ namespace dt
     #define THROW_ERRORF(msg, ...) throw std::runtime_error(format_log(LOG_ERROR, msg, __VA_ARGS__));
     #define THROW_IF(cond, msg) if (cond) throw std::runtime_error(msg)
     #define THROW_IF_FAILED(cond) if (auto hr = (cond); FAILED(hr)) throw std::runtime_error("The execution of d3d command failed: " + Utils::ToString(hr))
+    #define ASSERT_THROW(cond) if (!(cond)) throw std::runtime_error("Assertion failed: " + std::string(#cond))
+    #define ASSERT_THROWM(cond, msg) if (!(cond)) throw std::runtime_error(msg)
+    
+    #define STRING_HANDLE(KEY, VALUE) static auto KEY = StringHandle(#VALUE);
+
+    STRING_HANDLE(GLOBAL_CBUFFER, _Global)
+    STRING_HANDLE(PER_VIEW_CBUFFER, PerViewCBuffer)
+    STRING_HANDLE(PER_MATERIAL_CBUFFER, PerMaterialCBuffer)
+
+    static constexpr uint32_t MAX_REGISTER_COUNT = 16;
     
     template <typename T>
     using up = std::unique_ptr<T>;
@@ -42,6 +53,10 @@ namespace dt
     using crvecwp = cr<vecwp<T>>;
     template <typename T>
     using crvecpt = cr<vecpt<T>>;
+    template <typename K, typename V>
+    using vecpair = std::vector<std::pair<K, V>>;
+    template <typename K, typename V>
+    using crvecpair = cr<vecpair<K, V>>;
     
     template <typename K, typename V>
     using umap = std::unordered_map<K, V>;
@@ -119,5 +134,10 @@ namespace dt
         {VertexAttr::TANGENT_OS, "tangentOS"},
         {VertexAttr::UV0, "uv0"},
         {VertexAttr::UV1, "uv1"},
+    };
+    
+    inline vec<string_hash> PREDEFINED_CBUFFER = {
+        GLOBAL_CBUFFER.Hash(),
+        PER_VIEW_CBUFFER.Hash()
     };
 }

@@ -7,6 +7,7 @@
 
 namespace dt
 {
+    class Material;
     class Mesh;
     class DirectX;
     class Shader;
@@ -26,16 +27,9 @@ namespace dt
         void Render();
 
     private:
-        void CreateMesh();
-        void CreateRootSignature();
-        void CreatePso();
         
         sp<DirectX> m_directx;
-        sp<Shader> m_testShader;
         sp<Mesh> m_testMesh;
-        
-        ComPtr<ID3D12RootSignature> m_rootSignature;
-        ComPtr<ID3D12PipelineState> m_pso;
-        ComPtr<ID3D12Resource> m_testCb;
+        sp<Material> m_testMaterial;
     };
 }

@@ -293,7 +293,7 @@ namespace dt
             initScale = config.at("init_scale").get<float>();
         }
 
-        flipWindingOrder = true;
+        flipWindingOrder = false;
         if (config.contains("flip_winding_order"))
         {
             flipWindingOrder = config.at("flip_winding_order").get<bool>();

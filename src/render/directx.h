@@ -44,6 +44,7 @@ namespace dt
             D3D12_HEAP_FLAGS heapFlags = D3D12_HEAP_FLAG_NONE);
 
         static ComPtr<ID3DBlob> CompileShader(crstr filePath, crstr entryPoint, crstr target);
+        static void ThrowErrorBlob(cr<ComPtr<ID3DBlob>> blob);
 
     private:
         void LoadFactory();
