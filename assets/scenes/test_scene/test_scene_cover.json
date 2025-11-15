@@ -1,0 +1,25 @@
+{
+    "config": {
+        "ambientLightColorSky": [
+            2.636,
+            2.681,
+            2.777
+        ],
+        "ambientLightColorEquator": [
+            2.15,
+            2.26,
+            2.21
+        ],
+        "ambientLightColorGround": [
+            2.636,
+            2.681,
+            2.777
+        ],
+        "fog_intensity": 0.00062,
+        "fog_color": [
+            0.63,
+            0.77,
+            1.00
+        ]
+    }
+}

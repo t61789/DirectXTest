@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <DirectXMath.h>
+#include <nlohmann/json.hpp>
 
 #include "const.h"
 
@@ -31,4 +32,76 @@ namespace dt
             extents = XMLoadFloat3(&extentsFloat3);
         }
     };
+
+    inline XMVECTOR QuaternionToEuler(cr<XMVECTOR> q)
+    {
+        XMFLOAT4 normalizedQ;
+        XMStoreFloat4(&normalizedQ, XMQuaternionNormalize(q));
+
+        XMFLOAT4 result;
+        result.x = std::asin(2 * (normalizedQ.w * normalizedQ.x - normalizedQ.y * normalizedQ.z)) * RAD2DEG;
+        result.y = std::atan2(2 * (normalizedQ.w * normalizedQ.y + normalizedQ.x * normalizedQ.z),
+                              1 - 2 * (normalizedQ.x * normalizedQ.x + normalizedQ.y * normalizedQ.y)) * RAD2DEG;
+        result.z = std::atan2(2 * (normalizedQ.w * normalizedQ.z + normalizedQ.x * normalizedQ.y),
+                              1 - 2 * (normalizedQ.x * normalizedQ.x + normalizedQ.z * normalizedQ.z)) * RAD2DEG;
+        return XMLoadFloat4(&result);
+    }
+
+    inline XMVECTOR GetForward(cr<XMMATRIX> m)
+    {
+        return m.r[0];
+    }
+
+    inline XMVECTOR GetUp(cr<XMMATRIX> m)
+    {
+        return m.r[1];
+    }
+
+    inline XMVECTOR GetRight(cr<XMMATRIX> m)
+    {
+        return m.r[2];
+    }
+
+    inline XMVECTOR GetPosition(cr<XMMATRIX> m)
+    {
+        return m.r[3];
+    }
+
+    inline XMMATRIX Inverse(cr<XMMATRIX> m)
+    {
+        XMVECTOR determinant;
+        auto result = XMMatrixInverse(&determinant, m);
+        auto det = XMVectorGetX(determinant);
+        ASSERT_THROW(std::abs(det) > EPSILON);
+
+        return result;
+    }
 }
+
+template <>
+struct nlohmann::adl_serializer<DirectX::XMFLOAT3>
+{
+    static DirectX::XMFLOAT3 from_json(const json& j)
+    {
+        return DirectX::XMFLOAT3 {
+            j.at(0).get<float>(),
+            j.at(1).get<float>(),
+            j.at(2).get<float>()
+        };
+    }
+};
+
+template <>
+struct nlohmann::adl_serializer<DirectX::XMVECTOR>
+{
+    static DirectX::XMVECTOR from_json(const json& j)
+    {
+        auto f3 = DirectX::XMFLOAT3 {
+            j.at(0).get<float>(),
+            j.at(1).get<float>(),
+            j.at(2).get<float>()
+        };
+
+        return XMLoadFloat3(&f3);
+    }
+};

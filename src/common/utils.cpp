@@ -269,4 +269,18 @@ namespace dt
     {
         return IsVec(jsonValue, 4);
     }
+    
+    std::string Utils::Join(const std::vector<std::string>& strings, const std::string& delimiter)
+    {
+        std::stringstream ss;
+        for (size_t i = 0; i < strings.size(); ++i)
+        {
+            ss << strings[i];
+            if (i != strings.size() - 1)
+            {
+                ss << delimiter;
+            }
+        }
+        return ss.str();
+    }
 }

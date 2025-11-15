@@ -5,22 +5,33 @@
 
 namespace dt
 {
+    class Scene;
     class Cbuffer;
     class IResource;
 
     class GameResource : public Singleton<GameResource>
     {
     public:
+        GameResource() = default;
+        ~GameResource();
+        GameResource(const GameResource& other) = delete;
+        GameResource(GameResource&& other) noexcept = delete;
+        GameResource& operator=(const GameResource& other) = delete;
+        GameResource& operator=(GameResource&& other) noexcept = delete;
+
         uint64_t GetFrameCount() const { return m_frameCount; }
         double GetTime() const { return m_time; }
         double GetDeltaTime() const { return m_deltaTime; }
         void GetScreenSize(uint32_t& width, uint32_t& height) const { width = m_screenWidth; height = m_screenHeight; }
+        sp<Cbuffer> GetPredefinedCbuffer(cr<StringHandle> name) const;
         
         void RegisterResource(cr<StringHandle> path, crsp<IResource> resource);
         void UnregisterResource(cr<StringHandle> path);
         sp<IResource> GetResource(cr<StringHandle> path);
         template <typename T>
         sp<T> GetResource(cr<StringHandle> path);
+
+        Scene* mainScene;
 
     private:
         uint64_t m_frameCount;
@@ -57,4 +68,8 @@ namespace dt
     }
 
     static GameResource* GR() { return GameResource::Ins(); }
+
+    static sp<Cbuffer> GetPerViewCbuffer() { return GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER); }
+
+    static sp<Cbuffer> GetPerObjectCbuffer() { return GR()->GetPredefinedCbuffer(PER_OBJECT_CBUFFER); }
 }

@@ -38,7 +38,7 @@ namespace dt
         void DoLoad(cr<StringHandle> path);
         void LoadShaderInfo();
         void LoadVertexLayout(ReflectionPack& reflectionPack);
-        void LoadCbuffers(ReflectionPack& reflectionPack);
+        void LoadCbuffers(const ReflectionPack& reflectionPack);
         void CreateRootSignature(ReflectionPack& reflectionPack);
         
         static void LoadShaderStage(cr<ComPtr<ID3DBlob>> blob, ReflectionPack& reflectionPack);
@@ -55,7 +55,7 @@ namespace dt
         ComPtr<ID3D12RootSignature> m_rootSignature;
         D3D12_GRAPHICS_PIPELINE_STATE_DESC m_psoTemplateDesc = {};
 
-        std::optional<CbufferLayout> m_localCbufferLayout;
+        sp<CbufferLayout> m_localCbufferLayout = nullptr;
 
         sp<Pso> m_pso = nullptr;
 

@@ -23,7 +23,7 @@ namespace dt
         Mesh() = default;
         
         cr<StringHandle> GetPath() override { return m_path; }
-        cr<Bounds> GetBounds() const { return m_bounds; }
+        Bounds GetBounds() const { return m_bounds; }
         uint32_t GetVertexDataStrideB() const { return m_vertexDataStrideB; }
         crvec<float> GetVertexData() const { return m_vertexData; }
         crvec<uint32_t> GetIndexData() const { return m_indexData; }

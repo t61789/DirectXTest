@@ -18,6 +18,23 @@
 
 namespace dt
 {
+    static crumap<VertexAttr, Mesh::VertexAttrInfo> GetFullVertexAttribInfo()
+    {
+        static umap<VertexAttr, Mesh::VertexAttrInfo> vertexAttribInfo;
+        if (vertexAttribInfo.empty())
+        {
+            for (auto& attrDefine : VERTEX_ATTR_DEFINES)
+            {
+                vertexAttribInfo[attrDefine.attr] = {
+                    true,
+                    attrDefine.offsetF * sizeof(float)
+                };
+            }
+        }
+
+        return vertexAttribInfo;
+    }
+    
     static vec<D3D12_INPUT_ELEMENT_DESC> GetD3dVertexLayout(crumap<VertexAttr, Mesh::VertexAttrInfo> vertexAttribInfo)
     {
         static umap<VertexAttr, D3D12_INPUT_ELEMENT_DESC> INPUT_ELEMENT_DESC_MAPPER =
@@ -80,7 +97,6 @@ namespace dt
         vertexAttribInfo[VertexAttr::TANGENT_OS] = {mesh->mTangents != nullptr};
         vertexAttribInfo[VertexAttr::UV0] = {mesh->HasTextureCoords(0)};
         vertexAttribInfo[VertexAttr::UV1] = {mesh->HasTextureCoords(1)};
-        CalcVertexAttrOffset(vertexAttribInfo);
 
         auto boundsMin = XMVectorReplicate((std::numeric_limits<float>::max)());
         auto boundsMax = XMVectorReplicate((std::numeric_limits<float>::min)());
@@ -109,6 +125,13 @@ namespace dt
                 vertexData.push_back(mesh->mNormals[i].z);
                 vertexData.push_back(0.0f);
             }
+            else
+            {
+                vertexData.push_back(0.0f);
+                vertexData.push_back(0.0f);
+                vertexData.push_back(0.0f);
+                vertexData.push_back(0.0f);
+            }
 
             // Load tangentOS
             if (vertexAttribInfo[VertexAttr::TANGENT_OS].enabled)
@@ -118,18 +141,28 @@ namespace dt
                 vertexData.push_back(mesh->mTangents[i].z);
                 vertexData.push_back(1.0f);
             }
+            else
+            {
+                vertexData.push_back(0.0f);
+                vertexData.push_back(0.0f);
+                vertexData.push_back(0.0f);
+                vertexData.push_back(1.0f);
+            }
 
             // Load uv
             VertexAttr uvAttr[] = {VertexAttr::UV0, VertexAttr::UV1};
             for (size_t j = 0; j < 2; ++j)
             {
-                if (!vertexAttribInfo[uvAttr[j]].enabled)
+                if (vertexAttribInfo[uvAttr[j]].enabled)
                 {
-                    continue;
+                    vertexData.push_back(mesh->mTextureCoords[j][i].x);
+                    vertexData.push_back(mesh->mTextureCoords[j][i].y);
                 }
-                
-                vertexData.push_back(mesh->mTextureCoords[j][i].x);
-                vertexData.push_back(mesh->mTextureCoords[j][i].y);
+                else
+                {
+                    vertexData.push_back(0.0f);
+                    vertexData.push_back(0.0f);
+                }
             }
         }
 
@@ -143,6 +176,12 @@ namespace dt
                 indices.push_back(face.mIndices[j]);
             }
         }
+        
+        for (auto& attrInfo : vertexAttribInfo)
+        {
+            attrInfo.second.enabled = true;
+        }
+        CalcVertexAttrOffset(vertexAttribInfo);
 
         auto bounds = Bounds((boundsMax + boundsMin) * 0.5f, (boundsMax - boundsMin) * 0.5f);
         bounds.extents = XMVectorMax(bounds.extents, XMVectorReplicate(0.01f));
@@ -201,7 +240,10 @@ namespace dt
         auto vbBuffer = Dx()->CreateCommittedResource(
             CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
             CD3DX12_RESOURCE_DESC::Buffer(vbUploadBuffer->GetDesc().Width),
-            D3D12_RESOURCE_STATE_COPY_DEST);
+            D3D12_RESOURCE_STATE_COMMON,
+            nullptr,
+            D3D12_HEAP_FLAG_NONE,
+            "Vertex Buffer");
         D3D12_VERTEX_BUFFER_VIEW vbView = {};
         vbView.SizeInBytes = vbUploadBuffer->GetDesc().Width;
         vbView.StrideInBytes = vertexDataStrideB;
@@ -213,7 +255,10 @@ namespace dt
         auto ibBuffer = Dx()->CreateCommittedResource(
             CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
             CD3DX12_RESOURCE_DESC::Buffer(ibUploadBuffer->GetDesc().Width),
-            D3D12_RESOURCE_STATE_COPY_DEST);
+            D3D12_RESOURCE_STATE_COMMON,
+            nullptr,
+            D3D12_HEAP_FLAG_NONE,
+            "Index Buffer");
         D3D12_INDEX_BUFFER_VIEW ibView = {};
         ibView.Format = DXGI_FORMAT_R32_UINT;
         ibView.SizeInBytes = ibUploadBuffer->GetDesc().Width;
@@ -221,17 +266,16 @@ namespace dt
 
         Dx()->AddCommand([vbUploadBuffer, vbBuffer, ibUploadBuffer, ibBuffer](ID3D12GraphicsCommandList* cmdList)
         {
+            Dx()->AddTransition(vbBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+            Dx()->AddTransition(ibBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+            Dx()->ApplyTransitions(cmdList);
+            
             cmdList->CopyResource(vbBuffer.Get(), vbUploadBuffer.Get());
             cmdList->CopyResource(ibBuffer.Get(), ibUploadBuffer.Get());
 
-            CD3DX12_RESOURCE_BARRIER transitions[] = {
-                CD3DX12_RESOURCE_BARRIER::Transition(vbBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER),
-                CD3DX12_RESOURCE_BARRIER::Transition(ibBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER)
-            };
-            cmdList->ResourceBarrier(2, transitions);
-
-            Dx()->DelayRelease(std::move(vbUploadBuffer));
-            Dx()->DelayRelease(std::move(ibUploadBuffer));
+            Dx()->AddTransition(vbBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+            Dx()->AddTransition(ibBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+            Dx()->ApplyTransitions(cmdList);
         });
 
         sp<Mesh> result = msp<Mesh>();
@@ -288,16 +332,10 @@ namespace dt
         auto config = Utils::GetResourceMeta(modelPath);
 
         initScale = 1.0f;
-        if (config.contains("init_scale"))
-        {
-            initScale = config.at("init_scale").get<float>();
-        }
+        try_get_val(config, "init_scale", initScale);
 
         flipWindingOrder = false;
-        if (config.contains("flip_winding_order"))
-        {
-            flipWindingOrder = config.at("flip_winding_order").get<bool>();
-        }
+        try_get_val(config, "flip_winding_order", flipWindingOrder);
     }
     
     crvec<float> Mesh::GetFullVertexData(const Mesh* mesh)

@@ -1,0 +1,179 @@
+{
+    "config": {
+        "ambientLightColorSky": [
+            0.44,
+            0.44,
+            0.54
+        ],
+        "ambientLightColorEquator": [
+            0.36,
+            0.36,
+            0.43
+        ],
+        "ambientLightColorGround": [
+            0.40,
+            0.40,
+            0.46
+        ],
+        "mainLightColor": [
+            3.7,
+            3.7,
+            3.7
+        ],
+        "mainLightDirection": [
+            -1,
+            1,
+            1
+        ],
+        "tonemappingExposureMultiplier": 1
+    },
+    "root": [
+        {
+            "name": "Main Camera",
+            "comps": [
+                {
+                    "name": "TransformComp",
+                    "position": [
+                        0,
+                        1,
+                        -5
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        0
+                    ]
+                },
+                {
+                    "name": "CameraComp",
+                    "fov": 45,
+                    "nearClip": 0.05,
+                    "farClip": 300
+                }
+            ]
+        },
+        {
+            "name": "Main Light",
+            "comps": [
+                {
+                    "name": "TransformComp",
+                    "rotation": [
+                        45,
+                        -150,
+                        0
+                    ]
+                },
+                {
+                    "name": "LightComp",
+                    "color": [
+                        3.7,
+                        3.7,
+                        3.7
+                    ],
+                    "light_type": 0,
+                    "intensity": 1
+                }
+            ]
+        },
+        {
+            "name": "Point Light",
+            "comps": [
+                {
+                    "name": "TransformComp",
+                    "position": [
+                        1,
+                        1,
+                        1
+                    ]
+                },
+                {
+                    "name": "LightComp",
+                    "color": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "light_type": 1,
+                    "intensity": 10,
+                    "radius": 5
+                }
+            ]
+        },
+        {
+            "name": "Beast",
+            "comps": [
+                {
+                    "name": "TransformComp",
+                    "scale": [
+                        1,
+                        1,
+                        1
+                    ],
+                    "position": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        0
+                    ]
+                },
+                {
+                    "name": "RenderComp",
+                    "mesh": "meshes/beast.obj",
+                    "material": "materials/test_mat.json"
+                }
+            ],
+            "children": [
+                {
+                    "name": "Cube",
+                    "comps": [
+                        {
+                            "name": "TransformComp",
+                            "position": [
+                                3,
+                                1,
+                                0
+                            ]
+                        },
+                        {
+                            "name": "RenderComp",
+                            "mesh": "meshes/smooth_cube.obj",
+                            "material": "materials/test_mat.json"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Ground",
+            "comps": [
+                {
+                    "name": "TransformComp",
+                    "scale": [
+                        10,
+                        10,
+                        10
+                    ],
+                    "position": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "rotation": [
+                        90,
+                        0,
+                        0
+                    ]
+                },
+                {
+                    "name": "RenderComp",
+                    "mesh": "meshes/quad.obj",
+                    "material": "materials/test_mat.json"
+                }
+            ]
+        }
+    ]
+}

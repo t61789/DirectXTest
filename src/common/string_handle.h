@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 
 namespace dt
 {
@@ -24,9 +26,13 @@ namespace dt
         
         bool operator==(const std::string& other) const { return m_str == other; }
 
+        bool operator==(const char* other) const { return m_str == other; }
+
         bool operator!=(const StringHandle& other) const { return m_hash != other.m_hash; }
 
         bool operator!=(const std::string& other) const { return m_str != other; }
+
+        bool operator!=(const char* other) const { return m_str != other; }
 
         operator size_t() const { return m_hash; }
 

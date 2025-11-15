@@ -53,11 +53,13 @@ namespace dt
         static bool IsVec(cr<nlohmann::json> jsonValue, size_t components);
         static bool IsVec3(cr<nlohmann::json> jsonValue);
         static bool IsVec4(cr<nlohmann::json> jsonValue);
-        
+
         template <typename T>
         static void BinarySerialize(T& obj, crstr path);
         template <class T>
         static void BinaryDeserialize(T& obj, crstr path);
+        
+        static std::string Join(const std::vector<std::string>& strings, const std::string& delimiter);
     };
     
     template <typename... Args>
@@ -351,6 +353,31 @@ namespace dt
         vec.erase(std::remove_if(vec.begin(), vec.end(), p), vec.end());
     }
 
+    inline void from_json(cr<nlohmann::json> j, StringHandle& v)
+    {
+        str s;
+        j.get_to<str>(s);
+        v = s;
+    }
+
+    template <typename T>
+    static bool try_get_val(const nlohmann::json& j, const char* name, T& value)
+    {
+        if (j.contains(name))
+        {
+            value = j.at(name).get<T>();
+            return true;
+        }
+
+        return false;
+    }
+
+    template <typename T>
+    static T get_val(const nlohmann::json& j, const char* name)
+    {
+        return j.at(name).get<T>();
+    }
+
     template <typename T>
     void Utils::BinarySerialize(T& obj, crstr path)
     {
@@ -404,4 +431,47 @@ namespace dt
         
         friend T;
     };
+    
+    struct UsingObject
+    {
+        template <typename F>
+        explicit UsingObject(F&& deleter);
+        ~UsingObject();
+        UsingObject(const UsingObject& other) = delete;
+        UsingObject(UsingObject&& other) noexcept = delete;
+        UsingObject& operator=(const UsingObject& other) = delete;
+        UsingObject& operator=(UsingObject&& other) noexcept = delete;
+
+    private:
+        std::function<void()> m_deleter;
+    };
+
+    template <typename F>
+    UsingObject::UsingObject(F&& deleter)
+    {
+        m_deleter = std::forward<F>(deleter);
+    }
+
+    inline UsingObject::~UsingObject()
+    {
+        m_deleter();
+    }
+    
+    template <typename T>
+    struct UsingObjectT : UsingObject
+    {
+        template <typename F>
+        explicit UsingObjectT(cr<T> obj, F&& deleter);
+        const T& Get() { return m_obj; }
+
+    private:
+        T m_obj;
+    };
+
+    template <typename T>
+    template <typename F>
+    UsingObjectT<T>::UsingObjectT(cr<T> obj, F&& deleter): UsingObject(std::move(deleter))
+    {
+        m_obj = obj;
+    }
 }

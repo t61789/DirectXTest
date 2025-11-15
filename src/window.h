@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <string>
 
+#include "common/keyboard.h"
 #include "game/game.h"
 
 namespace dt
@@ -35,5 +36,6 @@ namespace dt
         std::string m_className;
         int m_width, m_height;
         std::unique_ptr<Game> m_game;
+        std::unique_ptr<Keyboard> m_keyboard;
     };
 }

@@ -16,12 +16,13 @@ namespace dt
         m_height(height)
     {
         m_className = "ModernWindowClass_" + std::to_string(GetTickCount());
-        m_game = std::make_unique<Game>();
+        m_keyboard = std::make_unique<Keyboard>();
     }
     
     Window::~Window()
     {
         m_game.reset();
+        m_keyboard.reset();
         
         if (m_hwnd)
         {
@@ -36,7 +37,7 @@ namespace dt
             return false;
         }
         
-        m_game->Init(m_width, m_height);
+        m_game = mup<Game>(m_width, m_height);
 
         return true;
     }
@@ -131,6 +132,18 @@ namespace dt
             
         case WM_SIZE:
             InvalidateRect(m_hwnd, nullptr, TRUE);
+            return 0;
+
+        case WM_KEYDOWN:
+            m_keyboard->SetKeyDown(wParam);
+            return 0;
+
+        case WM_KEYUP:
+            m_keyboard->SetKeyUp(wParam);
+            return 0;
+
+        case WM_KILLFOCUS:
+            m_keyboard->ResetAllKey();
             return 0;
             
         default:

@@ -22,6 +22,10 @@ namespace dt
         Shader* GetShader() const { return m_shader.get(); }
         Cbuffer* GetCbuffer() const { return m_cbuffer.get(); }
         cr<StringHandle> GetPath() override { return m_path; }
+        DepthMode GetDepthMode() const { return m_depthMode; }
+        BlendMode GetBlendMode() const { return m_blendMode; }
+        CullMode GetCullMode() const { return m_cullMode; }
+        bool GetDepthWrite() const { return m_depthWrite; }
         
         template <typename T>
         void SetValue(string_hash name, T val);

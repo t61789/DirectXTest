@@ -52,11 +52,11 @@ namespace dt
 {
     sp<Cbuffer> Shader::CreateCbuffer()
     {
-        if (!m_localCbufferLayout.has_value())
+        if (!m_localCbufferLayout)
         {
             return nullptr;
         }
-        return msp<Cbuffer>(m_localCbufferLayout.value());
+        return msp<Cbuffer>(m_localCbufferLayout);
     }
 
     sp<Shader> Shader::LoadFromFile(cr<StringHandle> path)
@@ -172,7 +172,7 @@ namespace dt
         {
             D3D12_SHADER_INPUT_BIND_DESC resourceDesc;
             THROW_IF_FAILED(reflectionPack.shaderReflection->GetResourceBindingDesc(i, &resourceDesc));
-            ASSERT_THROW(resourceDesc.BindPoint < MAX_REGISTER_COUNT, "Shader resource register out of range.");
+            ASSERT_THROWM(resourceDesc.BindPoint < MAX_REGISTER_COUNT, "Shader resource register out of range.");
 
             Register registerInfo;
             registerInfo.resourceName = StringHandle(resourceDesc.Name);
@@ -214,9 +214,9 @@ namespace dt
         }
     }
 
-    void Shader::LoadCbuffers(ReflectionPack& reflectionPack)
+    void Shader::LoadCbuffers(const ReflectionPack& reflectionPack)
     {
-        if (m_localCbufferLayout.has_value())
+        if (m_localCbufferLayout)
         {
             return;
         }
@@ -233,14 +233,14 @@ namespace dt
             {
                 if (!GR()->m_predefinedCbuffers[predefinedCbufferIndex.value()])
                 {
-                    auto layout = CbufferLayout(cbufferReflection, cbufferDesc);
+                    auto layout = msp<CbufferLayout>(cbufferReflection, cbufferDesc);
                     GR()->m_predefinedCbuffers[predefinedCbufferIndex.value()] = msp<Cbuffer>(std::move(layout));
                 }
 
                 continue;
             }
 
-            m_localCbufferLayout = CbufferLayout(cbufferReflection, cbufferDesc);
+            m_localCbufferLayout = msp<CbufferLayout>(cbufferReflection, cbufferDesc);
             return;
         }
     }

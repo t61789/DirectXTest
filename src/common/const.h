@@ -3,12 +3,16 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 
 #include "string_handle.h"
 
 namespace dt
 {
+    #define PI 3.1415926535f
+    #define DEG2RAD 0.0174532925f
+    #define RAD2DEG 57.2957795f
+    #define EPSILON 1e-6
+    
     #define THROW_ERROR(msg) throw std::runtime_error(format_log(Error, msg));
     #define THROW_ERRORF(msg, ...) throw std::runtime_error(format_log(LOG_ERROR, msg, __VA_ARGS__));
     #define THROW_IF(cond, msg) if (cond) throw std::runtime_error(msg)
@@ -20,9 +24,19 @@ namespace dt
 
     STRING_HANDLE(GLOBAL_CBUFFER, _Global)
     STRING_HANDLE(PER_VIEW_CBUFFER, PerViewCBuffer)
+    STRING_HANDLE(PER_OBJECT_CBUFFER, PerObjectCBuffer)
     STRING_HANDLE(PER_MATERIAL_CBUFFER, PerMaterialCBuffer)
 
-    static constexpr uint32_t MAX_REGISTER_COUNT = 16;
+    STRING_HANDLE(VP, _VP)
+    STRING_HANDLE(IVP, _IVP)
+    STRING_HANDLE(MVP, _MVP)
+    STRING_HANDLE(ITM, _ITM)
+    STRING_HANDLE(M, _M)
+    STRING_HANDLE(IM, _IM)
+    STRING_HANDLE(CAMERA_POSITION_WS, _CameraPositionWS)
+
+    static const uint32_t MAX_REGISTER_COUNT = 16;
+    static const auto UNNAMED_OBJECT = StringHandle("Unnamed Object");
     
     template <typename T>
     using up = std::unique_ptr<T>;
@@ -138,6 +152,7 @@ namespace dt
     
     inline vec<string_hash> PREDEFINED_CBUFFER = {
         GLOBAL_CBUFFER.Hash(),
-        PER_VIEW_CBUFFER.Hash()
+        PER_VIEW_CBUFFER.Hash(),
+        PER_OBJECT_CBUFFER.Hash()
     };
 }

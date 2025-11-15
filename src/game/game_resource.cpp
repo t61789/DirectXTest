@@ -2,8 +2,30 @@
 
 #include <cassert>
 
+#include "render/cbuffer.h"
+
 namespace dt
 {
+    GameResource::~GameResource()
+    {
+        m_predefinedCbuffers.clear();
+    }
+
+    sp<Cbuffer> GameResource::GetPredefinedCbuffer(cr<StringHandle> name) const
+    {
+        auto result = find_if(m_predefinedCbuffers, [&name](crsp<Cbuffer> cb)
+        {
+            return cb && cb->GetLayout()->name == name;
+        });
+
+        if (result)
+        {
+            return *result;
+        }
+
+        return nullptr;
+    }
+
     void GameResource::RegisterResource(cr<StringHandle> path, crsp<IResource> resource)
     {
         assert(!GetResource(path));

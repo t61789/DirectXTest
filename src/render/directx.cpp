@@ -12,14 +12,17 @@
 #include <directx/d3dx12_barriers.h>
 #include <directx/d3dx12_core.h>
 
+#include "window.h"
 #include "common/utils.h"
 #include "common/math.h"
 
 namespace dt
 {
-    void DirectX::Init(const HWND windowHwnd)
+    DirectX::DirectX()
     {
-        m_windowHwnd = windowHwnd;
+        m_windowHwnd = Window::Ins()->GetHandle();
+
+        EnableDebugLayer();
 
         LoadFactory();
         LoadAdapter();
@@ -35,11 +38,15 @@ namespace dt
         CreateDescriptorHeaps();
         CreateRenderTargets();
 
-        CreateTextures();
+        // CreateTextures();
     }
 
-    void DirectX::Release()
+    DirectX::~DirectX()
     {
+        FlushCommand();
+        IncreaseFence();
+        WaitForFence();
+        
         CloseHandle(m_fenceEvent);
     }
 
@@ -58,17 +65,18 @@ namespace dt
         m_swapChainBufferIndex = (m_swapChainBufferIndex + 1) % m_swapChainDesc.BufferCount;
     }
 
-    void DirectX::DelayRelease(const ComPtr<ID3D12Resource>&& obj)
-    {
-        m_delayedReleaseObjs.push_back(std::move(obj));
-    }
-
     ComPtr<ID3D12Resource> DirectX::CreateUploadBuffer(const void* data, const size_t sizeB)
     {
         CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
         CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeB);
         
-        ComPtr<ID3D12Resource> buffer = CreateCommittedResource(heapProps, bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+        ComPtr<ID3D12Resource> buffer = CreateCommittedResource(
+            heapProps,
+            bufferDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            D3D12_HEAP_FLAG_NONE,
+            "Upload Buffer");
 
         void* mappedData;
         THROW_IF_FAILED(buffer->Map(0, nullptr, &mappedData));
@@ -83,7 +91,8 @@ namespace dt
         cr<D3D12_RESOURCE_DESC> pDesc,
         const D3D12_RESOURCE_STATES initialResourceState,
         const D3D12_CLEAR_VALUE* pOptimizedClearValue,
-        const D3D12_HEAP_FLAGS heapFlags)
+        const D3D12_HEAP_FLAGS heapFlags,
+        const char* name)
     {
         ComPtr<ID3D12Resource> resource;
         THROW_IF_FAILED(m_device->CreateCommittedResource(
@@ -94,6 +103,11 @@ namespace dt
             pOptimizedClearValue,
             IID_ID3D12Resource,
             &resource));
+
+        if (name)
+        {
+            THROW_IF_FAILED(resource->SetName(Utils::StringToWString(name).c_str()));
+        }
 
         return resource;
     }
@@ -142,11 +156,28 @@ namespace dt
         throw std::runtime_error(msg);
     }
 
+    void DirectX::EnableDebugLayer()
+    {
+        THROW_IF_FAILED(D3D12GetDebugInterface(IID_ID3D12Debug, &m_debugLayer));
+        m_debugLayer->EnableDebugLayer();
+    }
+
     void DirectX::FlushCommand()
     {
         THROW_IF_FAILED(m_commandList->Close());
         ID3D12CommandList* cmdList[] = { m_commandList.Get() };
         m_commandQueue->ExecuteCommandLists(1, cmdList);
+    }
+
+    void DirectX::AddTransition(ID3D12Resource* resource, const D3D12_RESOURCE_STATES before, const D3D12_RESOURCE_STATES after)
+    {
+        m_transitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(resource, before, after));
+    }
+
+    void DirectX::ApplyTransitions(ID3D12GraphicsCommandList* cmdList)
+    {
+        cmdList->ResourceBarrier(m_transitions.size(), m_transitions.data());
+        m_transitions.clear();
     }
 
     void DirectX::IncreaseFence()
@@ -167,7 +198,7 @@ namespace dt
         THROW_IF_FAILED(m_commandAllocator->Reset());
         THROW_IF_FAILED(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
-        m_delayedReleaseObjs.clear();
+        m_cmds.clear();
     }
 
     void DirectX::LoadFactory()
@@ -300,6 +331,7 @@ namespace dt
         for (uint32_t i = 0; i < m_swapChainDesc.BufferCount; i++)
         {
             THROW_IF_FAILED(m_dxgiSwapChain->GetBuffer(i, IID_ID3D12Resource, &m_swapChainBuffers[i]));
+            THROW_IF_FAILED(m_swapChainBuffers[i]->SetName(L"Swap Cain Buffer"));
         }
     }
 
@@ -332,49 +364,48 @@ namespace dt
         }
     }
 
-    void DirectX::CreateTextures()
-    {
-        
-        D3D12_RESOURCE_DESC depthTexDesc = {};
-        depthTexDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        depthTexDesc.Alignment = 0;
-        depthTexDesc.Width = m_swapChainDesc.BufferDesc.Width;
-        depthTexDesc.Height = m_swapChainDesc.BufferDesc.Height;
-        depthTexDesc.DepthOrArraySize = 1;
-        depthTexDesc.MipLevels = 1;
-        depthTexDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        depthTexDesc.SampleDesc.Count = 1;
-        depthTexDesc.SampleDesc.Quality = 0;
-        depthTexDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-        depthTexDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-        D3D12_HEAP_PROPERTIES depthTexHeapProps = {};
-        depthTexHeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-
-        THROW_IF_FAILED(m_device->CreateCommittedResource(
-            &depthTexHeapProps,
-            D3D12_HEAP_FLAG_NONE,
-            &depthTexDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            IID_ID3D12Resource,
-            &m_depthStencilBuffer));
-
-        m_device->CreateDepthStencilView(
-            m_depthStencilBuffer.Get(),
-            nullptr,
-            m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
-
-        AddCommand([this](ID3D12GraphicsCommandList* cmdList)
-        {
-            auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
-                this->m_depthStencilBuffer.Get(),
-                D3D12_RESOURCE_STATE_COMMON,
-                D3D12_RESOURCE_STATE_DEPTH_WRITE);
-            cmdList->ResourceBarrier(1, &transition);
-        });
-        
-        FlushCommand();
-        WaitForFence();
-    }
+    // void DirectX::CreateTextures()
+    // {
+    //     
+    //     D3D12_RESOURCE_DESC depthTexDesc = {};
+    //     depthTexDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    //     depthTexDesc.Alignment = 0;
+    //     depthTexDesc.Width = m_swapChainDesc.BufferDesc.Width;
+    //     depthTexDesc.Height = m_swapChainDesc.BufferDesc.Height;
+    //     depthTexDesc.DepthOrArraySize = 1;
+    //     depthTexDesc.MipLevels = 1;
+    //     depthTexDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    //     depthTexDesc.SampleDesc.Count = 1;
+    //     depthTexDesc.SampleDesc.Quality = 0;
+    //     depthTexDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    //     depthTexDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    //
+    //     D3D12_HEAP_PROPERTIES depthTexHeapProps = {};
+    //     depthTexHeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+    //
+    //     THROW_IF_FAILED(m_device->CreateCommittedResource(
+    //         &depthTexHeapProps,
+    //         D3D12_HEAP_FLAG_NONE,
+    //         &depthTexDesc,
+    //         D3D12_RESOURCE_STATE_COPY_DEST,
+    //         nullptr,
+    //         IID_ID3D12Resource,
+    //         &m_depthStencilBuffer));
+    //
+    //     m_depthStencilBuffer->SetName(L"Depth Stencil Buffer");
+    //
+    //     m_device->CreateDepthStencilView(
+    //         m_depthStencilBuffer.Get(),
+    //         nullptr,
+    //         m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+    //
+    //     AddCommand([this](ID3D12GraphicsCommandList* cmdList)
+    //     {
+    //         auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
+    //             this->m_depthStencilBuffer.Get(),
+    //             D3D12_RESOURCE_STATE_COPY_DEST,
+    //             D3D12_RESOURCE_STATE_DEPTH_WRITE);
+    //         cmdList->ResourceBarrier(1, &transition);
+    //     });
+    // }
 }

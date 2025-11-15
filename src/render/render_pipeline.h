@@ -28,7 +28,6 @@ namespace dt
 
     private:
         
-        sp<DirectX> m_directx;
         sp<Mesh> m_testMesh;
         sp<Material> m_testMaterial;
     };

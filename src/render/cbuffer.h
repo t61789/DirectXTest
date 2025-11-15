@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include <d3d12.h>
 #include <d3d12shader.h>
-#include <mutex>
 #include <wrl/client.h>
 
 #include "common/const.h"
@@ -10,9 +9,8 @@ namespace dt
 {
     using namespace Microsoft::WRL;
 
-    class CbufferLayout
+    struct CbufferLayout
     {
-    public:
         struct Field
         {
             StringHandle name;
@@ -20,6 +18,7 @@ namespace dt
             uint32_t sizeB;
         };
 
+        StringHandle name;
         D3D12_SHADER_BUFFER_DESC desc;
         vecpair<string_hash, Field> fields;
 
@@ -31,13 +30,14 @@ namespace dt
         struct Field;
         
     public:
-        explicit Cbuffer(CbufferLayout layout);
+        explicit Cbuffer(sp<CbufferLayout> layout);
         ~Cbuffer();
         Cbuffer(const Cbuffer& other) = delete;
         Cbuffer(Cbuffer&& other) noexcept = delete;
         Cbuffer& operator=(const Cbuffer& other) = delete;
         Cbuffer& operator=(Cbuffer&& other) noexcept = delete;
-        
+
+        sp<CbufferLayout> GetLayout() const { return m_layout; }
         cr<ComPtr<ID3D12Resource>> GetDxResource() const { return m_dxResource; }
 
         bool Write(string_hash name, const void* data, uint32_t sizeB);
@@ -50,7 +50,7 @@ namespace dt
 
         std::atomic<bool> m_using;
 
-        CbufferLayout m_layout;
+        sp<CbufferLayout> m_layout;
         
         struct Field
         {

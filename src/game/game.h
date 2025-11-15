@@ -3,25 +3,31 @@
 
 namespace dt
 {
+    class Scene;
     class RenderPipeline;
     class GameResource;
 
     class Game
     {
     public:
-        Game() = default;
-
-        void Init(uint32_t screenWidth, uint32_t screenHeight);
-        void Release();
+        Game(uint32_t screenWidth, uint32_t screenHeight);
+        ~Game();
+        Game(const Game& other) = delete;
+        Game(Game&& other) noexcept = delete;
+        Game& operator=(const Game& other) = delete;
+        Game& operator=(Game&& other) noexcept = delete;
         
         void Update();
         void Render();
 
     private:
         void UpdateTime();
-        
+        void UpdateComps();
+
         sp<GameResource> m_gameResource;
         sp<RenderPipeline> m_renderPipeline;
+        sp<Scene> m_scene;
+        sp<DirectX> m_directx;
 
         uint64_t m_frameCount = 0;
         LARGE_INTEGER m_timeCount;
