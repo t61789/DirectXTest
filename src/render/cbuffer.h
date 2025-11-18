@@ -44,6 +44,8 @@ namespace dt
 
     private:
         void CreateDxResource();
+
+        StringHandle m_name;
         
         void* m_gpuWriteDest;
         ComPtr<ID3D12Resource> m_dxResource;

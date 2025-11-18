@@ -65,7 +65,7 @@ namespace dt
             D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
             nullptr,
             D3D12_HEAP_FLAG_NONE,
-            "Cbuffer");
+            L"Cbuffer");
         CD3DX12_RANGE range(0, 0);
         THROW_IF_FAILED(m_dxResource->Map(0, &range, &m_gpuWriteDest));
     }

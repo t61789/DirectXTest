@@ -17,10 +17,18 @@ namespace dt
     
     class Shader final : public IResource
     {
-        struct Register;
         struct ReflectionPack;
         
     public:
+        struct BindResource
+        {
+            uint32_t rootParameterIndex;
+            uint32_t registerIndex;
+            uint32_t registerType;
+            StringHandle resourceName;
+            D3D_SHADER_INPUT_TYPE resourceType;
+        };
+
         void* GetVSPointer() const { return m_vs->GetBufferPointer(); }
         size_t GetVSSize() const { return m_vs->GetBufferSize(); }
         void* GetPSPointer() const { return m_ps->GetBufferPointer(); }
@@ -29,6 +37,7 @@ namespace dt
         crvec<D3D12_INPUT_ELEMENT_DESC> GetVertexLayout() const { return m_vertexLayout; }
         cr<StringHandle> GetPath() override { return m_path; }
         Pso* GetPso() const { return m_pso.get(); }
+        crvec<BindResource> GetBindResources() const { return m_bindResources; }
         
         sp<Cbuffer> CreateCbuffer();
         
@@ -39,7 +48,7 @@ namespace dt
         void LoadShaderInfo();
         void LoadVertexLayout(ReflectionPack& reflectionPack);
         void LoadCbuffers(const ReflectionPack& reflectionPack);
-        void CreateRootSignature(ReflectionPack& reflectionPack);
+        void CreateRootSignature(const ReflectionPack& reflectionPack);
         
         static void LoadShaderStage(cr<ComPtr<ID3DBlob>> blob, ReflectionPack& reflectionPack);
         static void LoadInputResources(ReflectionPack& reflectionPack);
@@ -51,8 +60,8 @@ namespace dt
         StringHandle m_path;
 
         vec<D3D12_INPUT_ELEMENT_DESC> m_vertexLayout;
-        vecpair<string_hash, Register> m_resourceBindings;
         ComPtr<ID3D12RootSignature> m_rootSignature;
+        vec<BindResource> m_bindResources;
         D3D12_GRAPHICS_PIPELINE_STATE_DESC m_psoTemplateDesc = {};
 
         sp<CbufferLayout> m_localCbufferLayout = nullptr;
@@ -60,29 +69,6 @@ namespace dt
         sp<Pso> m_pso = nullptr;
 
         vec<str> m_semanticNames = {};
-
-        struct Register
-        {
-            uint32_t rootParameterIndex = ~0u;
-            uint32_t registerIndex = ~0u;
-            StringHandle resourceName;
-            D3D_SHADER_INPUT_TYPE resourceType;
-
-            bool Empty() const { return registerIndex == ~0u; }
-
-            friend bool operator==(const Register& lhs, const Register& rhs)
-            {
-                return lhs.rootParameterIndex == rhs.rootParameterIndex
-                    && lhs.resourceName == rhs.resourceName
-                    && lhs.resourceName == rhs.resourceName
-                    && lhs.resourceType == rhs.resourceType;
-            }
-
-            friend bool operator!=(const Register& lhs, const Register& rhs)
-            {
-                return !(lhs == rhs);
-            }
-        };
 
         struct ReflectionPack
         {
@@ -93,9 +79,7 @@ namespace dt
             ID3D12ShaderReflectionConstantBuffer* cbReflection;
             D3D12_SHADER_BUFFER_DESC cbDesc;
 
-            Register registers[MAX_REGISTER_COUNT * 4];
-
-            Register* GetRegisterGroup(D3D_SHADER_INPUT_TYPE resourceType);
+            vec<BindResource> bindResources;
         };
     };
 }

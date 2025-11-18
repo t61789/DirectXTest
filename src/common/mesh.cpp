@@ -15,6 +15,7 @@
 #include "common/asset_cache.h"
 #include "game/game_resource.h"
 #include "render/directx.h"
+#include "render/dx_helper.h"
 
 namespace dt
 {
@@ -243,7 +244,7 @@ namespace dt
             D3D12_RESOURCE_STATE_COMMON,
             nullptr,
             D3D12_HEAP_FLAG_NONE,
-            "Vertex Buffer");
+            L"Vertex Buffer");
         D3D12_VERTEX_BUFFER_VIEW vbView = {};
         vbView.SizeInBytes = vbUploadBuffer->GetDesc().Width;
         vbView.StrideInBytes = vertexDataStrideB;
@@ -258,7 +259,7 @@ namespace dt
             D3D12_RESOURCE_STATE_COMMON,
             nullptr,
             D3D12_HEAP_FLAG_NONE,
-            "Index Buffer");
+            L"Index Buffer");
         D3D12_INDEX_BUFFER_VIEW ibView = {};
         ibView.Format = DXGI_FORMAT_R32_UINT;
         ibView.SizeInBytes = ibUploadBuffer->GetDesc().Width;
@@ -266,16 +267,16 @@ namespace dt
 
         Dx()->AddCommand([vbUploadBuffer, vbBuffer, ibUploadBuffer, ibBuffer](ID3D12GraphicsCommandList* cmdList)
         {
-            Dx()->AddTransition(vbBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-            Dx()->AddTransition(ibBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-            Dx()->ApplyTransitions(cmdList);
+            DxHelper::AddTransition(vbBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+            DxHelper::AddTransition(ibBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+            DxHelper::ApplyTransitions(cmdList);
             
             cmdList->CopyResource(vbBuffer.Get(), vbUploadBuffer.Get());
             cmdList->CopyResource(ibBuffer.Get(), ibUploadBuffer.Get());
 
-            Dx()->AddTransition(vbBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-            Dx()->AddTransition(ibBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
-            Dx()->ApplyTransitions(cmdList);
+            DxHelper::AddTransition(vbBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+            DxHelper::AddTransition(ibBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+            DxHelper::ApplyTransitions(cmdList);
         });
 
         sp<Mesh> result = msp<Mesh>();

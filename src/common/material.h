@@ -35,8 +35,6 @@ namespace dt
         void SetValue(string_hash name, const void* val, size_t sizeB);
         void GetValue(string_hash name, void* val, size_t sizeB);
 
-        void ApplyRenderState(Pso* pso);
-        
         static sp<Material> LoadFromFile(cr<StringHandle> path);
 
     private:
@@ -55,6 +53,8 @@ namespace dt
         sp<DataSet> m_dataSet = nullptr;
 
         StringHandle m_path;
+
+        friend class DxHelper;
     };
 
     template <typename T>

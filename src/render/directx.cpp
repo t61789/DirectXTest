@@ -76,7 +76,7 @@ namespace dt
             D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
             D3D12_HEAP_FLAG_NONE,
-            "Upload Buffer");
+            L"Upload Buffer");
 
         void* mappedData;
         THROW_IF_FAILED(buffer->Map(0, nullptr, &mappedData));
@@ -92,7 +92,7 @@ namespace dt
         const D3D12_RESOURCE_STATES initialResourceState,
         const D3D12_CLEAR_VALUE* pOptimizedClearValue,
         const D3D12_HEAP_FLAGS heapFlags,
-        const char* name)
+        const wchar_t* name)
     {
         ComPtr<ID3D12Resource> resource;
         THROW_IF_FAILED(m_device->CreateCommittedResource(
@@ -106,7 +106,7 @@ namespace dt
 
         if (name)
         {
-            THROW_IF_FAILED(resource->SetName(Utils::StringToWString(name).c_str()));
+            THROW_IF_FAILED(resource->SetName(name));
         }
 
         return resource;
@@ -167,17 +167,6 @@ namespace dt
         THROW_IF_FAILED(m_commandList->Close());
         ID3D12CommandList* cmdList[] = { m_commandList.Get() };
         m_commandQueue->ExecuteCommandLists(1, cmdList);
-    }
-
-    void DirectX::AddTransition(ID3D12Resource* resource, const D3D12_RESOURCE_STATES before, const D3D12_RESOURCE_STATES after)
-    {
-        m_transitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(resource, before, after));
-    }
-
-    void DirectX::ApplyTransitions(ID3D12GraphicsCommandList* cmdList)
-    {
-        cmdList->ResourceBarrier(m_transitions.size(), m_transitions.data());
-        m_transitions.clear();
     }
 
     void DirectX::IncreaseFence()

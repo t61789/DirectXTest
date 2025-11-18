@@ -30,9 +30,6 @@ namespace dt
         void AddCommand(F&& func);
         void FlushCommand();
 
-        void AddTransition(ID3D12Resource* resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
-        void ApplyTransitions(ID3D12GraphicsCommandList* cmdList);
-        
         void IncreaseFence();
         void WaitForFence();
         
@@ -45,7 +42,7 @@ namespace dt
             D3D12_RESOURCE_STATES initialResourceState,
             const D3D12_CLEAR_VALUE* pOptimizedClearValue = nullptr,
             D3D12_HEAP_FLAGS heapFlags = D3D12_HEAP_FLAG_NONE,
-            const char* name = nullptr);
+            const wchar_t* name = nullptr);
 
         static ComPtr<ID3DBlob> CompileShader(crstr filePath, crstr entryPoint, crstr target);
         static void ThrowErrorBlob(cr<ComPtr<ID3DBlob>> blob);

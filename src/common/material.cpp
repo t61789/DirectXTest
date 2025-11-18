@@ -19,13 +19,6 @@ namespace dt
         ASSERT_THROW(m_dataSet->TryGetImp(name, &val, sizeB));
     }
 
-    void Material::ApplyRenderState(Pso* pso)
-    {
-        pso->SetDepthMode(m_depthMode);
-        pso->SetDepthWrite(m_depthWrite);
-        pso->SetCullMode(m_cullMode);
-    }
-
     sp<Material> Material::LoadFromFile(cr<StringHandle> path)
     {
         {

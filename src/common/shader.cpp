@@ -6,6 +6,7 @@
 
 #include "game/game_resource.h"
 #include "render/directx.h"
+#include "render/dx_helper.h"
 
 namespace
 {
@@ -117,32 +118,30 @@ namespace dt
         THROW_IF_FAILED(reflectionPack.shaderReflection->GetDesc(&reflectionPack.shaderDesc));
     }
 
-    void Shader::CreateRootSignature(ReflectionPack& reflectionPack)
+    void Shader::CreateRootSignature(const ReflectionPack& reflectionPack)
     {
+        // Build root parameters from bind resources
         vec<CD3DX12_ROOT_PARAMETER> rootParameters;
-        for (auto& registerInfo : reflectionPack.registers)
+        for (auto& bindResource : reflectionPack.bindResources)
         {
-            if (registerInfo.Empty())
-            {
-                continue;
-            }
-            auto registerIndex = registerInfo.registerIndex;
+            auto registerIndex = bindResource.registerIndex;
             
             rootParameters.emplace_back();
 
-            if (registerInfo.resourceType == D3D_SIT_CBUFFER)
+            if (bindResource.resourceType == D3D_SIT_CBUFFER)
             {
                 rootParameters.back().InitAsConstantBufferView(registerIndex);
-                registerInfo.rootParameterIndex = static_cast<uint32_t>(rootParameters.size() - 1);
             }
             else
             {
                 throw std::runtime_error("Unsupported resource type.");
             }
-
-            m_resourceBindings.emplace_back(registerInfo.resourceName.Hash(), registerInfo);
         }
-        
+
+        // Record bind resources for future binding query
+        m_bindResources = reflectionPack.bindResources;
+
+        // Create actual root signature by root parameters for dx
         D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
         rootSignatureDesc.NumParameters = rootParameters.size();
         rootSignatureDesc.pParameters = rootParameters.data();
@@ -174,14 +173,30 @@ namespace dt
             THROW_IF_FAILED(reflectionPack.shaderReflection->GetResourceBindingDesc(i, &resourceDesc));
             ASSERT_THROWM(resourceDesc.BindPoint < MAX_REGISTER_COUNT, "Shader resource register out of range.");
 
-            Register registerInfo;
-            registerInfo.resourceName = StringHandle(resourceDesc.Name);
-            registerInfo.registerIndex = resourceDesc.BindPoint;
-            registerInfo.resourceType = resourceDesc.Type;
-            
-            auto& destRegisterInfo = reflectionPack.GetRegisterGroup(resourceDesc.Type)[resourceDesc.BindPoint];
-            THROW_IF(destRegisterInfo != registerInfo && !destRegisterInfo.Empty(), "Different shader stage bound different resource in same register");
-            destRegisterInfo = registerInfo;
+            BindResource bindResource;
+            bindResource.resourceName = StringHandle(resourceDesc.Name);
+            bindResource.registerIndex = resourceDesc.BindPoint;
+            bindResource.resourceType = resourceDesc.Type;
+            bindResource.registerType = DxHelper::GetRegisterType(bindResource.resourceType);
+
+            auto found = find_if(reflectionPack.bindResources, [&bindResource](cr<BindResource> x)
+            {
+                if (x.registerIndex == bindResource.registerIndex && x.registerType == bindResource.registerType)
+                {
+                    if (x.resourceName != bindResource.resourceName || x.resourceType != bindResource.resourceType)
+                    {
+                        throw std::runtime_error("Different shader stage bound different resource in same register");
+                    }
+                    return true;
+                }
+                return false;
+            });
+
+            if (!found)
+            {
+                bindResource.rootParameterIndex = reflectionPack.bindResources.size();
+                reflectionPack.bindResources.push_back(bindResource);
+            }
         }
     }
 
@@ -276,15 +291,5 @@ namespace dt
         }
 
         return shaderBlob;
-    }
-
-    Shader::Register* Shader::ReflectionPack::GetRegisterGroup(const D3D_SHADER_INPUT_TYPE resourceType)
-    {
-        static umap<D3D_SHADER_INPUT_TYPE, uint32_t> mapper = {
-            { D3D_SIT_CBUFFER, 0 },
-        };
-
-        auto registerType = mapper.at(resourceType);
-        return &registers[registerType * MAX_REGISTER_COUNT];
     }
 }
