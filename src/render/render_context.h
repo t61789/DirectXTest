@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include "common/utils.h"
-#include "common//math.h"
+#include "common/math.h"
 
 namespace dt
 {

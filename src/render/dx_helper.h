@@ -18,9 +18,9 @@ namespace dt
         static void PrepareRendering(ID3D12GraphicsCommandList* cmdList);
         static void SetViewport(ID3D12GraphicsCommandList* cmdList, uint32_t width, uint32_t height);
         
-        static void BindRootSignature(ID3D12GraphicsCommandList* cmdList, const Material* material);
+        static void BindRootSignature(ID3D12GraphicsCommandList* cmdList, const Shader* shader);
         static void BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material);
-        static void BindCbuffer(ID3D12GraphicsCommandList* cmdList, const Material* material, Cbuffer* cbuffer);
+        static void BindCbuffer(ID3D12GraphicsCommandList* cmdList, const Shader* shader, Cbuffer* cbuffer);
         static void BindMesh(ID3D12GraphicsCommandList* cmdList, const Mesh* mesh);
         
         static void AddTransition(ID3D12Resource* resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);

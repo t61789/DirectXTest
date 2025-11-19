@@ -10,6 +10,11 @@ struct PSInput
     float4 positionCS : SV_POSITION;
 };
 
+cbuffer GlobalCBuffer : register(b0)
+{
+    float4 _Dummy;
+};
+
 cbuffer PerViewCBuffer : register(b1)
 {
     float4x4 _VP;
@@ -39,5 +44,5 @@ PSInput VS_Main(VSInput input)
 
 float4 PS_Main(PSInput input) : SV_TARGET
 {
-    return _CameraPositionWS * _Test * _BaseColor;
+    return _Dummy * _CameraPositionWS * _Test * _BaseColor;
 }

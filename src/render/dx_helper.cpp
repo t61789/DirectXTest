@@ -35,9 +35,9 @@ namespace dt
         cmdList->RSSetScissorRects(1, &scissorRect);
     }
 
-    void DxHelper::BindRootSignature(ID3D12GraphicsCommandList* cmdList, const Material* material)
+    void DxHelper::BindRootSignature(ID3D12GraphicsCommandList* cmdList, const Shader* shader)
     {
-        cmdList->SetGraphicsRootSignature(material->GetShader()->GetRootSignature().Get());
+        cmdList->SetGraphicsRootSignature(shader->GetRootSignature().Get());
     }
 
     void DxHelper::BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material)
@@ -51,10 +51,8 @@ namespace dt
         cmdList->SetPipelineState(pso->CurPso().Get());
     }
 
-    void DxHelper::BindCbuffer(ID3D12GraphicsCommandList* cmdList, const Material* material, Cbuffer* cbuffer)
+    void DxHelper::BindCbuffer(ID3D12GraphicsCommandList* cmdList, const Shader* shader, Cbuffer* cbuffer)
     {
-        auto shader = material->GetShader();
-        
         auto bindResource = find_if(shader->GetBindResources(), [&cbuffer](cr<Shader::BindResource> x)
         {
             static auto cbufferRegisterIndex = GetRegisterType(D3D_SIT_CBUFFER);

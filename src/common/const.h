@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "string_handle.h"
 
@@ -22,7 +23,7 @@ namespace dt
     
     #define STRING_HANDLE(KEY, VALUE) static auto KEY = StringHandle(#VALUE);
 
-    STRING_HANDLE(GLOBAL_CBUFFER, _Global)
+    STRING_HANDLE(GLOBAL_CBUFFER, GlobalCBuffer)
     STRING_HANDLE(PER_VIEW_CBUFFER, PerViewCBuffer)
     STRING_HANDLE(PER_OBJECT_CBUFFER, PerObjectCBuffer)
     STRING_HANDLE(PER_MATERIAL_CBUFFER, PerMaterialCBuffer)
@@ -76,6 +77,10 @@ namespace dt
     using umap = std::unordered_map<K, V>;
     template <typename K, typename V>
     using crumap = cr<umap<K, V>>;
+    template <typename K>
+    using uset = std::unordered_set<K>;
+    template <typename K>
+    using cruset = cr<uset<K>>;
     template <typename T>
     using crsp = const std::shared_ptr<T>&;
     template <typename T>

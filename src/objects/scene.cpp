@@ -48,6 +48,7 @@ namespace dt
         GR()->mainScene = scene.get();
         
         scene->m_registry = mup<SceneRegistry>(scene.get());
+        scene->m_renderTree = mup<RenderTree>();
         
         nlohmann::json json = Utils::LoadJson(sceneJsonPath);
 

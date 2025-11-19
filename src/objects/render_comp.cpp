@@ -5,6 +5,7 @@
 #include "common/mesh.h"
 
 #include "object.h"
+#include "scene.h"
 #include "transform_comp.h"
 #include "render/cbuffer.h"
 
@@ -24,12 +25,15 @@ namespace dt
 
     void RenderComp::OnEnable()
     {
+        GetOwner()->GetScene()->GetRenderTree()->Register(this);
+        
         OnTransformDirty();
         UpdateTransform();
     }
 
     void RenderComp::OnDisable()
     {
+        GetOwner()->GetScene()->GetRenderTree()->UnRegister(this);
     }
 
     void RenderComp::OnDestroy()

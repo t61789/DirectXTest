@@ -7,6 +7,7 @@
 
 namespace dt
 {
+    class Scene;
     class Material;
     class Mesh;
     class DirectX;
@@ -25,6 +26,7 @@ namespace dt
         RenderPipeline& operator=(RenderPipeline&& other) noexcept = delete;
 
         void Render();
+        static void RenderScene(ID3D12GraphicsCommandList* cmdList, const Scene* scene);
 
     private:
         

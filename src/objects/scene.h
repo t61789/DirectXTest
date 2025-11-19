@@ -5,6 +5,7 @@
 
 #include "common/i_resource.h"
 #include "scene_registry.h"
+#include "render/render_tree.h"
 
 namespace dt
 {
@@ -28,6 +29,7 @@ namespace dt
         Scene& operator=(Scene&& other) noexcept = delete;
 
         SceneRegistry* GetRegistry() const { return m_registry.get();}
+        RenderTree* GetRenderTree() const { return m_renderTree.get();}
         cr<StringHandle> GetPath() override { return m_path;}
         sp<Object> GetRoot() const { return m_sceneRoot;}
         
@@ -38,6 +40,7 @@ namespace dt
         
         sp<Object> m_sceneRoot = nullptr;
         up<SceneRegistry> m_registry;
+        up<RenderTree> m_renderTree;
         
         void LoadSceneConfig(cr<nlohmann::json> configJson);
         

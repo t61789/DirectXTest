@@ -24,9 +24,10 @@ namespace dt
         
         Object() = default;
 
-        bool IsEnable() const { return m_realEnable;}
-        crvecsp<Object> GetChildren() const { return m_children;}
-        crvecsp<Comp> GetComps() const { return m_comps;}
+        bool IsEnable() const { return m_realEnable; }
+        crvecsp<Object> GetChildren() const { return m_children; }
+        crvecsp<Comp> GetComps() const { return m_comps; }
+        Scene* GetScene() const { return m_scene; }
         std::string GetPathInScene() const;
 
         void SetEnable(bool enable);
