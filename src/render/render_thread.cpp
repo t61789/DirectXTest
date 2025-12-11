@@ -31,20 +31,8 @@ namespace dt
             THROW_IF_FAILED(cmdList->Close());
             ID3D12CommandList* c[] = { cmdList };
             Dx()->GetCommandQueue()->ExecuteCommandLists(1, c);
-            
-            m_fenceValue++;
-            THROW_IF_FAILED(Dx()->GetCommandQueue()->Signal(m_fence.Get(), m_fenceValue));
-            
-            if (m_fence->GetCompletedValue() < m_fenceValue)
-            {
-                THROW_IF_FAILED(m_fence->SetEventOnCompletion(m_fenceValue, m_fenceEvent));
 
-                {
-                    ZoneScopedNC("Wait for fence", TRACY_IDLE_COLOR);
-                       
-                    THROW_IF(WaitForSingleObject(m_fenceEvent, INFINITE) != WAIT_OBJECT_0, "Call wait for fence event failed.");
-                }
-            }
+            WaitForFence();
 
             THROW_IF_FAILED(m_cmdAllocator->Reset());
             THROW_IF_FAILED(m_cmdList->Reset(m_cmdAllocator.Get(), nullptr));
@@ -71,6 +59,8 @@ namespace dt
 
     void RenderThread::AddCmd(sp<RenderCmd>&& cmd)
     {
+        assert(!m_stop.load());
+        
         std::lock_guard lock(m_mutex);
         m_cmds.push_back(std::move(cmd));
         m_execCmdCond.notify_one();
@@ -91,13 +81,13 @@ namespace dt
                 {
                     m_waitForDoneCond.notify_one();
                 }
-                
+
                 m_execCmdCond.wait(lock, [this]
                 {
                     return m_stop.load() || m_curCmdIndex < m_cmds.size();
                 });
 
-                if (m_stop.load())
+                if (m_stop.load() && m_curCmdIndex >= m_cmds.size())
                 {
                     break;
                 }
@@ -108,6 +98,8 @@ namespace dt
 
             (*cmd)(m_cmdList.Get());
         }
+
+        WaitForFence();
         
         m_cmdList.Reset();
         m_cmdAllocator.Reset();
@@ -123,5 +115,22 @@ namespace dt
         m_thread.join();
         
         ReleaseCmdResources();
+    }
+
+    void RenderThread::WaitForFence()
+    {
+        m_fenceValue++;
+        THROW_IF_FAILED(Dx()->GetCommandQueue()->Signal(m_fence.Get(), m_fenceValue));
+        
+        if (m_fence->GetCompletedValue() < m_fenceValue)
+        {
+            THROW_IF_FAILED(m_fence->SetEventOnCompletion(m_fenceValue, m_fenceEvent));
+
+            {
+                ZoneScopedNC("Wait for fence", TRACY_IDLE_COLOR);
+                   
+                THROW_IF(WaitForSingleObject(m_fenceEvent, INFINITE) != WAIT_OBJECT_0, "Call wait for fence event failed.");
+            }
+        }
     }
 }

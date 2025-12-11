@@ -47,10 +47,10 @@ namespace dt
         static void ThrowErrorBlob(cr<ComPtr<ID3DBlob>> blob);
 
     private:
-        void EnableDebugLayer();
-        void LoadFactory();
-        void LoadAdapter();
-        void LoadOutput();
+        void CreateDebugLayer();
+        void CreateFactory();
+        void CreateAdapter();
+        void CreateOutput();
         void LoadOutputModes();
         void CreateDevice();
         void CreateCommandQueue();
@@ -61,7 +61,7 @@ namespace dt
 
         ComPtr<ID3D12Debug> m_debugLayer;
         ComPtr<IDXGIFactory4> m_dxgiFactor4;
-        ComPtr<IDXGIAdapter> m_dxgiAdapter;
+        ComPtr<IDXGIAdapter1> m_dxgiAdapter1;
         ComPtr<IDXGIOutput> m_dxgiOutput;
         ComPtr<IDXGISwapChain3> m_dxgiSwapChain3;
         vecsp<DxResource> m_swapChainBuffers;

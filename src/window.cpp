@@ -21,7 +21,6 @@ namespace dt
     
     Window::~Window()
     {
-        m_game.reset();
         m_keyboard.reset();
         
         if (m_hwnd)
@@ -40,6 +39,11 @@ namespace dt
         m_game = mup<Game>(m_width, m_height);
 
         return true;
+    }
+
+    void Window::Destroy()
+    {
+        m_game.reset();
     }
 
     int Window::Run()
@@ -123,6 +127,7 @@ namespace dt
         switch (uMsg)
         {
         case WM_DESTROY:
+            Destroy();
             PostQuitMessage(0);
             return 0;
             

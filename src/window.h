@@ -22,6 +22,7 @@ namespace dt
         HWND GetHandle() const { return m_hwnd; }
 
         bool Create();
+        void Destroy();
         int Run();
         
     private:

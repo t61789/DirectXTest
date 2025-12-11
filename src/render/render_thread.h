@@ -34,6 +34,7 @@ namespace dt
         void ThreadMain();
         void AddCmd(sp<RenderCmd>&& cmd);
         void StopThread();
+        void WaitForFence();
 
         ComPtr<ID3D12Device> m_device;
         ComPtr<ID3D12CommandAllocator> m_cmdAllocator;

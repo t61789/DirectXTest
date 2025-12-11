@@ -1,5 +1,7 @@
 #include "game/game.h"
 
+#include <tracy/Tracy.hpp>
+
 #include "game_resource.h"
 #include "objects/scene.h"
 #include "render/render_pipeline.h"
@@ -34,12 +36,16 @@ namespace dt
 
     void Game::Update()
     {
+        ZoneScoped;
+        
         UpdateTime();
         UpdateComps();
     }
 
     void Game::Render()
     {
+        ZoneScoped;
+        
         m_renderPipeline->Render();
     }
 

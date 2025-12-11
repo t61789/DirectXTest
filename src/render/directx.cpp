@@ -25,11 +25,11 @@ namespace dt
     {
         m_windowHwnd = Window::Ins()->GetHandle();
 
-        EnableDebugLayer();
+        CreateDebugLayer();
 
-        LoadFactory();
-        LoadAdapter();
-        LoadOutput();
+        CreateFactory();
+        CreateAdapter();
+        CreateOutput();
         LoadOutputModes();
 
         CreateDevice();
@@ -52,13 +52,13 @@ namespace dt
 
         m_dsvHeap.Reset();
         m_rtvHeap.Reset();
-        m_device.Reset();
         m_depthStencilBuffer.Reset();
         m_swapChainBuffers.clear();
         m_dxgiSwapChain3.Reset();
+        m_device.Reset();
         m_commandQueue.Reset();
         m_dxgiOutput.Reset();
-        m_dxgiAdapter.Reset();
+        m_dxgiAdapter1.Reset();
         m_dxgiFactor4.Reset();
         m_debugLayer.Reset();
     }
@@ -173,39 +173,39 @@ namespace dt
         throw std::runtime_error(msg);
     }
 
-    void DirectX::EnableDebugLayer()
+    void DirectX::CreateDebugLayer()
     {
         THROW_IF_FAILED(D3D12GetDebugInterface(IID_ID3D12Debug, &m_debugLayer));
         m_debugLayer->EnableDebugLayer();
     }
 
-    void DirectX::LoadFactory()
+    void DirectX::CreateFactory()
     {
-        THROW_IF_FAILED(CreateDXGIFactory(IID_IDXGIFactory4, &m_dxgiFactor4));
+        THROW_IF_FAILED(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_IDXGIFactory4, &m_dxgiFactor4));
     }
 
-    void DirectX::LoadAdapter()
+    void DirectX::CreateAdapter()
     {
         for (uint32_t i = 0;; i++)
         {
-            THROW_IF(m_dxgiFactor4->EnumAdapters(i, &m_dxgiAdapter) == DXGI_ERROR_NOT_FOUND, "Failed to find DXGI adapter.");
+            THROW_IF(m_dxgiFactor4->EnumAdapters1(i, &m_dxgiAdapter1) == DXGI_ERROR_NOT_FOUND, "Failed to find DXGI adapter.");
 
-            if (SUCCEEDED(m_dxgiAdapter->GetDesc(&m_dxgiAdapterDesc)))
+            if (SUCCEEDED(m_dxgiAdapter1->GetDesc(&m_dxgiAdapterDesc)))
             {
                 break;
             }
 
-            m_dxgiAdapter.Reset();
+            m_dxgiAdapter1.Reset();
         }
         
         log_info("Adapter: %s", Utils::WStringToString(m_dxgiAdapterDesc.Description).c_str());
     }
 
-    void DirectX::LoadOutput()
+    void DirectX::CreateOutput()
     {
         for (uint32_t i = 0;; i++)
         {
-            THROW_IF(m_dxgiAdapter->EnumOutputs(i, &m_dxgiOutput) == DXGI_ERROR_NOT_FOUND, "Failed to find DXGI output.");
+            THROW_IF(m_dxgiAdapter1->EnumOutputs(i, &m_dxgiOutput) == DXGI_ERROR_NOT_FOUND, "Failed to find DXGI output.");
 
             if (SUCCEEDED(m_dxgiOutput->GetDesc(&m_dxgiOutputDesc)))
             {
@@ -248,7 +248,7 @@ namespace dt
 
     void DirectX::CreateDevice()
     {
-        THROW_IF_FAILED(D3D12CreateDevice(m_dxgiAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_ID3D12Device, &m_device));
+        THROW_IF_FAILED(D3D12CreateDevice(m_dxgiAdapter1.Get(), D3D_FEATURE_LEVEL_11_0, IID_ID3D12Device, &m_device));
 
         m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
         m_dsvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
