@@ -8,6 +8,7 @@
 #include "i_resource.h"
 #include "math.h"
 #include "utils.h"
+#include "render/dx_resource.h"
 
 namespace dt
 {
@@ -86,8 +87,8 @@ namespace dt
         vec<float> m_vertexData;
         vec<uint32_t> m_indexData;
 
-        ComPtr<ID3D12Resource> m_vertexBuffer;
-        ComPtr<ID3D12Resource> m_indexBuffer;
+        sp<DxResource> m_vertexBuffer;
+        sp<DxResource> m_indexBuffer;
 
         D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW m_indexBufferView;

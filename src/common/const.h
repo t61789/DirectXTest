@@ -9,12 +9,17 @@
 
 namespace dt
 {
+    #define TRACY_IDLE_COLOR 0x25281E
+
+    #define DESC_HANDLE_POOL_SIZE 16384
+    #define SAMPLER_DESC_POOL_SIZE 100
+    
     #define PI 3.1415926535f
     #define DEG2RAD 0.0174532925f
     #define RAD2DEG 57.2957795f
     #define EPSILON 1e-6
     
-    #define THROW_ERROR(msg) throw std::runtime_error(format_log(Error, msg));
+    #define THROW_ERROR(msg) throw std::runtime_error(format_log(LOG_ERROR, msg));
     #define THROW_ERRORF(msg, ...) throw std::runtime_error(format_log(LOG_ERROR, msg, __VA_ARGS__));
     #define THROW_IF(cond, msg) if (cond) throw std::runtime_error(msg)
     #define THROW_IF_FAILED(cond) if (auto hr = (cond); FAILED(hr)) throw std::runtime_error("The execution of d3d command failed: " + Utils::ToString(hr))
@@ -35,6 +40,7 @@ namespace dt
     STRING_HANDLE(M, _M)
     STRING_HANDLE(IM, _IM)
     STRING_HANDLE(CAMERA_POSITION_WS, _CameraPositionWS)
+    STRING_HANDLE(BINDLESS_TEXTURES, _BindlessTextures)
 
     static const uint32_t MAX_REGISTER_COUNT = 16;
     static const auto UNNAMED_OBJECT = StringHandle("Unnamed Object");

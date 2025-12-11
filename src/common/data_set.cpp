@@ -44,12 +44,14 @@ namespace dt
     bool DataSet::TryGetImp(const string_hash nameId, void* data, const uint32_t sizeB)
     {
         auto dataInfo = find(m_data, &DataInfo::nameId, nameId);
-        if (!dataInfo || dataInfo->sizeB != sizeB)
+        if (!dataInfo)
         {
             return false;
         }
 
-        memcpy(data, dataInfo->data, sizeB);
+        auto clampedSizeB = std::min(sizeB, dataInfo->sizeB);
+
+        memcpy(data, dataInfo->data, clampedSizeB);
 
         return true;
     }

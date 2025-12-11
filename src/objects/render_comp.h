@@ -15,7 +15,6 @@ namespace dt
     class RenderComp final : public Comp
     {
     public:
-        void Awake() override;
         void Start() override;
         void OnEnable() override;
         void OnDisable() override;
@@ -26,7 +25,6 @@ namespace dt
         bool HasOddNegativeScale() const;
         sp<Mesh> GetMesh() const { return m_mesh;}
         sp<Material> GetMaterial() const { return m_material;}
-        sp<Cbuffer> GetPerObjectCbuffer() const { return m_perObjectCbuffer;}
 
         void LoadFromJson(const nlohmann::json& objJson) override;
 
@@ -37,7 +35,6 @@ namespace dt
         EventHandler m_onTransformDirtyHandler = 0;
         bool m_transformDirty = true;
         Bounds m_worldBounds;
-        sp<Cbuffer> m_perObjectCbuffer;
 
         void OnTransformDirty();
 

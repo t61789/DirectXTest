@@ -11,7 +11,10 @@
 #include <directx/d3dx12_root_signature.h>
 #include <directx/d3dx12_barriers.h>
 #include <directx/d3dx12_core.h>
+#include <tracy/Tracy.hpp>
 
+#include "dx_resource.h"
+#include "render_thread.h"
 #include "window.h"
 #include "common/utils.h"
 #include "common/math.h"
@@ -31,9 +34,10 @@ namespace dt
 
         CreateDevice();
         CreateCommandQueue();
-        CreateCommandAllocator();
-        CreateCommandList();
-        CreateFence();
+
+        m_renderThread = msp<RenderThread>(m_device);
+        m_descHandlePool = msp<SrvDescPool>(m_device);
+        
         CreateSwapChain();
         CreateDescriptorHeaps();
         CreateRenderTargets();
@@ -43,26 +47,39 @@ namespace dt
 
     DirectX::~DirectX()
     {
-        FlushCommand();
-        IncreaseFence();
-        WaitForFence();
-        
-        CloseHandle(m_fenceEvent);
+        m_descHandlePool.reset();
+        m_renderThread.reset();
+
+        m_dsvHeap.Reset();
+        m_rtvHeap.Reset();
+        m_device.Reset();
+        m_depthStencilBuffer.Reset();
+        m_swapChainBuffers.clear();
+        m_dxgiSwapChain3.Reset();
+        m_commandQueue.Reset();
+        m_dxgiOutput.Reset();
+        m_dxgiAdapter.Reset();
+        m_dxgiFactor4.Reset();
+        m_debugLayer.Reset();
     }
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE DirectX::GetBackBufferHandle()
     {
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-        rtvHandle.Offset(static_cast<int>(m_swapChainBufferIndex * m_rtvDescriptorSize));
+        rtvHandle.Offset(static_cast<int>(m_backBufferIndex * m_rtvDescriptorSize));
 
         return rtvHandle;
     }
 
     void DirectX::PresentSwapChain()
     {
-        THROW_IF_FAILED(m_dxgiSwapChain->Present(1, 0));
+        THROW_IF_FAILED(m_dxgiSwapChain3->Present(1, 0));
+        m_backBufferIndex = m_dxgiSwapChain3->GetCurrentBackBufferIndex();
+    }
 
-        m_swapChainBufferIndex = (m_swapChainBufferIndex + 1) % m_swapChainDesc.BufferCount;
+    void DirectX::EndFrame()
+    {
+        RenderThread::Ins()->ReleaseCmdResources();
     }
 
     ComPtr<ID3D12Resource> DirectX::CreateUploadBuffer(const void* data, const size_t sizeB)
@@ -162,44 +179,16 @@ namespace dt
         m_debugLayer->EnableDebugLayer();
     }
 
-    void DirectX::FlushCommand()
-    {
-        THROW_IF_FAILED(m_commandList->Close());
-        ID3D12CommandList* cmdList[] = { m_commandList.Get() };
-        m_commandQueue->ExecuteCommandLists(1, cmdList);
-    }
-
-    void DirectX::IncreaseFence()
-    {
-        m_fenceValue++;
-        THROW_IF_FAILED(m_commandQueue->Signal(m_fence.Get(), m_fenceValue));
-    }
-
-    void DirectX::WaitForFence()
-    {
-        if (m_fence->GetCompletedValue() < m_fenceValue)
-        {
-            THROW_IF_FAILED(m_fence->SetEventOnCompletion(m_fenceValue, m_fenceEvent));
-            
-            THROW_IF(WaitForSingleObject(m_fenceEvent, INFINITE) != WAIT_OBJECT_0, "Call wait for fence event failed.");
-        }
-
-        THROW_IF_FAILED(m_commandAllocator->Reset());
-        THROW_IF_FAILED(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
-
-        m_cmds.clear();
-    }
-
     void DirectX::LoadFactory()
     {
-        THROW_IF_FAILED(CreateDXGIFactory(IID_IDXGIFactory, &m_dxgiFactor));
+        THROW_IF_FAILED(CreateDXGIFactory(IID_IDXGIFactory4, &m_dxgiFactor4));
     }
 
     void DirectX::LoadAdapter()
     {
         for (uint32_t i = 0;; i++)
         {
-            THROW_IF(m_dxgiFactor->EnumAdapters(i, &m_dxgiAdapter) == DXGI_ERROR_NOT_FOUND, "Failed to find DXGI adapter.");
+            THROW_IF(m_dxgiFactor4->EnumAdapters(i, &m_dxgiAdapter) == DXGI_ERROR_NOT_FOUND, "Failed to find DXGI adapter.");
 
             if (SUCCEEDED(m_dxgiAdapter->GetDesc(&m_dxgiAdapterDesc)))
             {
@@ -275,52 +264,40 @@ namespace dt
         THROW_IF_FAILED(m_device->CreateCommandQueue(&desc, IID_ID3D12CommandQueue, &m_commandQueue));
     }
 
-    void DirectX::CreateCommandAllocator()
-    {
-        THROW_IF_FAILED(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_ID3D12CommandAllocator, &m_commandAllocator));
-    }
-
-    void DirectX::CreateCommandList()
-    {
-        THROW_IF_FAILED(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_ID3D12GraphicsCommandList, &m_commandList));
-    }
-
-    void DirectX::CreateFence()
-    {
-        THROW_IF_FAILED(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_ID3D12Fence, &m_fence));
-
-        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        THROW_IF(m_fenceEvent == nullptr, "Failed to create fence event.");
-    }
-
     void DirectX::CreateSwapChain()
     {
-        DXGI_MODE_DESC modeDesc = {};
-        modeDesc.Width = 1600;
-        modeDesc.Height = 900;
-        modeDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        modeDesc.RefreshRate.Numerator = 144;
-        modeDesc.RefreshRate.Denominator = 1;
-        modeDesc.Scaling = DXGI_MODE_SCALING_STRETCHED;
+        m_swapChainDesc1 = {};
+        m_swapChainDesc1.Width = 1600;
+        m_swapChainDesc1.Height = 900;
+        m_swapChainDesc1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        m_swapChainDesc1.Stereo = FALSE;
+        m_swapChainDesc1.SampleDesc.Count = 1;
+        m_swapChainDesc1.SampleDesc.Quality = 0;
+        m_swapChainDesc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        m_swapChainDesc1.BufferCount = 2;
+        m_swapChainDesc1.Scaling = DXGI_SCALING_STRETCH;
+        m_swapChainDesc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        m_swapChainDesc1.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+        ComPtr<IDXGISwapChain1> swapChain1;
+        THROW_IF_FAILED(m_dxgiFactor4->CreateSwapChainForHwnd(
+            m_commandQueue.Get(),
+            m_windowHwnd,
+            &m_swapChainDesc1,
+            nullptr,
+            nullptr,
+            &swapChain1));
         
-        m_swapChainDesc = {};
-        m_swapChainDesc.BufferDesc = modeDesc;
-        m_swapChainDesc.SampleDesc.Quality = 0;
-        m_swapChainDesc.SampleDesc.Count = 1;
-        m_swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        m_swapChainDesc.BufferCount = 2;
-        m_swapChainDesc.OutputWindow = m_windowHwnd;
-        m_swapChainDesc.Windowed = TRUE;
-        m_swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-        m_swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        THROW_IF_FAILED(swapChain1.As(&m_dxgiSwapChain3));
+        m_backBufferIndex = m_dxgiSwapChain3->GetCurrentBackBufferIndex();
 
-        THROW_IF_FAILED(m_dxgiFactor->CreateSwapChain(m_commandQueue.Get(), &m_swapChainDesc, &m_dxgiSwapChain));
-
-        m_swapChainBuffers.resize(m_swapChainDesc.BufferCount);
-        for (uint32_t i = 0; i < m_swapChainDesc.BufferCount; i++)
+        m_swapChainBuffers.resize(m_swapChainDesc1.BufferCount);
+        for (uint32_t i = 0; i < m_swapChainDesc1.BufferCount; i++)
         {
-            THROW_IF_FAILED(m_dxgiSwapChain->GetBuffer(i, IID_ID3D12Resource, &m_swapChainBuffers[i]));
-            THROW_IF_FAILED(m_swapChainBuffers[i]->SetName(L"Swap Cain Buffer"));
+            ComPtr<ID3D12Resource> buffer;
+            THROW_IF_FAILED(m_dxgiSwapChain3->GetBuffer(i, IID_ID3D12Resource, &buffer));
+
+            m_swapChainBuffers[i] = DxResource::Create(buffer, D3D12_RESOURCE_STATE_PRESENT, L"Swap Cain Buffer");
         }
     }
 
@@ -328,7 +305,7 @@ namespace dt
     {
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
         rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        rtvHeapDesc.NumDescriptors = m_swapChainDesc.BufferCount;
+        rtvHeapDesc.NumDescriptors = m_swapChainDesc1.BufferCount;
         rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         rtvHeapDesc.NodeMask = 0;
 
@@ -346,9 +323,9 @@ namespace dt
     void DirectX::CreateRenderTargets()
     {
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-        for (uint32_t i = 0; i < m_swapChainDesc.BufferCount; i++)
+        for (uint32_t i = 0; i < m_swapChainDesc1.BufferCount; i++)
         {
-            m_device->CreateRenderTargetView(m_swapChainBuffers[i].Get(), nullptr, rtvHandle);
+            m_device->CreateRenderTargetView(m_swapChainBuffers[i]->GetResource(), nullptr, rtvHandle);
             rtvHandle.Offset(static_cast<int>(m_rtvDescriptorSize));
         }
     }

@@ -55,4 +55,12 @@ namespace dt
             return renderObject->renderComp == renderComp;
         });
     }
+
+    void RenderTree::UpdateTransform(RenderComp* renderComp, cr<XMFLOAT4X4> localToWorld, cr<XMFLOAT4X4> worldToLocal)
+    {
+        auto ro = m_registeredComps.at(renderComp);
+        
+        ro->perObjectCbuffer->Write(M, &localToWorld, sizeof(XMFLOAT4X4));
+        ro->perObjectCbuffer->Write(IM, &worldToLocal, sizeof(XMFLOAT4X4));
+    }
 }

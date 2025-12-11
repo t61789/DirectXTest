@@ -1,6 +1,8 @@
 ﻿#pragma once
+
 #include "cbuffer.h"
 #include "common/const.h"
+#include "common/math.h"
 
 namespace dt
 {
@@ -27,6 +29,8 @@ namespace dt
 
         template <typename F>
         void Foreach(F&& func);
+
+        void UpdateTransform(RenderComp* renderComp, cr<XMFLOAT4X4> localToWorld, cr<XMFLOAT4X4> worldToLocal);
 
     private:
         vecsp<RenderObject> m_renderObjects;

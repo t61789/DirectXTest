@@ -16,6 +16,7 @@
 #include "game/game_resource.h"
 #include "render/directx.h"
 #include "render/dx_helper.h"
+#include "render/render_thread.h"
 
 namespace dt
 {
@@ -234,50 +235,36 @@ namespace dt
         cr<Bounds> bounds)
     {
         auto vertexDataStrideB = static_cast<int>(vertexData.size() / vertexCount * sizeof(float));
-        
-        auto vbUploadBuffer = Dx()->CreateUploadBuffer(
-            vertexData.data(),
-            vertexData.size() * sizeof(float));
-        auto vbBuffer = Dx()->CreateCommittedResource(
+
+        auto vertexDataSizeB = vertexData.size() * sizeof(float);
+        auto vb = DxResource::Create(
             CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            CD3DX12_RESOURCE_DESC::Buffer(vbUploadBuffer->GetDesc().Width),
-            D3D12_RESOURCE_STATE_COMMON,
+            CD3DX12_RESOURCE_DESC::Buffer(vertexDataSizeB),
+            D3D12_RESOURCE_STATE_COPY_DEST,
             nullptr,
             D3D12_HEAP_FLAG_NONE,
             L"Vertex Buffer");
         D3D12_VERTEX_BUFFER_VIEW vbView = {};
-        vbView.SizeInBytes = vbUploadBuffer->GetDesc().Width;
+        vbView.SizeInBytes = vertexDataSizeB;
         vbView.StrideInBytes = vertexDataStrideB;
-        vbView.BufferLocation = vbBuffer->GetGPUVirtualAddress();
+        vbView.BufferLocation = vb->GetResource()->GetGPUVirtualAddress();
+        vb->Upload(vertexData.data(), vertexDataSizeB);
+        DxHelper::AddTransition(vb, D3D12_RESOURCE_STATE_COMMON);
 
-        auto ibUploadBuffer = Dx()->CreateUploadBuffer(
-            indices.data(),
-            indices.size() * sizeof(uint32_t));
-        auto ibBuffer = Dx()->CreateCommittedResource(
+        auto indicesSizeB = indices.size() * sizeof(uint32_t);
+        auto ib = DxResource::Create(
             CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            CD3DX12_RESOURCE_DESC::Buffer(ibUploadBuffer->GetDesc().Width),
-            D3D12_RESOURCE_STATE_COMMON,
+            CD3DX12_RESOURCE_DESC::Buffer(indicesSizeB),
+            D3D12_RESOURCE_STATE_COPY_DEST,
             nullptr,
             D3D12_HEAP_FLAG_NONE,
             L"Index Buffer");
         D3D12_INDEX_BUFFER_VIEW ibView = {};
         ibView.Format = DXGI_FORMAT_R32_UINT;
-        ibView.SizeInBytes = ibUploadBuffer->GetDesc().Width;
-        ibView.BufferLocation = ibBuffer->GetGPUVirtualAddress();
-
-        Dx()->AddCommand([vbUploadBuffer, vbBuffer, ibUploadBuffer, ibBuffer](ID3D12GraphicsCommandList* cmdList)
-        {
-            DxHelper::AddTransition(vbBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-            DxHelper::AddTransition(ibBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-            DxHelper::ApplyTransitions(cmdList);
-            
-            cmdList->CopyResource(vbBuffer.Get(), vbUploadBuffer.Get());
-            cmdList->CopyResource(ibBuffer.Get(), ibUploadBuffer.Get());
-
-            DxHelper::AddTransition(vbBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-            DxHelper::AddTransition(ibBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
-            DxHelper::ApplyTransitions(cmdList);
-        });
+        ibView.SizeInBytes = indicesSizeB;
+        ibView.BufferLocation = ib->GetResource()->GetGPUVirtualAddress();
+        ib->Upload(indices.data(), indicesSizeB);
+        DxHelper::AddTransition(ib, D3D12_RESOURCE_STATE_COMMON);
 
         sp<Mesh> result = msp<Mesh>();
         result->m_vertexBufferView = vbView;
@@ -287,9 +274,9 @@ namespace dt
         result->m_bounds = bounds;
         result->m_inputLayout = GetD3dVertexLayout(vertexAttribInfo);
         result->m_vertexData = std::move(vertexData);
-        result->m_vertexBuffer = std::move(vbBuffer);
+        result->m_vertexBuffer = std::move(vb);
         result->m_indexData = std::move(indices);
-        result->m_indexBuffer = std::move(ibBuffer);
+        result->m_indexBuffer = std::move(ib);
         result->m_vertexAttribInfo = std::move(vertexAttribInfo);
 
         return result;

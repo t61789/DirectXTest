@@ -3,11 +3,19 @@
 #include <cassert>
 
 #include "render/cbuffer.h"
+#include "render/global_material_params.h"
 
 namespace dt
 {
+    GameResource::GameResource()
+    {
+        m_globalMaterialParams = new GlobalMaterialParams();
+    }
+
     GameResource::~GameResource()
     {
+        delete m_globalMaterialParams;
+        
         m_predefinedCbuffers.clear();
     }
 
@@ -17,6 +25,8 @@ namespace dt
         {
             return cb && cb->GetLayout()->name == name;
         });
+
+        assert(result);
 
         if (result)
         {

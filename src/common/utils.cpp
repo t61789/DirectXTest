@@ -108,7 +108,17 @@ namespace dt
     {
         return relative(absPath, std::filesystem::current_path()).generic_string();
     }
-    
+
+    bool Utils::EndsWith(crstr str, crstr suffix)
+    {
+        if (suffix.length() > str.length())
+        {
+            return false;
+        }
+        
+        return str.rfind(suffix) == str.length() - suffix.length();
+    }
+
     size_t Utils::GetFileHash(const std::string& path)
     {
         auto filename = ToAbsPath(path);
@@ -163,6 +173,12 @@ namespace dt
     {
         static std::hash<std::string> hasher;
         return hasher(std::string(static_cast<const char*>(data), sizeB));
+    }
+    
+    bool Utils::AssetExists(const std::string& path)
+    {
+        auto absPath = ToAbsPath(path);
+        return std::filesystem::exists(absPath);
     }
 
     nlohmann::json Utils::GetResourceMeta(const std::string& assetPath)

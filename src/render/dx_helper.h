@@ -2,6 +2,7 @@
 
 #include <directx/d3d12.h>
 
+#include "dx_resource.h"
 #include "common/material.h"
 
 namespace dt
@@ -21,14 +22,21 @@ namespace dt
         static void BindRootSignature(ID3D12GraphicsCommandList* cmdList, const Shader* shader);
         static void BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material);
         static void BindCbuffer(ID3D12GraphicsCommandList* cmdList, const Shader* shader, Cbuffer* cbuffer);
+        static void BindBindlessTextures(ID3D12GraphicsCommandList* cmdList, const Shader* shader);
         static void BindMesh(ID3D12GraphicsCommandList* cmdList, const Mesh* mesh);
         
-        static void AddTransition(ID3D12Resource* resource, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
+        static void AddTransition(crsp<DxResource> resource, D3D12_RESOURCE_STATES state);
         static void ApplyTransitions(ID3D12GraphicsCommandList* cmdList);
-
+        
         static uint32_t GetRegisterType(D3D_SHADER_INPUT_TYPE resourceType);
 
     private:
-        inline static vec<D3D12_RESOURCE_BARRIER> m_transitions;
+        struct Transition
+        {
+            sp<DxResource> resource;
+            D3D12_RESOURCE_STATES state;
+        };
+        
+        inline static vec<Transition> m_transitions;
     };
 }

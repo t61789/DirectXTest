@@ -1,16 +1,20 @@
 #pragma once
 #include <d3d12.h>
 #include <dxgi.h>
+#include <dxgi1_4.h>
 #include <directx/d3dx12_root_signature.h>
 #include <wrl/client.h>
 
+#include "desc_handle_pool.h"
 #include "common/const.h"
 #include "common/utils.h"
 
 namespace dt
 {
+    class DxBuffer;
+    class RenderThread;
     using namespace Microsoft::WRL;
-    
+
     class DirectX : public Singleton<DirectX>
     {
     public:
@@ -22,18 +26,13 @@ namespace dt
         DirectX& operator=(DirectX&& other) noexcept = delete;
 
         ComPtr<ID3D12Device> GetDevice() const { return m_device; }
-        cr<DXGI_SWAP_CHAIN_DESC> GetSwapChainDesc() const { return m_swapChainDesc; }
-        ComPtr<ID3D12Resource> GetBackBuffer() const { return m_swapChainBuffers[m_swapChainBufferIndex]; }
+        cr<DXGI_SWAP_CHAIN_DESC1> GetSwapChainDesc() const { return m_swapChainDesc1; }
+        sp<DxResource> GetBackBuffer() const { return m_swapChainBuffers[m_backBufferIndex]; }
+        ID3D12CommandQueue* GetCommandQueue() const { return m_commandQueue.Get(); }
         CD3DX12_CPU_DESCRIPTOR_HANDLE GetBackBufferHandle();
 
-        template <typename F>
-        void AddCommand(F&& func);
-        void FlushCommand();
-
-        void IncreaseFence();
-        void WaitForFence();
-        
         void PresentSwapChain();
+        void EndFrame();
 
         ComPtr<ID3D12Resource> CreateUploadBuffer(const void* data, size_t sizeB);
         ComPtr<ID3D12Resource> CreateCommittedResource(
@@ -55,30 +54,25 @@ namespace dt
         void LoadOutputModes();
         void CreateDevice();
         void CreateCommandQueue();
-        void CreateCommandAllocator();
-        void CreateCommandList();
-        void CreateFence();
         void CreateSwapChain();
         void CreateDescriptorHeaps();
         void CreateRenderTargets();
         // void CreateTextures();
 
         ComPtr<ID3D12Debug> m_debugLayer;
-        ComPtr<IDXGIFactory> m_dxgiFactor;
+        ComPtr<IDXGIFactory4> m_dxgiFactor4;
         ComPtr<IDXGIAdapter> m_dxgiAdapter;
         ComPtr<IDXGIOutput> m_dxgiOutput;
-        ComPtr<IDXGISwapChain> m_dxgiSwapChain;
-        vec<ComPtr<ID3D12Resource>> m_swapChainBuffers;
+        ComPtr<IDXGISwapChain3> m_dxgiSwapChain3;
+        vecsp<DxResource> m_swapChainBuffers;
         ComPtr<ID3D12Resource> m_depthStencilBuffer;
         DXGI_ADAPTER_DESC m_dxgiAdapterDesc;
         DXGI_OUTPUT_DESC m_dxgiOutputDesc;
         vec<DXGI_MODE_DESC> m_dxgiOutputModes;
-        DXGI_SWAP_CHAIN_DESC m_swapChainDesc;
+        DXGI_SWAP_CHAIN_DESC1 m_swapChainDesc1;
 
         ComPtr<ID3D12Device> m_device;
         ComPtr<ID3D12CommandQueue> m_commandQueue;
-        ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-        ComPtr<ID3D12GraphicsCommandList> m_commandList;
         ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
         ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
 
@@ -86,24 +80,14 @@ namespace dt
         uint32_t m_dsvDescriptorSize;
         uint32_t m_cbvDescriptorSize;
         
-        ComPtr<ID3D12Fence> m_fence;
-        HANDLE m_fenceEvent;
-        uint64_t m_fenceValue = 0;
+        uint32_t m_backBufferIndex = 0;
 
-        vec<D3D12_RESOURCE_BARRIER> m_transitions;
-        vec<std::function<void(ID3D12GraphicsCommandList*)>> m_cmds;
-
-        uint32_t m_swapChainBufferIndex = 0;
+        sp<SrvDescPool> m_descHandlePool;
 
         HWND m_windowHwnd;
-    };
 
-    template <typename F>
-    void DirectX::AddCommand(F&& func)
-    {
-        m_cmds.push_back(func);
-        func(m_commandList.Get());
-    }
+        sp<RenderThread> m_renderThread;
+    };
 
     static DirectX* Dx() { return DirectX::Ins(); }
 }

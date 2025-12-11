@@ -16,7 +16,6 @@
 
 namespace dt
 {
-    
     enum LogType : uint8_t
     {
         LOG_INFO,
@@ -37,11 +36,13 @@ namespace dt
         static str ToString(long hr);
         static str ToAbsPath(crstr relativePath);
         static str ToRelativePath(crstr absPath);
+        static bool EndsWith(crstr str, crstr suffix);
 
         static size_t GetFileHash(const std::string& path);
         static size_t CombineHash(size_t hash1, size_t hash2);
         static size_t GetMemoryHash(const void* data, size_t sizeB);
         
+        static bool AssetExists(const std::string& path);
         static nlohmann::json GetResourceMeta(const std::string& assetPath);
         static str GetResourceMetaPath(crstr assetPath);
         static std::vector<uint8_t> Base64ToBinary(const std::string& base64Str);
@@ -376,6 +377,12 @@ namespace dt
     static T get_val(const nlohmann::json& j, const char* name)
     {
         return j.at(name).get<T>();
+    }
+
+    template <typename T>
+    static uint8_t enum_int(T e)
+    {
+        return static_cast<uint8_t>(e);
     }
 
     template <typename T>

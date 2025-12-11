@@ -26,11 +26,11 @@ namespace dt
         m_desc.SampleDesc.Quality = 0;
     }
 
-    ComPtr<ID3D12PipelineState> Pso::CurPso()
+    ID3D12PipelineState* Pso::CurPso()
     {
         Update();
 
-        return m_curPso;
+        return m_curPso.Get();
     }
 
     void Pso::SetDepthMode(const DepthMode mode)

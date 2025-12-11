@@ -24,6 +24,7 @@ namespace dt
         {
             uint32_t rootParameterIndex;
             uint32_t registerIndex;
+            uint32_t registerSpace;
             uint32_t registerType;
             StringHandle resourceName;
             D3D_SHADER_INPUT_TYPE resourceType;

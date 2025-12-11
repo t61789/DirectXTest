@@ -35,6 +35,7 @@ find_package(DirectX-Headers REQUIRED)
 find_package(assimp REQUIRED)
 find_package(Tracy REQUIRED)
 find_package(Boost REQUIRED)
+find_package(stb REQUIRED)
 
 # 链接依赖库
 target_link_libraries(${PROJECT_NAME} 
@@ -49,6 +50,7 @@ target_link_libraries(${PROJECT_NAME}
 		assimp::assimp
 		Tracy::TracyClient
 		boost::boost
+		stb::stb
 )
 
 # 安装目标

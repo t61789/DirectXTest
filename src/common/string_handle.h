@@ -13,7 +13,7 @@ namespace dt
         StringHandle();
         StringHandle(const char* str);
         StringHandle(const std::string& str);
-        
+
         bool Empty() const;
 
         size_t Hash() const { return m_hash; }

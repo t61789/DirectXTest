@@ -15,7 +15,7 @@ namespace dt
     public:
         explicit Pso(Shader* shader);
 
-        ComPtr<ID3D12PipelineState> CurPso();
+        ID3D12PipelineState* CurPso();
 
         void SetDepthMode(DepthMode mode);
         void SetDepthWrite(bool enable);

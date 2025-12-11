@@ -5,6 +5,7 @@
 #include "directx.h"
 #include "dx_helper.h"
 #include "render_context.h"
+#include "render_thread.h"
 #include "window.h"
 #include "common/material.h"
 #include "common/mesh.h"
@@ -27,13 +28,13 @@ namespace dt
 
     void RenderPipeline::Render()
     {
-        Dx()->AddCommand([this](ID3D12GraphicsCommandList* cmdList)
+        RT()->AddCmd([this](ID3D12GraphicsCommandList* cmdList)
         {
             DxHelper::PrepareRendering(cmdList);
-            
-            DxHelper::SetViewport(cmdList, Dx()->GetSwapChainDesc().BufferDesc.Width, Dx()->GetSwapChainDesc().BufferDesc.Height);
 
-            DxHelper::AddTransition(Dx()->GetBackBuffer().Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            DxHelper::SetViewport(cmdList, Dx()->GetSwapChainDesc().Width, Dx()->GetSwapChainDesc().Height);
+            
+            DxHelper::AddTransition(Dx()->GetBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET);
             DxHelper::ApplyTransitions(cmdList);
         
             auto backBufferTexHandle = Dx()->GetBackBufferHandle();
@@ -41,14 +42,15 @@ namespace dt
 
             RenderScene(cmdList, GR()->mainScene);
             
-            DxHelper::AddTransition(Dx()->GetBackBuffer().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+            DxHelper::AddTransition(Dx()->GetBackBuffer(), D3D12_RESOURCE_STATE_PRESENT);
             DxHelper::ApplyTransitions(cmdList);
         });
-        
-        Dx()->FlushCommand();
-        Dx()->IncreaseFence();
-        Dx()->WaitForFence();
-        Dx()->PresentSwapChain();
+
+        RT()->FlushCmds();
+
+        RT()->WaitForDone();
+
+        RT()->ReleaseCmdResources();
     }
 
     void RenderPipeline::RenderScene(ID3D12GraphicsCommandList* cmdList, const Scene* scene)
@@ -57,15 +59,14 @@ namespace dt
         Material* material = nullptr;
         Mesh* mesh = nullptr;
         
-        scene->GetRenderTree()->Foreach([&](RenderObject* ro)
+        scene->GetRenderTree()->Foreach([&](const RenderObject* ro)
         {
             auto rebindRootSignature = ro->shader != shader;
             auto rebindPso = ro->material != material;
-            auto rebindAllCbuffer = rebindRootSignature || rebindPso;
-            auto rebindPerMaterialCbuffer = rebindAllCbuffer || ro->material != material;
-            auto rebindPerViewCbuffer = rebindAllCbuffer;
-            auto rebindGlobalCbuffer = rebindAllCbuffer;
-            auto rebindMesh = rebindRootSignature || rebindPso || ro->mesh != mesh;
+            auto rebindGlobalCbuffer = rebindRootSignature;
+            auto rebindPerViewCbuffer = rebindRootSignature;
+            auto rebindPerMaterialCbuffer = rebindRootSignature || ro->material != material;
+            auto rebindMesh = ro->mesh != mesh;
             
             if (rebindRootSignature)
             {
@@ -77,14 +78,6 @@ namespace dt
                 DxHelper::BindPso(cmdList, ro->material);
             }
 
-            if (rebindPerMaterialCbuffer)
-            {
-                if (ro->material->GetCbuffer())
-                {
-                    DxHelper::BindCbuffer(cmdList, ro->shader, ro->material->GetCbuffer());
-                }
-            }
-
             if (rebindGlobalCbuffer)
             {
                 DxHelper::BindCbuffer(cmdList, ro->shader, GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER).get());
@@ -94,8 +87,16 @@ namespace dt
             {
                 DxHelper::BindCbuffer(cmdList, ro->shader, GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
             }
-            
+
             DxHelper::BindCbuffer(cmdList, ro->shader, ro->perObjectCbuffer.get());
+
+            if (rebindPerMaterialCbuffer)
+            {
+                if (ro->material->GetCbuffer())
+                {
+                    DxHelper::BindCbuffer(cmdList, ro->shader, ro->material->GetCbuffer());
+                }
+            }
 
             if (rebindMesh)
             {

@@ -15,6 +15,7 @@ class ImGuiExample(ConanFile):
         self.requires("assimp/5.4.3")
         self.requires("tracy/0.12.1")
         self.requires("boost/1.88.0")
+        self.requires("stb/cci.20230920")
         
     def layout(self):
         cmake_layout(self)

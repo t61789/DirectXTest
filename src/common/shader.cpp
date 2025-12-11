@@ -124,13 +124,27 @@ namespace dt
         vec<CD3DX12_ROOT_PARAMETER> rootParameters;
         for (auto& bindResource : reflectionPack.bindResources)
         {
-            auto registerIndex = bindResource.registerIndex;
-            
             rootParameters.emplace_back();
 
             if (bindResource.resourceType == D3D_SIT_CBUFFER)
             {
-                rootParameters.back().InitAsConstantBufferView(registerIndex);
+                rootParameters.back().InitAsConstantBufferView(bindResource.registerIndex, bindResource.registerSpace);
+            }
+            else if (bindResource.resourceType == D3D_SIT_TEXTURE)
+            {
+                if (bindResource.resourceName != BINDLESS_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 0)
+                {
+                    THROW_ERROR("Texture resource needs to be bindless with t0 and s0")
+                }
+                
+                CD3DX12_DESCRIPTOR_RANGE range[1];
+                range[0].Init(
+                    D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+                    1,
+                    bindResource.registerIndex,
+                    bindResource.registerSpace);
+
+                rootParameters.back().InitAsDescriptorTable(1, range, D3D12_SHADER_VISIBILITY_PIXEL); // TODO be visible to vertex
             }
             else
             {
@@ -176,12 +190,13 @@ namespace dt
             BindResource bindResource;
             bindResource.resourceName = StringHandle(resourceDesc.Name);
             bindResource.registerIndex = resourceDesc.BindPoint;
+            bindResource.registerSpace = resourceDesc.Space;
             bindResource.resourceType = resourceDesc.Type;
             bindResource.registerType = DxHelper::GetRegisterType(bindResource.resourceType);
 
             auto found = find_if(reflectionPack.bindResources, [&bindResource](cr<BindResource> x)
             {
-                if (x.registerIndex == bindResource.registerIndex && x.registerType == bindResource.registerType)
+                if (x.registerIndex == bindResource.registerIndex && x.registerType == bindResource.registerType && x.registerSpace == bindResource.registerSpace)
                 {
                     if (x.resourceName != bindResource.resourceName || x.resourceType != bindResource.resourceType)
                     {
