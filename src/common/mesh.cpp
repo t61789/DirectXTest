@@ -85,9 +85,9 @@ namespace dt
         return result;
     }
 
-    sp<Mesh> Mesh::LoadFromFileImp(crstr modelPath)
+    Mesh::Cache Mesh::CreateCacheFromAsset(crstr assetPath)
     {
-        auto importer = ImportFile(modelPath);
+        auto importer = ImportFile(assetPath);
         auto scene = importer->GetScene();
 
         auto mesh = scene->mMeshes[0];
@@ -188,14 +188,28 @@ namespace dt
         auto bounds = Bounds((boundsMax + boundsMin) * 0.5f, (boundsMax - boundsMin) * 0.5f);
         bounds.extents = XMVectorMax(bounds.extents, XMVectorReplicate(0.01f));
 
-        auto result = CreateMesh(
-            std::move(vertexData),
-            std::move(indices),
-            verticesCount,
-            std::move(vertexAttribInfo),
-            bounds);
+        Cache cache;
+        cache.bounds = bounds;
+        cache.vertexCount = verticesCount;
+        cache.vertexData = std::move(vertexData);
+        cache.indices = std::move(indices);
+        cache.vertexAttribInfo = std::move(vertexAttribInfo);
 
-        return result;
+        return cache;
+    }
+    
+    sp<Mesh> Mesh::CreateAssetFromCache(Cache&& cache)
+    {
+        auto c = std::move(cache);
+    
+        auto mesh = CreateMesh(
+            std::move(c.vertexData),
+            std::move(c.indices),
+            c.vertexCount,
+            c.vertexAttribInfo,
+            c.bounds);
+
+        return mesh;
     }
 
     up<Assimp::Importer> Mesh::ImportFile(crstr modelPath)
@@ -240,7 +254,7 @@ namespace dt
         auto vb = DxResource::Create(
             CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
             CD3DX12_RESOURCE_DESC::Buffer(vertexDataSizeB),
-            D3D12_RESOURCE_STATE_COPY_DEST,
+            D3D12_RESOURCE_STATE_COMMON,
             nullptr,
             D3D12_HEAP_FLAG_NONE,
             L"Vertex Buffer");
@@ -249,13 +263,12 @@ namespace dt
         vbView.StrideInBytes = vertexDataStrideB;
         vbView.BufferLocation = vb->GetResource()->GetGPUVirtualAddress();
         vb->Upload(vertexData.data(), vertexDataSizeB);
-        DxHelper::AddTransition(vb, D3D12_RESOURCE_STATE_COMMON);
 
         auto indicesSizeB = indices.size() * sizeof(uint32_t);
         auto ib = DxResource::Create(
             CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
             CD3DX12_RESOURCE_DESC::Buffer(indicesSizeB),
-            D3D12_RESOURCE_STATE_COPY_DEST,
+            D3D12_RESOURCE_STATE_COMMON,
             nullptr,
             D3D12_HEAP_FLAG_NONE,
             L"Index Buffer");
@@ -264,7 +277,6 @@ namespace dt
         ibView.SizeInBytes = indicesSizeB;
         ibView.BufferLocation = ib->GetResource()->GetGPUVirtualAddress();
         ib->Upload(indices.data(), indicesSizeB);
-        DxHelper::AddTransition(ib, D3D12_RESOURCE_STATE_COMMON);
 
         sp<Mesh> result = msp<Mesh>();
         result->m_vertexBufferView = vbView;
@@ -358,34 +370,5 @@ namespace dt
         }
 
         return vertexData;
-    }
-
-    Mesh::Cache Mesh::CreateCacheFromAsset(crstr assetPath)
-    {
-        auto mesh = LoadFromFileImp(assetPath);
-
-        Cache fullMesh;
-        fullMesh.bounds = mesh->GetBounds();
-        fullMesh.vertexCount = mesh->GetVertexCount();
-        // fullMesh.vertexData = GetFullVertexData(mesh.get());
-        fullMesh.vertexData = mesh->GetVertexData();
-        fullMesh.indices = mesh->GetIndexData();
-        fullMesh.vertexAttribInfo = mesh->GetVertexAttribInfo();
-
-        return fullMesh;
-    }
-
-    sp<Mesh> Mesh::CreateAssetFromCache(Cache&& cache)
-    {
-        auto c = std::move(cache);
-    
-        auto mesh = CreateMesh(
-            std::move(c.vertexData),
-            std::move(c.indices),
-            c.vertexCount,
-            c.vertexAttribInfo,
-            c.bounds);
-
-        return mesh;
     }
 }

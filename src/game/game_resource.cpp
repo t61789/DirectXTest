@@ -2,6 +2,8 @@
 
 #include <cassert>
 
+#include "common/image.h"
+#include "common/material.h"
 #include "render/cbuffer.h"
 #include "render/global_material_params.h"
 
@@ -10,10 +12,17 @@ namespace dt
     GameResource::GameResource()
     {
         m_globalMaterialParams = new GlobalMaterialParams();
+
+        errorTex = Image::LoadFromFile("built_in/textures/error.png");
+        
+        blitMat = Material::LoadFromFile("built_in/materials/blit.mtl");
     }
 
     GameResource::~GameResource()
     {
+        errorTex.reset();
+        blitMat.reset();
+        
         delete m_globalMaterialParams;
         
         m_predefinedCbuffers.clear();

@@ -23,12 +23,10 @@ namespace dt
         struct ImageCache
         {
             DxTextureDesc desc;
-            ImportConfig importConfig;
+            vec<uint8_t> data;
 
             template <typename Archive>
             void serialize(Archive& ar, uint32_t const version);
-
-            static ImageCache Create(const Image* image);
         };
         
     public:
@@ -42,20 +40,11 @@ namespace dt
         static sp<Image> CreateAssetFromCache(ImageCache&& cache);
 
     private:
-        uint32_t m_width = 0;
-        uint32_t m_height = 0;
+        static ImportConfig LoadImageImportConfig(crstr assetPath);
+        
         StringHandle m_path = {};
         
         sp<DxTexture> m_dxTexture = nullptr;
-
-        // serialization only fields
-        uint32_t m_channels = 0;
-        ImportConfig m_importConfig;
-        vec<uint8_t> m_data;
-
-        static ImportConfig LoadImageImportConfig(crstr assetPath);
-
-        static sp<Image> LoadFromFileImp(cr<StringHandle> path);
     };
 
     template <typename Archive>
@@ -77,6 +66,6 @@ namespace dt
     void Image::ImageCache::serialize(Archive& ar, uint32_t const version)
     {
         ar & desc;
-        ar & importConfig;
+        ar & data;
     }
 }

@@ -38,7 +38,7 @@ namespace dt
     class SrvDescPool : public Singleton<SrvDescPool>
     {
     public:
-        explicit SrvDescPool(cr<ComPtr<ID3D12Device>> device);
+        SrvDescPool();
         ~SrvDescPool() = default;
         SrvDescPool(const SrvDescPool& other) = delete;
         SrvDescPool(SrvDescPool&& other) noexcept = delete;
@@ -48,7 +48,6 @@ namespace dt
         ID3D12DescriptorHeap* GetHeap() const { return m_descHeap.Get(); }
 
         sp<SrvDesc> Alloc();
-        void SetHeap(ID3D12GraphicsCommandList* cmdList);
         void Bind(ID3D12GraphicsCommandList* cmdList, uint32_t rootParameterIndex);
 
     private:
@@ -82,13 +81,16 @@ namespace dt
         friend class SamplerDescPool;
     };
 
-    class SamplerDescPool
+    class SamplerDescPool : public Singleton<SamplerDescPool>
     {
     public:
         explicit SamplerDescPool();
+
+        ID3D12DescriptorHeap* GetHeap() const { return m_descHeap.Get(); }
         
         sp<SamplerDesc> Alloc(TextureFilterMode filterMode, TextureWrapMode wrapMode);
         void Release(uint32_t index);
+        void Bind(ID3D12GraphicsCommandList* cmdList, uint32_t rootParameterIndex);
 
     private:
         uint32_t m_firstFreeIndex = 0;

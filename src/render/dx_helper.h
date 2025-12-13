@@ -16,7 +16,6 @@ namespace dt
     class DxHelper
     {
     public:
-        static void PrepareRendering(ID3D12GraphicsCommandList* cmdList);
         static void SetViewport(ID3D12GraphicsCommandList* cmdList, uint32_t width, uint32_t height);
         
         static void BindRootSignature(ID3D12GraphicsCommandList* cmdList, const Shader* shader);
@@ -29,6 +28,8 @@ namespace dt
         static void ApplyTransitions(ID3D12GraphicsCommandList* cmdList);
         
         static uint32_t GetRegisterType(D3D_SHADER_INPUT_TYPE resourceType);
+        
+        static void SetHeaps(ID3D12GraphicsCommandList* cmdList, ID3D12DescriptorHeap* const* heaps, uint32_t heapCount);
 
     private:
         struct Transition

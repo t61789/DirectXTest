@@ -1,6 +1,7 @@
 ﻿#include "dx_resource.h"
 
 #include <directx/d3dx12_core.h>
+#include <directx/d3dx12.h>
 
 #include "directx.h"
 #include "dx_helper.h"
@@ -41,20 +42,13 @@ namespace dt
         const D3D12_HEAP_FLAGS heapFlags,
         const wchar_t* name)
     {
-        ComPtr<ID3D12Resource> resource;
-        THROW_IF_FAILED(Dx()->GetDevice()->CreateCommittedResource(
-            &heapProperties,
-            heapFlags,
-            &desc,
+        auto resource = Dx()->CreateCommittedResource(
+            heapProperties,
+            desc,
             initialResourceState,
             pOptimizedClearValue,
-            IID_ID3D12Resource,
-            &resource));
-
-        if (name)
-        {
-            THROW_IF_FAILED(resource->SetName(name));
-        }
+            heapFlags,
+            name);
 
         auto result = msp<DxResource>();
         result->m_resource = resource;

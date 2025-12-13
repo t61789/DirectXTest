@@ -83,8 +83,8 @@ namespace dt
     {
         log_info("Loading shader: %s", path.CStr());
 
-        m_ps = CompileShader(path.CStr(), "PS_Main", "ps_5_0");
-        m_vs = CompileShader(path.CStr(), "VS_Main", "vs_5_0");
+        m_ps = CompileShader(path.CStr(), "PS_Main", "ps_5_1");
+        m_vs = CompileShader(path.CStr(), "VS_Main", "vs_5_1");
 
         LoadShaderInfo();
     }
@@ -120,31 +120,55 @@ namespace dt
 
     void Shader::CreateRootSignature(const ReflectionPack& reflectionPack)
     {
+        vecup<CD3DX12_DESCRIPTOR_RANGE1> rootParamRanges;
+        vec<CD3DX12_ROOT_PARAMETER1> rootParams;
+        
         // Build root parameters from bind resources
-        vec<CD3DX12_ROOT_PARAMETER> rootParameters;
         for (auto& bindResource : reflectionPack.bindResources)
         {
-            rootParameters.emplace_back();
-
+            rootParams.emplace_back();
+            
             if (bindResource.resourceType == D3D_SIT_CBUFFER)
             {
-                rootParameters.back().InitAsConstantBufferView(bindResource.registerIndex, bindResource.registerSpace);
+                rootParams.back().InitAsConstantBufferView(bindResource.registerIndex, bindResource.registerSpace);
             }
             else if (bindResource.resourceType == D3D_SIT_TEXTURE)
             {
-                if (bindResource.resourceName != BINDLESS_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 0)
+                if (bindResource.resourceName != BINDLESS_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 1)
                 {
-                    THROW_ERROR("Texture resource needs to be bindless with t0 and s0")
+                    THROW_ERROR("Texture resource needs to be bindless with t0 and space1")
+                }
+
+                auto range = mup<CD3DX12_DESCRIPTOR_RANGE1>();
+                range->Init(
+                    D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+                    bindResource.bindCount,
+                    bindResource.registerIndex,
+                    bindResource.registerSpace,
+                    D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE,
+                    D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+                rootParamRanges.push_back(std::move(range));
+                
+                rootParams.back().InitAsDescriptorTable(1, rootParamRanges.back().get(), D3D12_SHADER_VISIBILITY_PIXEL); // TODO be visible to vertex
+            }
+            else if (bindResource.resourceType == D3D_SIT_SAMPLER)
+            {
+                if (bindResource.resourceName != BINDLESS_SAMPLERS || bindResource.registerIndex != 0 || bindResource.registerSpace != 1)
+                {
+                    THROW_ERROR("Sampler resource needs to be bindless with s0 and space1")
                 }
                 
-                CD3DX12_DESCRIPTOR_RANGE range[1];
-                range[0].Init(
-                    D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-                    1,
+                auto range = mup<CD3DX12_DESCRIPTOR_RANGE1>();
+                range->Init(
+                    D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
+                    bindResource.bindCount,
                     bindResource.registerIndex,
-                    bindResource.registerSpace);
-
-                rootParameters.back().InitAsDescriptorTable(1, range, D3D12_SHADER_VISIBILITY_PIXEL); // TODO be visible to vertex
+                    bindResource.registerSpace,
+                    D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE,
+                    D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+                rootParamRanges.push_back(std::move(range));
+                
+                rootParams.back().InitAsDescriptorTable(1, rootParamRanges.back().get(), D3D12_SHADER_VISIBILITY_PIXEL);
             }
             else
             {
@@ -156,17 +180,18 @@ namespace dt
         m_bindResources = reflectionPack.bindResources;
 
         // Create actual root signature by root parameters for dx
-        D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-        rootSignatureDesc.NumParameters = rootParameters.size();
-        rootSignatureDesc.pParameters = rootParameters.data();
-        rootSignatureDesc.NumStaticSamplers = 0;
-        rootSignatureDesc.pStaticSamplers = nullptr;
-        rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+        rootSignatureDesc.Init_1_1(
+            rootParams.size(),
+            rootParams.data(),
+            0,
+            nullptr,
+            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
         
         ComPtr<ID3DBlob> rootSignatureBlob;
         ComPtr<ID3DBlob> errorBlob;
 
-        if (FAILED(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob)))
+        if (FAILED(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &rootSignatureBlob, &errorBlob)))
         {
             DirectX::ThrowErrorBlob(errorBlob);
         }
@@ -193,12 +218,13 @@ namespace dt
             bindResource.registerSpace = resourceDesc.Space;
             bindResource.resourceType = resourceDesc.Type;
             bindResource.registerType = DxHelper::GetRegisterType(bindResource.resourceType);
+            bindResource.bindCount = resourceDesc.BindCount;
 
             auto found = find_if(reflectionPack.bindResources, [&bindResource](cr<BindResource> x)
             {
                 if (x.registerIndex == bindResource.registerIndex && x.registerType == bindResource.registerType && x.registerSpace == bindResource.registerSpace)
                 {
-                    if (x.resourceName != bindResource.resourceName || x.resourceType != bindResource.resourceType)
+                    if (x.resourceName != bindResource.resourceName || x.resourceType != bindResource.resourceType || x.bindCount != bindResource.bindCount)
                     {
                         throw std::runtime_error("Different shader stage bound different resource in same register");
                     }

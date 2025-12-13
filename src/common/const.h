@@ -41,6 +41,7 @@ namespace dt
     STRING_HANDLE(IM, _IM)
     STRING_HANDLE(CAMERA_POSITION_WS, _CameraPositionWS)
     STRING_HANDLE(BINDLESS_TEXTURES, _BindlessTextures)
+    STRING_HANDLE(BINDLESS_SAMPLERS, _BindlessSamplers)
 
     static const uint32_t MAX_REGISTER_COUNT = 16;
     static const auto UNNAMED_OBJECT = StringHandle("Unnamed Object");

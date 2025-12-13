@@ -30,6 +30,6 @@ namespace dt
 
         float m_curSpeedAdd = 0;
         
-        static vec<CameraComp*> m_cameras;
+        inline static vec<CameraComp*> m_cameras;
     };
 }

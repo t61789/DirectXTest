@@ -1,6 +1,7 @@
 ﻿#include "image.h"
 
 #define STB_IMAGE_IMPLEMENTATION
+#include <directx/d3dx12_resource_helpers.h>
 #include <tracy/Tracy.hpp>
 
 #include "dx_texture.h"
@@ -9,21 +10,13 @@
 #include "common/asset_cache.h"
 #include "game/game_resource.h"
 #include "render/desc_handle_pool.h"
+#include "render/directx.h"
 #include "render/dx_helper.h"
 #include "render/dx_resource.h"
+#include "render/render_thread.h"
 
 namespace dt
 {
-    Image::ImageCache Image::ImageCache::Create(const Image* image)
-    {
-        ImageCache cache;
-        
-        cache.desc = image->m_dxTexture->GetDesc();
-        cache.importConfig = image->m_importConfig;
-
-        return cache;
-    }
-
     uint32_t Image::GetSrvDescIndex()
     {
         return m_dxTexture->GetSrvDesc()->GetIndex();
@@ -70,14 +63,9 @@ namespace dt
         return importConfig;
     }
 
-    sp<Image> Image::LoadFromFileImp(cr<StringHandle> path)
+    Image::ImageCache Image::CreateCacheFromAsset(crstr assetPath)
     {
-        if (!Utils::AssetExists(path))
-        {
-            return GR()->errorTex;
-        }
-
-        auto importConfig = LoadImageImportConfig(path);
+        auto importConfig = LoadImageImportConfig(assetPath);
 
         stbi_set_flip_vertically_on_load(importConfig.needFlipVertical);
         
@@ -87,7 +75,7 @@ namespace dt
         {
             ZoneScopedN("Load Image Data");
             
-            data = stbi_load(Utils::ToAbsPath(path).c_str(), &width, &height, &nChannels, 0);
+            data = stbi_load(Utils::ToAbsPath(assetPath).c_str(), &width, &height, &nChannels, 0);
             if(!data)
             {
                 throw std::exception();
@@ -95,8 +83,8 @@ namespace dt
         }
         catch(cr<std::exception>)
         {
-            log_info("Failed to load texture: %s", path.CStr());
-            return GR()->errorTex;
+            log_info("Failed to load texture: %s", assetPath.c_str());
+            throw;
         }
 
         auto sizeB = width * height * nChannels;
@@ -110,38 +98,58 @@ namespace dt
         dxTextureDesc.format = nChannels == 4 ? TextureFormat::RGBA : TextureFormat::RGB;
         dxTextureDesc.width = width;
         dxTextureDesc.height = height;
+        dxTextureDesc.channelCount = nChannels;
         dxTextureDesc.wrapMode = importConfig.wrapMode;
         dxTextureDesc.filterMode = importConfig.filterMode;
         dxTextureDesc.hasMipmap = importConfig.needMipmap;
-        auto dxTexture = DxTexture::CreateImage(dxTextureDesc);
-        dxTexture->GetResource()->Upload(dataVec.data(), sizeB);
-        DxHelper::AddTransition(dxTexture->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-        auto result = msp<Image>();
-        result->m_width = width;
-        result->m_height = height;
-        result->m_dxTexture = dxTexture;
-        
-        result->m_channels = nChannels;
-        result->m_data = std::move(dataVec);
-        result->m_importConfig = importConfig;
+        ImageCache cache;
+        cache.desc = dxTextureDesc;
+        cache.data = std::move(dataVec);
 
-        return result;
-    }
-
-    Image::ImageCache Image::CreateCacheFromAsset(crstr assetPath)
-    {
-        auto asset = LoadFromFileImp(assetPath);
-
-        return ImageCache::Create(asset.get());
+        return std::move(cache);
     }
 
     sp<Image> Image::CreateAssetFromCache(ImageCache&& cache)
     {
+        auto dxTexture = DxTexture::CreateImage(cache.desc);
+
+        RT()->AddCmd([dxTexture, cache=std::move(cache)](ID3D12GraphicsCommandList* cmdList)
+        {
+            auto dxTextureResourceDesc = dxTexture->GetResource()->GetDesc();
+            
+            size_t uploadBytes;
+            Dx()->GetDevice()->GetCopyableFootprints(
+                &dxTextureResourceDesc,
+                0,
+                1,
+                0,
+                nullptr,
+                nullptr,
+                nullptr,
+                &uploadBytes);
+            
+            auto uploadBuffer = Dx()->CreateUploadBuffer(nullptr, uploadBytes);
+            
+            D3D12_SUBRESOURCE_DATA srcData;
+            srcData.pData = cache.data.data();
+            srcData.RowPitch = cache.desc.width * cache.desc.channelCount;
+            srcData.SlicePitch = srcData.RowPitch * cache.desc.height;
+            
+            THROW_IF_FAILED(UpdateSubresources(
+                cmdList,
+                dxTexture->GetResource()->GetResource(),
+                uploadBuffer.Get(),
+                0,
+                0,
+                1,
+                &srcData));
+            
+            DxHelper::AddTransition(dxTexture->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        });
+
         auto result = msp<Image>();
-        result->m_width = cache.desc.width;
-        result->m_height = cache.desc.height;
-        result->m_dxTexture = DxTexture::CreateImage(cache.desc);
+        result->m_dxTexture = dxTexture;
 
         return result;
     }

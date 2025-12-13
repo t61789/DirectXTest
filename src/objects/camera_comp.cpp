@@ -10,8 +10,6 @@ namespace dt
 {
     using namespace std;
 
-    vec<CameraComp*> CameraComp::m_cameras;
-
     void CameraComp::Awake()
     {
         m_cameras.push_back(this);
@@ -123,10 +121,7 @@ namespace dt
 
     CameraComp* CameraComp::GetMainCamera()
     {
-        if(m_cameras.empty())
-        {
-            return nullptr;
-        }
+        ASSERT_THROW(!m_cameras.empty());
 
         return m_cameras[0];
     }

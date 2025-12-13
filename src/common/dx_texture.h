@@ -42,6 +42,7 @@ namespace dt
         TextureFilterMode filterMode = TextureFilterMode::BILINEAR;
         uint32_t width = 0;
         uint32_t height = 0;
+        uint32_t channelCount = 0;
         bool hasMipmap = false;
 
         template <typename Archive>
@@ -84,6 +85,7 @@ namespace dt
 
         ar & width;
         ar & height;
+        ar & channelCount;
         ar & hasMipmap;
     }
 }

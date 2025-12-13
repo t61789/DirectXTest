@@ -1,0 +1,5 @@
+{
+    "shader": "shaders/blit.shader",
+    "depthWrite": false,
+    "depthMode": "Always"
+}

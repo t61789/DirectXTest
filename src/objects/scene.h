@@ -9,6 +9,7 @@
 
 namespace dt
 {
+    class CameraComp;
     class Object;
 
     class Scene final : public IResource, public std::enable_shared_from_this<Scene>

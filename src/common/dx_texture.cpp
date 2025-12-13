@@ -40,7 +40,7 @@ namespace dt
             dxResourceDesc,
             D3D12_RESOURCE_STATE_COPY_DEST,
             nullptr,
-            D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES | D3D12_HEAP_FLAG_CREATE_NOT_ZEROED,
+            D3D12_HEAP_FLAG_NONE,
             L"Image");
 
         auto srvDescHandle = SrvDescPool::Ins()->Alloc();

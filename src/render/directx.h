@@ -82,7 +82,8 @@ namespace dt
         
         uint32_t m_backBufferIndex = 0;
 
-        sp<SrvDescPool> m_descHandlePool;
+        sp<SrvDescPool> m_srvDescPool;
+        sp<SamplerDescPool> m_samplerDescPool;
 
         HWND m_windowHwnd;
 

@@ -123,7 +123,7 @@
                 {
                     "name": "RenderComp",
                     "mesh": "meshes/beast.obj",
-                    "material": "materials/test_mat.json"
+                    "material": "materials/test.mtl"
                 }
             ],
             "children": [
@@ -141,7 +141,7 @@
                         {
                             "name": "RenderComp",
                             "mesh": "meshes/smooth_cube.obj",
-                            "material": "materials/test_mat.json"
+                            "material": "materials/test.mtl"
                         }
                     ]
                 }
@@ -171,7 +171,20 @@
                 {
                     "name": "RenderComp",
                     "mesh": "meshes/quad.obj",
-                    "material": "materials/test_mat.json"
+                    "material": "materials/test.mtl"
+                }
+            ]
+        },
+        {
+            "name": "Cover",
+            "comps": [
+                {
+                    "name": "TransformComp"
+                },
+                {
+                    "name": "RenderComp",
+                    "mesh": "meshes/quad.obj",
+                    "material": "built_in/materials/blit.mtl"
                 }
             ]
         }

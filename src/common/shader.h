@@ -3,6 +3,7 @@
 #include <d3dcommon.h>
 #include <optional>
 #include <directx/d3d12.h>
+#include <directx/d3dx12_root_signature.h>
 #include <wrl/client.h>
 
 #include "i_resource.h"
@@ -26,6 +27,7 @@ namespace dt
             uint32_t registerIndex;
             uint32_t registerSpace;
             uint32_t registerType;
+            uint32_t bindCount;
             StringHandle resourceName;
             D3D_SHADER_INPUT_TYPE resourceType;
         };

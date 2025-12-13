@@ -11,13 +11,16 @@
 #include "common/mesh.h"
 #include "game/game_resource.h"
 #include "objects/scene.h"
+#include "render_pass/prepare_pass.h"
 
 namespace dt
 {
     RenderPipeline::RenderPipeline()
     {
         m_testMesh = Mesh::LoadFromFile("meshes/quad.obj");
-        m_testMaterial = Material::LoadFromFile("materials/test_mat.json");
+        m_testMaterial = Material::LoadFromFile("materials/test.mtl");
+
+        m_preparePass = msp<PreparePass>();
     }
 
     RenderPipeline::~RenderPipeline()
@@ -28,18 +31,10 @@ namespace dt
 
     void RenderPipeline::Render()
     {
+        m_preparePass->Execute();
+        
         RT()->AddCmd([this](ID3D12GraphicsCommandList* cmdList)
         {
-            DxHelper::PrepareRendering(cmdList);
-
-            DxHelper::SetViewport(cmdList, Dx()->GetSwapChainDesc().Width, Dx()->GetSwapChainDesc().Height);
-            
-            DxHelper::AddTransition(Dx()->GetBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-            DxHelper::ApplyTransitions(cmdList);
-        
-            auto backBufferTexHandle = Dx()->GetBackBufferHandle();
-            cmdList->OMSetRenderTargets(1, &backBufferTexHandle, false, nullptr);
-
             RenderScene(cmdList, GR()->mainScene);
             
             DxHelper::AddTransition(Dx()->GetBackBuffer(), D3D12_RESOURCE_STATE_PRESENT);

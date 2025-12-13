@@ -18,6 +18,7 @@ namespace dt
         DxResource& operator=(const DxResource& other) = delete;
         DxResource& operator=(DxResource&& other) noexcept = delete;
 
+        D3D12_RESOURCE_DESC GetDesc() const { return m_desc; }
         ID3D12Resource* GetResource() const { return m_resource.Get(); }
         D3D12_RESOURCE_STATES GetState() const { return m_state; }
         

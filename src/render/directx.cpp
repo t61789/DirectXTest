@@ -36,7 +36,8 @@ namespace dt
         CreateCommandQueue();
 
         m_renderThread = msp<RenderThread>(m_device);
-        m_descHandlePool = msp<SrvDescPool>(m_device);
+        m_srvDescPool = msp<SrvDescPool>();
+        m_samplerDescPool = msp<SamplerDescPool>();
         
         CreateSwapChain();
         CreateDescriptorHeaps();
@@ -47,7 +48,8 @@ namespace dt
 
     DirectX::~DirectX()
     {
-        m_descHandlePool.reset();
+        m_samplerDescPool.reset();
+        m_srvDescPool.reset();
         m_renderThread.reset();
 
         m_dsvHeap.Reset();
@@ -95,10 +97,13 @@ namespace dt
             D3D12_HEAP_FLAG_NONE,
             L"Upload Buffer");
 
-        void* mappedData;
-        THROW_IF_FAILED(buffer->Map(0, nullptr, &mappedData));
-        memcpy(mappedData, data, sizeB);
-        buffer->Unmap(0, nullptr);
+        if (data)
+        {
+            void* mappedData;
+            THROW_IF_FAILED(buffer->Map(0, nullptr, &mappedData));
+            memcpy(mappedData, data, sizeB);
+            buffer->Unmap(0, nullptr);
+        }
 
         return buffer;
     }

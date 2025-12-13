@@ -7,6 +7,7 @@
 
 namespace dt
 {
+    class PreparePass;
     class Scene;
     class Material;
     class Mesh;
@@ -32,5 +33,7 @@ namespace dt
         
         sp<Mesh> m_testMesh;
         sp<Material> m_testMaterial;
+
+        sp<PreparePass> m_preparePass;
     };
 }

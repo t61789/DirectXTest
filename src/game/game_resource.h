@@ -5,6 +5,7 @@
 
 namespace dt
 {
+    class Material;
     class GlobalMaterialParams;
     class Image;
     class Scene;
@@ -34,6 +35,8 @@ namespace dt
         sp<T> GetResource(cr<StringHandle> path);
 
         Scene* mainScene = nullptr;
+
+        sp<Material> blitMat = nullptr;
 
         sp<Image> errorTex = nullptr;
 

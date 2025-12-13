@@ -47,7 +47,7 @@ namespace dt
         return { m_pool->m_descHeap->GetCPUDescriptorHandleForHeapStart(), static_cast<INT>(m_index), m_pool->m_descSizeB };
     }
 
-    SrvDescPool::SrvDescPool(cr<ComPtr<ID3D12Device>> device)
+    SrvDescPool::SrvDescPool()
     {
         m_firstFreeIndex = 0;
         m_descInfos.resize(DESC_HANDLE_POOL_SIZE);
@@ -58,9 +58,9 @@ namespace dt
         rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         rtvHeapDesc.NodeMask = 0;
 
-        THROW_IF_FAILED(device->CreateDescriptorHeap(&rtvHeapDesc, IID_ID3D12DescriptorHeap, &m_descHeap));
+        THROW_IF_FAILED(Dx()->GetDevice()->CreateDescriptorHeap(&rtvHeapDesc, IID_ID3D12DescriptorHeap, &m_descHeap));
 
-        m_descSizeB = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        m_descSizeB = Dx()->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
 
     sp<SrvDesc> SrvDescPool::Alloc()
@@ -89,12 +89,6 @@ namespace dt
         return descHandle;
     }
 
-    void SrvDescPool::SetHeap(ID3D12GraphicsCommandList* cmdList)
-    {
-        ID3D12DescriptorHeap* heaps[] = { m_descHeap.Get() };
-        cmdList->SetDescriptorHeaps(1, heaps);
-    }
-
     void SrvDescPool::Bind(ID3D12GraphicsCommandList* cmdList, uint32_t rootParameterIndex)
     {
         cmdList->SetGraphicsRootDescriptorTable(rootParameterIndex, m_descHeap->GetGPUDescriptorHandleForHeapStart()); // TODO samplers
@@ -111,6 +105,14 @@ namespace dt
     {
         m_firstFreeIndex = 0;
         m_samplerDesc.resize(SAMPLER_DESC_POOL_SIZE);
+        
+        D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+        heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+        heapDesc.NumDescriptors = SAMPLER_DESC_POOL_SIZE;
+        heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        heapDesc.NodeMask = 0;
+        
+        THROW_IF_FAILED(Dx()->GetDevice()->CreateDescriptorHeap(&heapDesc, IID_ID3D12DescriptorHeap, &m_descHeap));
         m_descSizeB = Dx()->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     }
 
@@ -172,5 +174,10 @@ namespace dt
     void SamplerDescPool::Release(const uint32_t index)
     {
         m_firstFreeIndex = std::min<uint32_t>(index, m_firstFreeIndex);
+    }
+    
+    void SamplerDescPool::Bind(ID3D12GraphicsCommandList* cmdList, uint32_t rootParameterIndex)
+    {
+        cmdList->SetGraphicsRootDescriptorTable(rootParameterIndex, m_descHeap->GetGPUDescriptorHandleForHeapStart()); // TODO samplers
     }
 }

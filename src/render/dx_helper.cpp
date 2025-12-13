@@ -12,13 +12,6 @@
 
 namespace dt
 {
-    void DxHelper::PrepareRendering(ID3D12GraphicsCommandList* cmdList)
-    {
-        cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        SrvDescPool::Ins()->SetHeap(cmdList);
-    }
-
     void DxHelper::SetViewport(ID3D12GraphicsCommandList* cmdList, const uint32_t width, const uint32_t height)
     {
         D3D12_VIEWPORT viewport = {};
@@ -80,6 +73,17 @@ namespace dt
         {
             SrvDescPool::Ins()->Bind(cmdList, bindResource->rootParameterIndex);
         }
+        
+        bindResource = find_if(shader->GetBindResources(), [](cr<Shader::BindResource> x)
+        {
+            static auto textureRegisterType = GetRegisterType(D3D_SIT_SAMPLER);
+            return x.resourceName == BINDLESS_SAMPLERS && x.registerType == textureRegisterType;
+        });
+
+        if (bindResource)
+        {
+            SamplerDescPool::Ins()->Bind(cmdList, bindResource->rootParameterIndex);
+        }
     }
 
     void DxHelper::BindMesh(ID3D12GraphicsCommandList* cmdList, const Mesh* mesh)
@@ -126,8 +130,15 @@ namespace dt
                 return 0;
             case D3D_SIT_TEXTURE:
                 return 1;
+            case D3D_SIT_SAMPLER:
+                return 2;
             default:
                 THROW_ERROR("Invalid resource type");
         }
+    }
+
+    void DxHelper::SetHeaps(ID3D12GraphicsCommandList* cmdList, ID3D12DescriptorHeap* const* heaps, uint32_t heapCount)
+    {
+        cmdList->SetDescriptorHeaps(heapCount, heaps);
     }
 }

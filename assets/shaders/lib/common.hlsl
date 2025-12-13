@@ -1,3 +1,6 @@
+#define DESC_HANDLE_POOL_SIZE 16384
+#define SAMPLER_DESC_POOL_SIZE 100
+
 struct VSInput 
 {
     float4 positionOS : POSITION;
@@ -8,6 +11,7 @@ struct VSInput
 struct PSInput
 {
     float4 positionCS : SV_POSITION;
+    float2 uv0 : TEXCOORD0;
 };
 
 cbuffer GlobalCBuffer : register(b0)
@@ -27,6 +31,9 @@ cbuffer PerObjectCBuffer : register(b2)
     float4x4 _M;
     float4x4 _IM;
 };
+
+Texture2D<float4> _BindlessTextures[DESC_HANDLE_POOL_SIZE] : register(t0, space1);
+SamplerState _BindlessSamplers[SAMPLER_DESC_POOL_SIZE] : register(s0, space1);
 
 float4x4 GetLocalToWorld()
 {
@@ -71,4 +78,9 @@ float3 TransformObjectToWorldNormal(float3 normalOS, float4x4 worldToLocal)
 float3 TransformObjectToWorldNormal(float3 normalOS)
 {
     return TransformObjectToWorldNormal(normalOS, GetWorldToLocal());
+}
+
+float4 SampleTexture(uint textureIndex, float2 uv)
+{
+    return _BindlessTextures[textureIndex].Sample(_BindlessSamplers[textureIndex], uv);
 }
