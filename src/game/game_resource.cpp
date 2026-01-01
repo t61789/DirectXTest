@@ -4,26 +4,24 @@
 
 #include "common/image.h"
 #include "common/material.h"
+#include "common/mesh.h"
 #include "render/cbuffer.h"
-#include "render/global_material_params.h"
 
 namespace dt
 {
     GameResource::GameResource()
     {
-        m_globalMaterialParams = new GlobalMaterialParams();
-
         errorTex = Image::LoadFromFile("built_in/textures/error.png");
         
         blitMat = Material::LoadFromFile("built_in/materials/blit.mtl");
+        quadMesh = Mesh::LoadFromFile("built_in/meshes/quad.obj");
     }
 
     GameResource::~GameResource()
     {
         errorTex.reset();
         blitMat.reset();
-        
-        delete m_globalMaterialParams;
+        quadMesh.reset();
         
         m_predefinedCbuffers.clear();
     }

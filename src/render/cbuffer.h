@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <d3d12.h>
 #include <d3d12shader.h>
+#include <set>
 #include <wrl/client.h>
 
 #include "param_types.h"
@@ -32,7 +33,7 @@ namespace dt
         const Field* GetField(const string_hash nameId) { return find(fields, nameId); }
     };
     
-    class Cbuffer
+    class Cbuffer : public std::enable_shared_from_this<Cbuffer>
     {
     public:
         explicit Cbuffer(sp<CbufferLayout> layout);
@@ -45,32 +46,25 @@ namespace dt
         sp<CbufferLayout> GetLayout() const { return m_layout; }
         cr<ComPtr<ID3D12Resource>> GetDxResource() const { return m_dxResource; }
         
-        bool HasField(const string_hash nameId, const ParamType type, const uint32_t repeatCount) const;
+        bool HasField(string_hash nameId, ParamType type, uint32_t repeatCount) const;
 
         bool Write(string_hash name, const void* data, uint32_t sizeB);
-
-        template <typename F>
-        void ForeachField(F&& f);
+        
+        static void UpdateDirtyCbuffers();
 
     private:
         void CreateDxResource();
+        void ApplyModifies();
 
         StringHandle m_name;
         
         void* m_gpuWriteDest;
         ComPtr<ID3D12Resource> m_dxResource;
 
-        std::atomic<bool> m_using;
-
         sp<CbufferLayout> m_layout;
-    };
 
-    template <typename F>
-    void Cbuffer::ForeachField(F&& f)
-    {
-        for (auto& field : m_layout->fields)
-        {
-            f(field.second);
-        }
-    }
+        vecpair<string_hash, vec<uint8_t>> m_modifies; // <fieldName, data>
+
+        inline static std::set<sp<Cbuffer>> s_dirtyCbuffers;
+    };
 }

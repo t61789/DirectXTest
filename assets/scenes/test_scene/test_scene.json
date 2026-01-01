@@ -170,21 +170,8 @@
                 },
                 {
                     "name": "RenderComp",
-                    "mesh": "meshes/quad.obj",
+                    "mesh": "built_in/meshes/quad.obj",
                     "material": "materials/test.mtl"
-                }
-            ]
-        },
-        {
-            "name": "Cover",
-            "comps": [
-                {
-                    "name": "TransformComp"
-                },
-                {
-                    "name": "RenderComp",
-                    "mesh": "meshes/quad.obj",
-                    "material": "built_in/materials/blit.mtl"
                 }
             ]
         }

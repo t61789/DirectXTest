@@ -14,16 +14,19 @@
 #include <tracy/Tracy.hpp>
 
 #include "dx_resource.h"
+#include "render_target.h"
 #include "render_thread.h"
 #include "window.h"
 #include "common/utils.h"
 #include "common/math.h"
+#include "common/render_texture.h"
 
 namespace dt
 {
     DirectX::DirectX()
     {
         m_windowHwnd = Window::Ins()->GetHandle();
+
 
         CreateDebugLayer();
 
@@ -34,28 +37,25 @@ namespace dt
 
         CreateDevice();
         CreateCommandQueue();
-
-        m_renderThread = msp<RenderThread>(m_device);
-        m_srvDescPool = msp<SrvDescPool>();
-        m_samplerDescPool = msp<SamplerDescPool>();
-        
         CreateSwapChain();
-        CreateDescriptorHeaps();
-        CreateRenderTargets();
+        
+        m_recycleBin = new RecycleBin();
+        m_descriptorPool = new DescriptorPool();
+        m_renderThread = new RenderThreadMgr();
 
-        // CreateTextures();
+        CreateSwapChainTextures();
     }
 
     DirectX::~DirectX()
     {
-        m_samplerDescPool.reset();
-        m_srvDescPool.reset();
-        m_renderThread.reset();
-
-        m_dsvHeap.Reset();
-        m_rtvHeap.Reset();
-        m_depthStencilBuffer.Reset();
-        m_swapChainBuffers.clear();
+        m_swapChainRenderTargets.clear();
+        m_swapChainRenderTextures.clear();
+        
+        delete m_renderThread;
+        delete m_descriptorPool;
+        m_recycleBin->Flush();
+        delete m_recycleBin;
+        
         m_dxgiSwapChain3.Reset();
         m_device.Reset();
         m_commandQueue.Reset();
@@ -65,49 +65,12 @@ namespace dt
         m_debugLayer.Reset();
     }
 
-    CD3DX12_CPU_DESCRIPTOR_HANDLE DirectX::GetBackBufferHandle()
-    {
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-        rtvHandle.Offset(static_cast<int>(m_backBufferIndex * m_rtvDescriptorSize));
-
-        return rtvHandle;
-    }
-
     void DirectX::PresentSwapChain()
     {
         THROW_IF_FAILED(m_dxgiSwapChain3->Present(1, 0));
         m_backBufferIndex = m_dxgiSwapChain3->GetCurrentBackBufferIndex();
     }
 
-    void DirectX::EndFrame()
-    {
-        RenderThread::Ins()->ReleaseCmdResources();
-    }
-
-    ComPtr<ID3D12Resource> DirectX::CreateUploadBuffer(const void* data, const size_t sizeB)
-    {
-        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-        CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeB);
-        
-        ComPtr<ID3D12Resource> buffer = CreateCommittedResource(
-            heapProps,
-            bufferDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            D3D12_HEAP_FLAG_NONE,
-            L"Upload Buffer");
-
-        if (data)
-        {
-            void* mappedData;
-            THROW_IF_FAILED(buffer->Map(0, nullptr, &mappedData));
-            memcpy(mappedData, data, sizeB);
-            buffer->Unmap(0, nullptr);
-        }
-
-        return buffer;
-    }
-    
     ComPtr<ID3D12Resource> DirectX::CreateCommittedResource(
         cr<D3D12_HEAP_PROPERTIES> pHeapProperties,
         cr<D3D12_RESOURCE_DESC> pDesc,
@@ -254,10 +217,6 @@ namespace dt
     void DirectX::CreateDevice()
     {
         THROW_IF_FAILED(D3D12CreateDevice(m_dxgiAdapter1.Get(), D3D_FEATURE_LEVEL_11_0, IID_ID3D12Device, &m_device));
-
-        m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-        m_dsvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-        m_cbvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
 
     void DirectX::CreateCommandQueue()
@@ -271,10 +230,13 @@ namespace dt
 
     void DirectX::CreateSwapChain()
     {
+        auto format = TextureFormat::RGBA;
+        auto dxFormat = DxTexture::ToDxgiFormat(format);
+        
         m_swapChainDesc1 = {};
         m_swapChainDesc1.Width = 1600;
         m_swapChainDesc1.Height = 900;
-        m_swapChainDesc1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        m_swapChainDesc1.Format = dxFormat;
         m_swapChainDesc1.Stereo = FALSE;
         m_swapChainDesc1.SampleDesc.Count = 1;
         m_swapChainDesc1.SampleDesc.Quality = 0;
@@ -295,88 +257,31 @@ namespace dt
         
         THROW_IF_FAILED(swapChain1.As(&m_dxgiSwapChain3));
         m_backBufferIndex = m_dxgiSwapChain3->GetCurrentBackBufferIndex();
+    }
 
-        m_swapChainBuffers.resize(m_swapChainDesc1.BufferCount);
+    void DirectX::CreateSwapChainTextures()
+    {
+        m_swapChainRenderTextures.resize(m_swapChainDesc1.BufferCount);
+        m_swapChainRenderTargets.resize(m_swapChainDesc1.BufferCount);
         for (uint32_t i = 0; i < m_swapChainDesc1.BufferCount; i++)
         {
             ComPtr<ID3D12Resource> buffer;
             THROW_IF_FAILED(m_dxgiSwapChain3->GetBuffer(i, IID_ID3D12Resource, &buffer));
 
-            m_swapChainBuffers[i] = DxResource::Create(buffer, D3D12_RESOURCE_STATE_PRESENT, L"Swap Cain Buffer");
+            auto dxResource = DxResource::Create(buffer, D3D12_RESOURCE_STATE_PRESENT, L"Swap Cain Buffer");
+
+            RenderTextureDesc rtDesc;
+            rtDesc.dxDesc.width = m_swapChainDesc1.Width;
+            rtDesc.dxDesc.height = m_swapChainDesc1.Height;
+            rtDesc.dxDesc.channelCount = 4;
+            rtDesc.dxDesc.format = TextureFormat::RGBA;
+            rtDesc.dxDesc.wrapMode = TextureWrapMode::CLAMP;
+            rtDesc.dxDesc.filterMode = TextureFilterMode::BILINEAR;
+            rtDesc.dxDesc.hasMipmap = false;
+            rtDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+            m_swapChainRenderTextures[i] = msp<RenderTexture>(rtDesc, dxResource);
+
+            m_swapChainRenderTargets[i] = RenderTarget::Create({ m_swapChainRenderTextures[i] }, {});
         }
     }
-
-    void DirectX::CreateDescriptorHeaps()
-    {
-        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        rtvHeapDesc.NumDescriptors = m_swapChainDesc1.BufferCount;
-        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        rtvHeapDesc.NodeMask = 0;
-
-        THROW_IF_FAILED(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_ID3D12DescriptorHeap, &m_rtvHeap));
-
-        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-        dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-        dsvHeapDesc.NumDescriptors = 1;
-        dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        dsvHeapDesc.NodeMask = 0;
-
-        THROW_IF_FAILED(m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_ID3D12DescriptorHeap, &m_dsvHeap));
-    }
-
-    void DirectX::CreateRenderTargets()
-    {
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-        for (uint32_t i = 0; i < m_swapChainDesc1.BufferCount; i++)
-        {
-            m_device->CreateRenderTargetView(m_swapChainBuffers[i]->GetResource(), nullptr, rtvHandle);
-            rtvHandle.Offset(static_cast<int>(m_rtvDescriptorSize));
-        }
-    }
-
-    // void DirectX::CreateTextures()
-    // {
-    //     
-    //     D3D12_RESOURCE_DESC depthTexDesc = {};
-    //     depthTexDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    //     depthTexDesc.Alignment = 0;
-    //     depthTexDesc.Width = m_swapChainDesc.BufferDesc.Width;
-    //     depthTexDesc.Height = m_swapChainDesc.BufferDesc.Height;
-    //     depthTexDesc.DepthOrArraySize = 1;
-    //     depthTexDesc.MipLevels = 1;
-    //     depthTexDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    //     depthTexDesc.SampleDesc.Count = 1;
-    //     depthTexDesc.SampleDesc.Quality = 0;
-    //     depthTexDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    //     depthTexDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-    //
-    //     D3D12_HEAP_PROPERTIES depthTexHeapProps = {};
-    //     depthTexHeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-    //
-    //     THROW_IF_FAILED(m_device->CreateCommittedResource(
-    //         &depthTexHeapProps,
-    //         D3D12_HEAP_FLAG_NONE,
-    //         &depthTexDesc,
-    //         D3D12_RESOURCE_STATE_COPY_DEST,
-    //         nullptr,
-    //         IID_ID3D12Resource,
-    //         &m_depthStencilBuffer));
-    //
-    //     m_depthStencilBuffer->SetName(L"Depth Stencil Buffer");
-    //
-    //     m_device->CreateDepthStencilView(
-    //         m_depthStencilBuffer.Get(),
-    //         nullptr,
-    //         m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
-    //
-    //     AddCommand([this](ID3D12GraphicsCommandList* cmdList)
-    //     {
-    //         auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
-    //             this->m_depthStencilBuffer.Get(),
-    //             D3D12_RESOURCE_STATE_COPY_DEST,
-    //             D3D12_RESOURCE_STATE_DEPTH_WRITE);
-    //         cmdList->ResourceBarrier(1, &transition);
-    //     });
-    // }
 }

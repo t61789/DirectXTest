@@ -76,6 +76,16 @@ namespace dt
 
         return result;
     }
+
+    inline bool operator==(const XMINT2& lhs, const XMINT2& rhs)
+    {
+        return lhs.x == rhs.x && lhs.y == rhs.y;
+    }
+
+    inline bool operator!=(const XMINT2& lhs, const XMINT2& rhs)
+    {
+        return !(lhs == rhs);
+    }
 }
 
 template <>

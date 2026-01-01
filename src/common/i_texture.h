@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace op
+namespace dt
 {
     class ITexture
     {
@@ -14,7 +14,8 @@ namespace op
         ITexture& operator=(const ITexture& other) = delete;
         ITexture& operator=(ITexture&& other) noexcept = delete;
 
-        virtual uint32_t GetWidth() = 0;
-        virtual uint32_t GetHeight() = 0;
+        virtual DxTexture* GetDxTexture() = 0;
+        virtual uint32_t GetSrvDescIndex() = 0;
+        virtual XMINT2 GetSize() = 0;
     };
 }

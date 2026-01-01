@@ -6,6 +6,7 @@
 #include "directx.h"
 #include "dx_helper.h"
 #include "render_thread.h"
+#include "utils/recycle_bin.h"
 
 namespace dt
 {
@@ -15,21 +16,21 @@ namespace dt
 
         auto uploadBuffer = CreateUploadBuffer(data, sizeB);
 
-        RT()->AddCmd([self=shared_from_this(), uploadBuffer](ID3D12GraphicsCommandList* cmdList)
+        RT()->AddCmd([self=shared_from_this(), uploadBuffer](ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context)
         {
             auto preState = self->m_state.load();
             
             if (preState != D3D12_RESOURCE_STATE_COPY_DEST)
             {
-                DxHelper::AddTransition(self, D3D12_RESOURCE_STATE_COPY_DEST);
-                DxHelper::ApplyTransitions(cmdList);
+                DxHelper::AddTransition(context, self, D3D12_RESOURCE_STATE_COPY_DEST);
+                DxHelper::ApplyTransitions(cmdList, context);
             }
 
-            cmdList->CopyResource(self->m_resource.Get(), uploadBuffer.Get());
+            cmdList->CopyResource(self->m_resource.Get(), uploadBuffer->GetResource());
 
             if (preState != D3D12_RESOURCE_STATE_COPY_DEST)
             {
-                DxHelper::AddTransition(self, preState);
+                DxHelper::AddTransition(context, self, preState);
             }
         });
     }
@@ -50,7 +51,7 @@ namespace dt
             heapFlags,
             name);
 
-        auto result = msp<DxResource>();
+        auto result = make_recyclable<DxResource>();
         result->m_resource = resource;
         result->m_state = initialResourceState;
         result->m_desc = desc;
@@ -73,7 +74,7 @@ namespace dt
         D3D12_HEAP_PROPERTIES heapProperties;
         THROW_IF_FAILED(resource->GetHeapProperties(&heapProperties, &heapFlags));
 
-        auto result = msp<DxResource>();
+        auto result = make_recyclable<DxResource>();
         result->m_resource = resource;
         result->m_state = curState;
         result->m_desc = resource->GetDesc();
@@ -81,27 +82,25 @@ namespace dt
 
         return result;
     }
-
-    ComPtr<ID3D12Resource> DxResource::CreateUploadBuffer(const void* data, const size_t sizeB)
+    
+    sp<DxResource> DxResource::CreateUploadBuffer(const void* data, const size_t sizeB)
     {
-        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
-        CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeB);
-        
-        ComPtr<ID3D12Resource> buffer;
-        THROW_IF_FAILED(Dx()->GetDevice()->CreateCommittedResource(
-            &heapProps,
-            D3D12_HEAP_FLAG_NONE,
-            &bufferDesc,
+        auto result = Create(
+            CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+            CD3DX12_RESOURCE_DESC::Buffer(sizeB),
             D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
-            IID_ID3D12Resource,
-            &buffer));
+            D3D12_HEAP_FLAG_NONE,
+            L"Upload Buffer");
 
-        void* mappedData;
-        THROW_IF_FAILED(buffer->Map(0, nullptr, &mappedData));
-        memcpy(mappedData, data, sizeB);
-        buffer->Unmap(0, nullptr);
+        if (data)
+        {
+            void* mappedData;
+            THROW_IF_FAILED(result->GetResource()->Map(0, nullptr, &mappedData));
+            memcpy(mappedData, data, sizeB);
+            result->GetResource()->Unmap(0, nullptr);
+        }
 
-        return buffer;
+        return result;
     }
 }

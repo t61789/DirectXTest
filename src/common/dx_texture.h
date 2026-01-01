@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <cstdint>
 #include <d3d12.h>
+#include <DirectXMath.h>
 #include <wrl/client.h>
 
 #include "const.h"
@@ -10,6 +11,7 @@ namespace dt
     class DxResource;
     struct SrvDesc;
     using namespace Microsoft::WRL;
+    using namespace DirectX;
     
     enum class TextureType : uint8_t
     {
@@ -19,7 +21,9 @@ namespace dt
     enum class TextureFormat : uint8_t
     {
         RGBA,
-        RGB
+        RGB,
+        Depth,
+        DepthStencil
     };
 
     enum class TextureWrapMode : uint8_t
@@ -52,15 +56,16 @@ namespace dt
     class DxTexture
     {
     public:
-        SrvDesc* GetSrvDesc() const { return m_srvDescHandle.get(); }
-        crsp<DxResource> GetResource() const { return m_dxResource; }
+        crsp<DxResource> GetDxResource() const { return m_dxResource; }
         DxTextureDesc GetDesc() const { return m_desc; }
+        XMINT2 GetSize() const { return XMINT2(m_desc.width, m_desc.height); }
         
         static sp<DxTexture> CreateImage(cr<DxTextureDesc> desc);
+        static sp<DxTexture> CreateRenderTexture(cr<DxTextureDesc> desc, cr<XMFLOAT4> clearColor, crsp<DxResource> dxResource = nullptr);
+        static DXGI_FORMAT ToDxgiFormat(TextureFormat format);
         
     private:
         DxTextureDesc m_desc;
-        sp<SrvDesc> m_srvDescHandle;
         sp<DxResource> m_dxResource;
     };
 

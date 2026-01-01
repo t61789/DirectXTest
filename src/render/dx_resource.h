@@ -3,16 +3,17 @@
 #include <wrl/client.h>
 
 #include "common/const.h"
+#include "utils/recycle_bin.h"
 
 namespace dt
 {
     using namespace Microsoft::WRL;
     
-    class DxResource : public std::enable_shared_from_this<DxResource>
+    class DxResource : public std::enable_shared_from_this<DxResource>, public IRecyclable
     {
     public:
         DxResource() = default;
-        ~DxResource() = default;
+        ~DxResource() override = default;
         DxResource(const DxResource& other) = delete;
         DxResource(DxResource&& other) noexcept = delete;
         DxResource& operator=(const DxResource& other) = delete;
@@ -37,10 +38,9 @@ namespace dt
             D3D12_RESOURCE_STATES curState,
             const wchar_t* name);
 
-    private:
+        static sp<DxResource> CreateUploadBuffer(const void* data, size_t sizeB);
 
-        static ComPtr<ID3D12Resource> CreateUploadBuffer(const void* data, size_t sizeB);
-        
+    private:
         ComPtr<ID3D12Resource> m_resource;
         std::atomic<D3D12_RESOURCE_STATES> m_state;
         D3D12_RESOURCE_DESC m_desc;

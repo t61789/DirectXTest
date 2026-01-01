@@ -6,58 +6,91 @@
 #include <wrl/client.h>
 
 #include "common/utils.h"
+#include "game/game_resource.h"
+#include "utils/consumer_thread.h"
 
 namespace dt
 {
+    class RenderTarget;
+    class DxResource;
     using namespace Microsoft::WRL;
+
+    struct RenderThreadContext
+    {
+        sp<RenderTarget> curRenderTarget = nullptr;
+        vecpair<sp<DxResource>, D3D12_RESOURCE_STATES> transitions;
+    };
     
-    class RenderThread : public Singleton<RenderThread>
+    class RenderThread
     {
     public:
-        using RenderCmd = std::function<void(ID3D12GraphicsCommandList*)>;
+        using RenderCmd = std::function<void(ID3D12GraphicsCommandList*, RenderThreadContext&)>;
 
-        explicit RenderThread(cr<ComPtr<ID3D12Device>> device);
+        explicit RenderThread(const char* name = nullptr);
         ~RenderThread();
         RenderThread(const RenderThread& other) = delete;
         RenderThread(RenderThread&& other) noexcept = delete;
         RenderThread& operator=(const RenderThread& other) = delete;
         RenderThread& operator=(RenderThread&& other) noexcept = delete;
 
-        template <typename F>
-        void AddCmd(F&& f);
-        void FlushCmds();
-        void WaitForDone();
+        void Wait() { m_thread->Wait(); }
+
+        void AddCmd(RenderCmd&& cmd);
+
+        void StopRecording();
+        void StartRecording();
 
         void ReleaseCmdResources();
 
     private:
-        void ThreadMain();
-        void AddCmd(sp<RenderCmd>&& cmd);
-        void StopThread();
+        void ThreadInit();
+        void ThreadRelease();
         void WaitForFence();
 
-        ComPtr<ID3D12Device> m_device;
         ComPtr<ID3D12CommandAllocator> m_cmdAllocator;
         ComPtr<ID3D12GraphicsCommandList> m_cmdList;
-        
-        std::mutex m_mutex;
-        std::condition_variable m_execCmdCond;
-        std::condition_variable m_waitForDoneCond;
-        std::thread m_thread;
-        std::atomic<bool> m_stop = false;
-        vecsp<RenderCmd> m_cmds;
-        uint32_t m_curCmdIndex = 0;
+
+        up<ConsumerThread<RenderCmd>> m_thread;
+        vec<RenderCmd> m_cmds;
+        vec<RenderCmd> m_pendingCmds;
+
+        std::atomic<bool> m_recording = false;
+
+        RenderThreadContext m_context;
+
+        bool m_first = true;
         
         ComPtr<ID3D12Fence> m_fence;
         HANDLE m_fenceEvent;
         uint64_t m_fenceValue = 0;
     };
 
-    template <typename F>
-    void RenderThread::AddCmd(F&& f)
+    class RenderThreadMgr : public Singleton<RenderThreadMgr>
     {
-        AddCmd(msp<RenderCmd>(std::forward<F>(f)));
-    }
+        using PresentThread = ConsumerThread<std::function<void()>>;
+        
+    public:
+        RenderThreadMgr();
+        ~RenderThreadMgr();
+        RenderThreadMgr(const RenderThreadMgr& other) = delete;
+        RenderThreadMgr(RenderThreadMgr&& other) noexcept = delete;
+        RenderThreadMgr& operator=(const RenderThreadMgr& other) = delete;
+        RenderThreadMgr& operator=(RenderThreadMgr&& other) noexcept = delete;
 
-    static RenderThread* RT() { return RenderThread::Ins(); }
+        RenderThread* GetRenderThread() const { return m_renderThread; }
+
+        void ExecuteAllThreads();
+        void WaitForDone();
+
+    private:
+        bool m_executing = true;
+        
+        RenderThread* m_renderThread;
+        // PresentThread* m_presentThread;
+    };
+
+    static RenderThread* RT()
+    {
+        return RenderThreadMgr::Ins()->GetRenderThread();
+    }
 }

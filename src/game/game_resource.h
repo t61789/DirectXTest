@@ -5,8 +5,8 @@
 
 namespace dt
 {
+    class Mesh;
     class Material;
-    class GlobalMaterialParams;
     class Image;
     class Scene;
     class Cbuffer;
@@ -37,6 +37,7 @@ namespace dt
         Scene* mainScene = nullptr;
 
         sp<Material> blitMat = nullptr;
+        sp<Mesh> quadMesh = nullptr;
 
         sp<Image> errorTex = nullptr;
 
@@ -50,8 +51,6 @@ namespace dt
 
         umap<string_hash, wp<IResource>> m_resources;
         vecsp<Cbuffer> m_predefinedCbuffers = vecsp<Cbuffer>(PREDEFINED_CBUFFER.size());
-
-        GlobalMaterialParams* m_globalMaterialParams = nullptr;
 
         friend class Game;
         friend class Cbuffer;

@@ -4,9 +4,13 @@
 #include <wrl/client.h>
 
 #include "common/const.h"
+#include "common/utils.h"
 
 namespace dt
 {
+    class FinalPass;
+    class RenderThread;
+    struct RenderResources;
     class PreparePass;
     class Scene;
     class Material;
@@ -16,7 +20,7 @@ namespace dt
     
     using namespace Microsoft::WRL;
 
-    class RenderPipeline
+    class RenderPipeline : public Singleton<RenderPipeline>
     {
     public:
         RenderPipeline();
@@ -26,14 +30,19 @@ namespace dt
         RenderPipeline& operator=(const RenderPipeline& other) = delete;
         RenderPipeline& operator=(RenderPipeline&& other) noexcept = delete;
 
+        RenderResources* GetRenderResources() const { return m_renderResources.get(); }
+
         void Render();
         static void RenderScene(ID3D12GraphicsCommandList* cmdList, const Scene* scene);
 
     private:
-        
-        sp<Mesh> m_testMesh;
-        sp<Material> m_testMaterial;
-
         sp<PreparePass> m_preparePass;
+        sp<FinalPass> m_finalPass;
+        sp<RenderResources> m_renderResources;
     };
+
+    static RenderResources* RenderRes()
+    {
+        return RenderPipeline::Ins()->GetRenderResources();
+    }
 }

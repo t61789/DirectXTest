@@ -9,7 +9,7 @@
 #include "stb_image.h"
 #include "common/asset_cache.h"
 #include "game/game_resource.h"
-#include "render/desc_handle_pool.h"
+#include "render/descriptor_pool.h"
 #include "render/directx.h"
 #include "render/dx_helper.h"
 #include "render/dx_resource.h"
@@ -17,11 +17,6 @@
 
 namespace dt
 {
-    uint32_t Image::GetSrvDescIndex()
-    {
-        return m_dxTexture->GetSrvDesc()->GetIndex();
-    }
-
     sp<Image> Image::LoadFromFile(cr<StringHandle> path)
     {
         {
@@ -37,6 +32,7 @@ namespace dt
         }
 
         auto result = AssetCache::GetFromCache<Image, ImageCache>(path);
+        result->m_shaderResource = DescriptorPool::Ins()->AllocSrv(result->m_dxTexture.get());
         
         GR()->RegisterResource(path, result);
         result->m_path = path;
@@ -114,9 +110,9 @@ namespace dt
     {
         auto dxTexture = DxTexture::CreateImage(cache.desc);
 
-        RT()->AddCmd([dxTexture, cache=std::move(cache)](ID3D12GraphicsCommandList* cmdList)
+        RT()->AddCmd([dxTexture, cache=std::move(cache)](ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context)
         {
-            auto dxTextureResourceDesc = dxTexture->GetResource()->GetDesc();
+            auto dxTextureResourceDesc = dxTexture->GetDxResource()->GetDesc();
             
             size_t uploadBytes;
             Dx()->GetDevice()->GetCopyableFootprints(
@@ -129,7 +125,7 @@ namespace dt
                 nullptr,
                 &uploadBytes);
             
-            auto uploadBuffer = Dx()->CreateUploadBuffer(nullptr, uploadBytes);
+            auto uploadBuffer = DxResource::CreateUploadBuffer(nullptr, uploadBytes);
             
             D3D12_SUBRESOURCE_DATA srcData;
             srcData.pData = cache.data.data();
@@ -138,14 +134,14 @@ namespace dt
             
             THROW_IF_FAILED(UpdateSubresources(
                 cmdList,
-                dxTexture->GetResource()->GetResource(),
-                uploadBuffer.Get(),
+                dxTexture->GetDxResource()->GetResource(),
+                uploadBuffer->GetResource(),
                 0,
                 0,
                 1,
                 &srcData));
             
-            DxHelper::AddTransition(dxTexture->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            DxHelper::AddTransition(context, dxTexture->GetDxResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         });
 
         auto result = msp<Image>();

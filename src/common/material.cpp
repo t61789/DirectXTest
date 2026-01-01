@@ -6,21 +6,9 @@
 #include "image.h"
 #include "shader.h"
 #include "game/game_resource.h"
-#include "render/global_material_params.h"
 
 namespace dt
 {
-    Material::~Material()
-    {
-        for (auto& [nameId, param] : m_params)
-        {
-            if (param.isGlobal)
-            {
-                GlobalMaterialParams::Ins()->UnregisterParam(param.name, this);
-            }
-        }
-    }
-
     sp<Material> Material::LoadFromFile(cr<StringHandle> path)
     {
         {
@@ -90,40 +78,16 @@ namespace dt
                 continue;
             }
 
-            auto param = LoadParam(matJson, elemKey);
-            AddParam(param.name, param.data.data(), param.sizeB, false, param.image);
-        }
-        
-        if (m_cbuffer)
-        {
-            // cbuffer里还没被添加的参数就是全局参数了
-            m_cbuffer->ForeachField([this](cr<CbufferLayout::Field> field)
-            {
-                if (find(m_params, field.name))
-                {
-                    return;
-                }
-
-                // 是纹理的话要给个默认值，但不持有引用
-                if (IsTextureParam(field.name))
-                {
-                    auto i = GR()->errorTex->GetSrvDescIndex();
-                    AddParam(field.name, &i, field.logicSizeB, true, nullptr);
-                }
-                else
-                {
-                    AddParam(field.name, nullptr, field.logicSizeB, true, nullptr);
-                }
-            });
+            auto param = LoadParamInfo(matJson, elemKey);
+            SetParamImp(param.nameId, param.data.data(), param.sizeB, param.texture);
         }
     }
 
-    Material::Param* Material::AddParam(const string_hash nameId, const void* val, const uint32_t sizeB, const bool isGlobal, crsp<Image> image)
+    Material::Param* Material::AddParam(const string_hash nameId, const uint32_t sizeB)
     {
         Param param;
-        param.name = nameId;
-        param.image = nullptr;
-        param.isGlobal = isGlobal;
+        param.nameId = nameId;
+        param.texture = nullptr;
 
         const CbufferLayout::Field* cbufferField = nullptr;
         
@@ -143,72 +107,39 @@ namespace dt
             param.sizeB = sizeB;
         }
         
-        param.data.reserve(param.sizeB);
+        param.data.resize(param.sizeB);
 
-        m_params.push_back(std::make_pair(param.name, std::move(param)));
+        m_params.emplace_back(param.nameId, std::move(param));
         
-        auto result = &m_params.back().second;
-
-        if (val)
-        {
-            DoWriteParam(result, val, sizeB);
-        }
-
-        param.image = image;
-
-        if (param.isGlobal)
-        {
-            GlobalMaterialParams::Ins()->RegisterParam(param.name, this);
-        }
-
-        return result;
+        return &m_params.back().second;
     }
 
-    void Material::SetParamImp(const string_hash name, const void* val, const size_t sizeB, crsp<Image> image)
+    void Material::SetParamImp(const string_hash nameId, const void* val, const uint32_t sizeB, crsp<ITexture> texture)
     {
-        auto param = find(m_params, name);
+        assert(Utils::IsMainThread());
+        
+        auto param = find(m_params, nameId);
         if (!param)
         {
-            AddParam(name, val, sizeB, false, image);
-            return;
+            param = AddParam(nameId, sizeB);
         }
-        
-        if (param->isGlobal)
-        {
-            param->isGlobal = false;
-            GlobalMaterialParams::Ins()->UnregisterParam(param->name, this);
-        }
-        
-        DoWriteParam(param, val, sizeB);
-        param->image = image;
-    }
-    
-    void Material::OnGlobalParamChanged(const string_hash nameId, const void* val, const size_t sizeB)
-    {
-        auto param = find(m_params, nameId);
-        
-        assert(param && param->isGlobal);
 
-        DoWriteParam(param, val, sizeB);
-    }
-
-    void Material::DoWriteParam(Param* param, const void* val, const uint32_t sizeB)
-    {
         auto clampedSizeB = (std::min)(sizeB, param->sizeB);
-        if (memcmp(param->data.data(), val, clampedSizeB) != 0)
-        {
-            memcpy(param->data.data(), val, clampedSizeB);
+        memcpy(param->data.data(), val, clampedSizeB);
 
-            if (param->isCbuffer)
-            {
-                m_cbuffer->Write(param->name, param->data.data(), param->sizeB);
-            }
+        if (param->isCbuffer)
+        {
+            m_cbuffer->Write(param->nameId, param->data.data(), param->sizeB);
         }
+        
+        param->texture = texture;
     }
     
-    bool Material::GetParamImp(const string_hash name, void* val, const uint32_t sizeB)
+    bool Material::GetParamImp(const string_hash nameId, void* val, const uint32_t sizeB)
     {
-        auto param = find(m_params, name);
+        assert(Utils::IsMainThread());
+        
+        auto param = find(m_params, nameId);
         if (!param)
         {
             return false;
@@ -220,12 +151,12 @@ namespace dt
         return true;
     }
 
-    Material::Param Material::LoadParam(cr<nlohmann::json> matJson, cr<StringHandle> paramName)
+    Material::Param Material::LoadParamInfo(cr<nlohmann::json> matJson, cr<StringHandle> paramName)
     {
         const auto& elemValue = matJson.at(paramName.Str());
 
         Param param;
-        param.name = paramName;
+        param.nameId = paramName;
         
         if (elemValue.is_number_integer())
         {
@@ -256,7 +187,7 @@ namespace dt
             ASSERT_THROW(elemValue.is_string());
             
             auto image = Image::LoadFromFile(elemValue.get<str>());
-            param.image = image;
+            param.texture = image;
             param.sizeB = sizeof(uint32_t);
             
             auto srvDescIndex = image->GetSrvDescIndex();

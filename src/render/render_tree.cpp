@@ -1,27 +1,18 @@
 ﻿#include "render_tree.h"
 
+#include "render_resources.h"
 #include "common/material.h"
 #include "game/game_resource.h"
 #include "objects/render_comp.h"
 
 namespace dt
 {
-    void RenderTree::Register(RenderComp* renderComp)
+    void RenderTree::Register(const RenderComp* renderComp)
     {
-        if (m_registeredComps.find(renderComp) != m_registeredComps.end())
-        {
-            return;
-        }
-
-        auto renderObject = msp<RenderObject>();
-        renderObject->shader = renderComp->GetMaterial()->GetShader();
-        renderObject->material = renderComp->GetMaterial().get();
-        renderObject->mesh = renderComp->GetMesh().get();
-        renderObject->renderComp = renderComp;
-        renderObject->perObjectCbuffer = mup<Cbuffer>(GR()->GetPredefinedCbuffer(PER_OBJECT_CBUFFER)->GetLayout());
+        auto ro = renderComp->GetRenderObject();
+        assert(!ExistsRenderObject(ro));
         
-        m_registeredComps[renderComp] = renderObject;
-        m_renderObjects.push_back(renderObject);
+        m_renderObjects.push_back(ro);
 
         std::sort(m_renderObjects.begin(), m_renderObjects.end(), [](crsp<RenderObject> a, crsp<RenderObject> b)
         {
@@ -41,26 +32,16 @@ namespace dt
         });
     }
 
-    void RenderTree::UnRegister(RenderComp* renderComp)
+    void RenderTree::UnRegister(const RenderComp* renderComp)
     {
-        auto it = m_registeredComps.find(renderComp);
-        if (it == m_registeredComps.end())
-        {
-            return;
-        }
-        m_registeredComps.erase(it);
+        auto ro = renderComp->GetRenderObject();
+        assert(ExistsRenderObject(ro));
 
-        remove_if(m_renderObjects, [renderComp](crsp<RenderObject> renderObject)
-        {
-            return renderObject->renderComp == renderComp;
-        });
+        remove(m_renderObjects, ro);
     }
 
-    void RenderTree::UpdateTransform(RenderComp* renderComp, cr<XMFLOAT4X4> localToWorld, cr<XMFLOAT4X4> worldToLocal)
+    bool RenderTree::ExistsRenderObject(crsp<RenderObject> renderObject)
     {
-        auto ro = m_registeredComps.at(renderComp);
-        
-        ro->perObjectCbuffer->Write(M, &localToWorld, sizeof(XMFLOAT4X4));
-        ro->perObjectCbuffer->Write(IM, &worldToLocal, sizeof(XMFLOAT4X4));
+        return exists_if(m_renderObjects, [&renderObject](crsp<RenderObject> x){ return x == renderObject; });
     }
 }

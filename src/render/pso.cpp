@@ -35,7 +35,7 @@ namespace dt
 
     void Pso::SetDepthMode(const DepthMode mode)
     {
-        if (m_depthMode ==  mode)
+        if (m_depthMode == mode)
         {
             return;
         }
@@ -77,6 +77,7 @@ namespace dt
         m_dirty = true;
         m_depthWrite = enable;
 
+        m_desc.DepthStencilState.DepthEnable = enable;
         m_desc.DepthStencilState.DepthWriteMask = enable ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
     }
 

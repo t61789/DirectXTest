@@ -7,9 +7,19 @@
 #include "object.h"
 #include "scene.h"
 #include "transform_comp.h"
+#include "render/render_resources.h"
 
 namespace dt
 {
+    void RenderComp::Awake()
+    {
+        m_renderObject = msp<RenderObject>();
+        m_renderObject->mesh = m_mesh;
+        m_renderObject->material = m_material;
+        m_renderObject->shader = m_material->GetShader();
+        m_renderObject->perObjectCbuffer = msp<Cbuffer>(GR()->GetPredefinedCbuffer(PER_OBJECT_CBUFFER)->GetLayout());
+    }
+
     void RenderComp::Start()
     {
         m_onTransformDirtyHandler = GetOwner()->transform->dirtyEvent.Add(this, &RenderComp::OnTransformDirty);
@@ -89,7 +99,8 @@ namespace dt
         XMStoreFloat4x4(&localToWorld, GetOwner()->transform->GetLocalToWorld());
         XMFLOAT4X4 worldToLocal;
         XMStoreFloat4x4(&worldToLocal, GetOwner()->transform->GetWorldToLocal());
-        
-        GetOwner()->GetScene()->GetRenderTree()->UpdateTransform(this, localToWorld, worldToLocal);
+
+        m_renderObject->perObjectCbuffer->Write(M, &localToWorld, sizeof(XMFLOAT4X4));
+        m_renderObject->perObjectCbuffer->Write(IM, &worldToLocal, sizeof(XMFLOAT4X4));
     }
 }

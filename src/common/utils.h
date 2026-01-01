@@ -61,6 +61,8 @@ namespace dt
         static void BinaryDeserialize(T& obj, crstr path);
         
         static std::string Join(const std::vector<std::string>& strings, const std::string& delimiter);
+
+        static bool IsMainThread();
     };
     
     template <typename... Args>
@@ -373,6 +375,23 @@ namespace dt
         return false;
     }
 
+    template <typename K, typename V>
+    static bool try_get(crumap<K, V>& map, const K& key, V& value)
+    {
+        auto it = map.find(key);
+        if (it != map.end())
+        {
+            value = it->second;
+            return true;
+        }
+        return false;
+    }
+
+    inline uint32_t ceil_div(const uint32_t a, const uint32_t b)
+    {
+        return (a + b - 1) / b;
+    }
+
     template <typename T>
     static T get_val(const nlohmann::json& j, const char* name)
     {
@@ -423,10 +442,10 @@ namespace dt
     class Singleton
     {
     public:
-        Singleton(const Singleton& other) = delete;
-        Singleton(Singleton&& other) noexcept = delete;
-        Singleton& operator=(const Singleton& other) = delete;
-        Singleton& operator=(Singleton&& other) noexcept = delete;
+        Singleton(const Singleton& other) = default;
+        Singleton(Singleton&& other) noexcept = default;
+        Singleton& operator=(const Singleton& other) = default;
+        Singleton& operator=(Singleton&& other) noexcept = default;
 
         ~Singleton() { m_instance = nullptr; }
         static T* Ins() { return m_instance; }

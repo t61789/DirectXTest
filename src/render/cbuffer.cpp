@@ -47,8 +47,8 @@ namespace dt
 
     Cbuffer::~Cbuffer()
     {
-        assert(!m_using);
         m_dxResource->Unmap(0, nullptr);
+        m_dxResource.Reset();
     }
     
     bool Cbuffer::HasField(const string_hash nameId, const ParamType type, const uint32_t repeatCount) const
@@ -62,14 +62,62 @@ namespace dt
 
     bool Cbuffer::Write(const string_hash name, const void* data, const uint32_t sizeB)
     {
-        if (auto field = find(m_layout->fields, name))
+        auto field = find(m_layout->fields, name);
+        if (!field)
         {
-            auto writeSizeB = (std::min)(field->logicSizeB, sizeB);
-            memcpy(static_cast<uint8_t*>(m_gpuWriteDest) + field->offsetB, data, writeSizeB); // TODO cmdbuffer
-            return true;
+            return false;
+        }
+        auto dataSizeB = (std::min)(field->logicSizeB, sizeB);
+        
+        if (Utils::IsMainThread())
+        {
+            if (auto modify = find(m_modifies, field->name))
+            {
+                memcpy(modify->data(), data, dataSizeB);
+            }
+            else
+            {
+                vec<uint8_t> modifyData(dataSizeB);
+                memcpy(modifyData.data(), data, dataSizeB);
+
+                m_modifies.emplace_back(field->name, std::move(modifyData));
+            }
+
+            s_dirtyCbuffers.insert(shared_from_this());
+        }
+        else
+        {
+            memcpy(static_cast<uint8_t*>(m_gpuWriteDest) + field->offsetB, data, dataSizeB);
         }
 
-        return false;
+        return true;
+    }
+
+    void Cbuffer::ApplyModifies()
+    {
+        assert(Utils::IsMainThread());
+
+        for (auto& [fieldName, data] : m_modifies)
+        {
+            auto field = find(m_layout->fields, fieldName);
+            assert(field);
+
+            memcpy(static_cast<uint8_t*>(m_gpuWriteDest) + field->offsetB, data.data(), data.size());
+        }
+
+        m_modifies.clear();
+    }
+
+    void Cbuffer::UpdateDirtyCbuffers()
+    {
+        assert(Utils::IsMainThread());
+
+        for (auto& cb : s_dirtyCbuffers)
+        {
+            cb->ApplyModifies();
+        }
+
+        s_dirtyCbuffers.clear();
     }
 
     void Cbuffer::CreateDxResource()

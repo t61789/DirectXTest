@@ -3,6 +3,8 @@
 #include <directx/d3d12.h>
 
 #include "dx_resource.h"
+#include "render_target.h"
+#include "render_thread.h"
 #include "common/material.h"
 
 namespace dt
@@ -12,6 +14,7 @@ namespace dt
     class Cbuffer;
     class Material;
     class Mesh;
+    struct RenderThreadContext;
 
     class DxHelper
     {
@@ -24,20 +27,17 @@ namespace dt
         static void BindBindlessTextures(ID3D12GraphicsCommandList* cmdList, const Shader* shader);
         static void BindMesh(ID3D12GraphicsCommandList* cmdList, const Mesh* mesh);
         
-        static void AddTransition(crsp<DxResource> resource, D3D12_RESOURCE_STATES state);
-        static void ApplyTransitions(ID3D12GraphicsCommandList* cmdList);
+        static void AddTransition(RenderThreadContext& context, crsp<DxResource> resource, D3D12_RESOURCE_STATES state);
+        static void ApplyTransitions(ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context);
         
         static uint32_t GetRegisterType(D3D_SHADER_INPUT_TYPE resourceType);
         
-        static void SetHeaps(ID3D12GraphicsCommandList* cmdList, ID3D12DescriptorHeap* const* heaps, uint32_t heapCount);
+        static void SetHeaps(ID3D12GraphicsCommandList* cmdList, DescriptorPool* descPool);
+        static void SetRenderTarget(ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context, crsp<RenderTarget> renderTarget);
+        static void UnsetRenderTarget(RenderThreadContext& context, crsp<RenderTarget> renderTarget);
 
-    private:
-        struct Transition
-        {
-            sp<DxResource> resource;
-            D3D12_RESOURCE_STATES state;
-        };
-        
-        inline static vec<Transition> m_transitions;
+        static void PrepareCmdList(ID3D12GraphicsCommandList* cmdList);
+
+        static void Blit(ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context, const Material* material, crsp<RenderTarget> renderTarget);
     };
 }

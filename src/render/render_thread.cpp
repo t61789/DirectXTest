@@ -3,118 +3,109 @@
 #include <tracy/Tracy.hpp>
 
 #include "directx.h"
+#include "utils/recycle_bin.h"
 
 namespace dt
 {
-    RenderThread::RenderThread(cr<ComPtr<ID3D12Device>> device)
+    RenderThread::RenderThread(const char* name)
     {
-        m_device = device;
-        THROW_IF_FAILED(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_ID3D12Fence, &m_fence));
+        m_thread = mup<ConsumerThread<RenderCmd>>([this](cr<RenderCmd> cmd) { cmd(m_cmdList.Get(), m_context); }, name);
+        m_thread->Enqueue([this](const ID3D12GraphicsCommandList*, RenderThreadContext&) { ThreadInit(); });
+        
+        THROW_IF_FAILED(Dx()->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_ID3D12Fence, &m_fence));
         m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
         THROW_IF(m_fenceEvent == nullptr, "Failed to create fence event.");
-        
-        m_thread = std::thread(&RenderThread::ThreadMain, this);
     }
 
     RenderThread::~RenderThread()
     {
-        StopThread();
+        m_thread->Enqueue([this](const ID3D12GraphicsCommandList*, RenderThreadContext&) { ThreadRelease(); });
+        m_thread->Stop(false);
+        m_thread->Join();
+        
+        ReleaseCmdResources();
+
+        WaitForFence();
 
         CloseHandle(m_fenceEvent);
-        m_device.Reset();
     }
-
-    void RenderThread::FlushCmds()
+    
+    void RenderThread::AddCmd(RenderCmd&& cmd)
     {
-        AddCmd([this](ID3D12GraphicsCommandList* cmdList)
+        assert(Utils::IsMainThread() && !m_thread->IsStopped());
+
+        if (!m_recording.load())
         {
-            THROW_IF_FAILED(cmdList->Close());
-            ID3D12CommandList* c[] = { cmdList };
-            Dx()->GetCommandQueue()->ExecuteCommandLists(1, c);
-
-            WaitForFence();
-
-            THROW_IF_FAILED(m_cmdAllocator->Reset());
-            THROW_IF_FAILED(m_cmdList->Reset(m_cmdAllocator.Get(), nullptr));
-
-            Dx()->PresentSwapChain();
-        });
+            m_pendingCmds.push_back(std::move(cmd));
+        }
+        else
+        {
+            m_thread->Enqueue(cmd);
+            m_cmds.push_back(std::move(cmd));
+        }
     }
 
     void RenderThread::ReleaseCmdResources()
     {
-        std::lock_guard lock(m_mutex);
         m_cmds.clear();
-        m_curCmdIndex = 0;
     }
 
-    void RenderThread::WaitForDone()
+    void RenderThread::StopRecording()
     {
-        std::unique_lock lock(m_mutex);
-        m_waitForDoneCond.wait(lock, [this]
+        assert(Utils::IsMainThread() && m_recording.load());
+
+        AddCmd([this](ID3D12GraphicsCommandList* cmdList, RenderThreadContext&)
         {
-            return m_stop.load() || m_curCmdIndex >= m_cmds.size();
-        });
-    }
-
-    void RenderThread::AddCmd(sp<RenderCmd>&& cmd)
-    {
-        assert(!m_stop.load());
-        
-        std::lock_guard lock(m_mutex);
-        m_cmds.push_back(std::move(cmd));
-        m_execCmdCond.notify_one();
-    }
-
-    void RenderThread::ThreadMain()
-    {
-        THROW_IF_FAILED(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_ID3D12CommandAllocator, &m_cmdAllocator));
-        THROW_IF_FAILED(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmdAllocator.Get(), nullptr, IID_ID3D12GraphicsCommandList, &m_cmdList));
-        
-        while (true)
-        {
-            sp<RenderCmd> cmd;
+            ZoneScopedN("Execute");
             
-            {
-                std::unique_lock lock(m_mutex);
-                if (m_curCmdIndex >= m_cmds.size())
-                {
-                    m_waitForDoneCond.notify_one();
-                }
+            THROW_IF_FAILED(cmdList->Close());
+            
+            vec<ID3D12CommandList*> cmdLists;
+            cmdLists.push_back(m_cmdList.Get());
 
-                m_execCmdCond.wait(lock, [this]
-                {
-                    return m_stop.load() || m_curCmdIndex < m_cmds.size();
-                });
+            Dx()->GetCommandQueue()->ExecuteCommandLists(static_cast<UINT>(cmdLists.size()), cmdLists.data());
 
-                if (m_stop.load() && m_curCmdIndex >= m_cmds.size())
-                {
-                    break;
-                }
+            WaitForFence();
 
-                cmd = m_cmds[m_curCmdIndex];
-                m_curCmdIndex++;
-            }
+            Dx()->PresentSwapChain();
+        });
+        
+        m_recording.store(false);
+    }
 
-            (*cmd)(m_cmdList.Get());
+    void RenderThread::StartRecording()
+    {
+        assert(Utils::IsMainThread() && !m_recording.load());
+
+        if (!m_first)
+        {
+            THROW_IF_FAILED(m_cmdAllocator->Reset());
+            THROW_IF_FAILED(m_cmdList->Reset(m_cmdAllocator.Get(), nullptr));
+        }
+        m_first = false;
+
+        ReleaseCmdResources();
+
+        m_recording.store(true);
+        
+        for (auto& cmd : m_pendingCmds)
+        {
+            AddCmd(std::move(cmd));
         }
 
-        WaitForFence();
-        
+        m_pendingCmds.clear();
+    }
+
+    void RenderThread::ThreadInit()
+    {
+        THROW_IF_FAILED(Dx()->GetDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_ID3D12CommandAllocator, &m_cmdAllocator));
+        THROW_IF_FAILED(Dx()->GetDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmdAllocator.Get(), nullptr, IID_ID3D12GraphicsCommandList, &m_cmdList));
+    }
+
+    void RenderThread::ThreadRelease()
+    {
         m_cmdList.Reset();
         m_cmdAllocator.Reset();
-    }
-    
-    void RenderThread::StopThread()
-    {
-        {
-            std::lock_guard lock(m_mutex);
-            m_stop = true;
-            m_execCmdCond.notify_one();
-        }
-        m_thread.join();
-        
-        ReleaseCmdResources();
     }
 
     void RenderThread::WaitForFence()
@@ -132,5 +123,52 @@ namespace dt
                 THROW_IF(WaitForSingleObject(m_fenceEvent, INFINITE) != WAIT_OBJECT_0, "Call wait for fence event failed.");
             }
         }
+    }
+
+    RenderThreadMgr::RenderThreadMgr()
+    {
+        m_renderThread = new RenderThread("Common Render Thread");
+
+        // m_presentThread = new PresentThread([](cr<std::function<void()>> product){ product(); }, "Present Thread");
+        
+    }
+
+    RenderThreadMgr::~RenderThreadMgr()
+    {
+        // m_presentThread->Stop(false);
+        // m_presentThread->Wait();
+        // delete m_presentThread;
+        delete m_renderThread;
+    }
+
+    void RenderThreadMgr::ExecuteAllThreads()
+    {
+        assert(Utils::IsMainThread() && !m_executing);
+        
+        m_executing = true;
+        
+        m_renderThread->StopRecording();
+
+        // m_presentThread->Enqueue([this]
+        // {
+        // });
+    }
+
+    void RenderThreadMgr::WaitForDone()
+    {
+        assert(Utils::IsMainThread() && m_executing);
+
+        {
+            ZoneScopedNC("Wait for pre frame", TRACY_IDLE_COLOR);
+
+            // m_presentThread->Wait();
+            m_renderThread->Wait();
+        }
+
+        RecycleBin::Ins()->Flush();
+
+        m_renderThread->StartRecording();
+
+        m_executing = false;
     }
 }

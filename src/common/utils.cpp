@@ -299,4 +299,11 @@ namespace dt
         }
         return ss.str();
     }
+
+    bool Utils::IsMainThread()
+    {
+        static std::thread::id mainTheadId = std::this_thread::get_id();
+        return std::this_thread::get_id() == mainTheadId;
+    }
+
 }

@@ -55,12 +55,11 @@ namespace dt
         const vecwp<Object>* allSceneObjs;
         
         const vecwp<LightComp>* lights;
-        const vecwp<CameraComp>* cameras;
-        const vecwp<RenderComp>* allRenderObjs;
-        vec<RenderComp*> visibleRenderObjs;
 
         sp<ViewProjInfo> mainVPInfo = nullptr;
         sp<ViewProjInfo> shadowVPInfo = nullptr;
+
+        sp<RenderTarget> curRenderTarget = nullptr;
 
         RenderContext() = default;
         ~RenderContext() = default;
@@ -75,8 +74,8 @@ namespace dt
         crsp<ViewProjInfo> CurViewProjMatrix() const;
 
     private:
-        std::unordered_map<std::string, RenderTexture*> m_rts;
         vecsp<ViewProjInfo> m_vpMatrixStack;
+        std::unordered_map<std::string, RenderTexture*> m_rts;
 
         static void SetViewProjMatrix(crsp<ViewProjInfo> viewProjInfo);
     };

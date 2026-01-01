@@ -23,22 +23,21 @@ namespace dt
     public:
         struct Param
         {
-            string_hash name = 0;
-            bool isGlobal = false;
+            string_hash nameId;
             bool isCbuffer = false;
             uint32_t sizeB = 0;
-            sp<Image> image = nullptr;
+            sp<ITexture> texture = nullptr;
             vec<uint8_t> data;
         };
 
         Material() = default;
-        ~Material() override;
+        ~Material() override = default;
         Material(const Material& other) = delete;
         Material(Material&& other) noexcept = delete;
         Material& operator=(const Material& other) = delete;
         Material& operator=(Material&& other) noexcept = delete;
 
-        Shader* GetShader() const { return m_shader.get(); }
+        sp<Shader> GetShader() const { return m_shader; }
         Cbuffer* GetCbuffer() const { return m_cbuffer.get(); }
         cr<StringHandle> GetPath() override { return m_path; }
         DepthMode GetDepthMode() const { return m_depthMode; }
@@ -49,7 +48,7 @@ namespace dt
         template <typename T>
         void SetParam(string_hash name, T val);
         void SetParam(string_hash nameId, const float* val, uint32_t count);
-        void SetParam(string_hash nameId, crsp<Image> image);
+        void SetParam(string_hash nameId, crsp<ITexture> texture);
         template <typename T>
         T GetParam(string_hash name);
         
@@ -58,16 +57,14 @@ namespace dt
     private:
         void BindShader(crsp<Shader> shader);
         void LoadParams(cr<nlohmann::json> matJson);
-        Param* AddParam(string_hash nameId, const void* val, uint32_t sizeB, bool isGlobal, crsp<Image> image);
-        void SetParamImp(string_hash name, const void* val, size_t sizeB, crsp<Image> image = nullptr);
-        bool GetParamImp(string_hash name, void* val, uint32_t sizeB);
-        void OnGlobalParamChanged(string_hash nameId, const void* val, size_t sizeB);
-        void DoWriteParam(Param* param, const void* val, uint32_t sizeB);
+        Param* AddParam(string_hash nameId, uint32_t sizeB);
+        void SetParamImp(string_hash nameId, const void* val, uint32_t sizeB, crsp<ITexture> texture = nullptr);
+        bool GetParamImp(string_hash nameId, void* val, uint32_t sizeB);
 
         template <typename T>
         static void TypeCheck();
         static bool IsTextureParam(cr<StringHandle> name);
-        static Param LoadParam(cr<nlohmann::json> matJson, cr<StringHandle> paramName);
+        static Param LoadParamInfo(cr<nlohmann::json> matJson, cr<StringHandle> paramName);
 
         DepthMode m_depthMode = DepthMode::LESS;
         bool m_depthWrite = true;
@@ -98,10 +95,10 @@ namespace dt
         SetParamImp(nameId, val, sizeof(float) * count, nullptr);
     }
 
-    inline void Material::SetParam(const string_hash nameId, crsp<Image> image)
+    inline void Material::SetParam(const string_hash nameId, crsp<ITexture> texture)
     {
-        auto i = image->GetSrvDescIndex();
-        SetParamImp(nameId, &i, sizeof(i), nullptr);
+        auto i = texture->GetSrvDescIndex();
+        SetParamImp(nameId, &i, sizeof(i), texture);
     }
 
     template <typename T>

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(DirectXTest LANGUAGES C CXX)
 
 # 在 include(conanbuildinfo.cmake) 之前添加
-list(APPEND CMAKE_PREFIX_PATH "build/Debug/generators")
+list(APPEND CMAKE_PREFIX_PATH "build/generators")
 include(E:/Programming/DirectXTest/build/generators/conan_toolchain.cmake)
 
 

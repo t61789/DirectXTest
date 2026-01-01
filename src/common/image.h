@@ -1,13 +1,15 @@
 ﻿#pragma once
 #include "dx_texture.h"
 #include "i_resource.h"
+#include "i_texture.h"
+#include "render/descriptor_pool.h"
 
 namespace dt
 {
     enum class TextureFilterMode : uint8_t;
     enum class TextureWrapMode : uint8_t;
 
-    class Image final : public IResource
+    class Image final : public IResource, public ITexture
     {
         struct ImportConfig
         {
@@ -30,9 +32,10 @@ namespace dt
         };
         
     public:
-        DxTexture* GetDxTexture() { return m_dxTexture.get();}
+        XMINT2 GetSize() override { return m_dxTexture->GetSize();}
+        DxTexture* GetDxTexture() override { return m_dxTexture.get();}
         cr<StringHandle> GetPath() override { return m_path;}
-        uint32_t GetSrvDescIndex();
+        uint32_t GetSrvDescIndex() override { return m_shaderResource->GetSrvIndex(); }
 
         static sp<Image> LoadFromFile(cr<StringHandle> path);
 
@@ -41,10 +44,12 @@ namespace dt
 
     private:
         static ImportConfig LoadImageImportConfig(crstr assetPath);
-        
+
+    private:
         StringHandle m_path = {};
         
         sp<DxTexture> m_dxTexture = nullptr;
+        sp<ShaderResource> m_shaderResource;
     };
 
     template <typename Archive>

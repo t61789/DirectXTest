@@ -11,8 +11,11 @@ namespace dt
 {
     #define TRACY_IDLE_COLOR 0x25281E
 
-    #define DESC_HANDLE_POOL_SIZE 16384
+    #define JOB_THREAD_COUNT 3
+
+    #define SRV_DESC_POOL_SIZE 16384
     #define SAMPLER_DESC_POOL_SIZE 100
+    #define RTV_DESC_POOL_SIZE 128
     
     #define PI 3.1415926535f
     #define DEG2RAD 0.0174532925f
@@ -79,6 +82,8 @@ namespace dt
     using vecpair = std::vector<std::pair<K, V>>;
     template <typename K, typename V>
     using crvecpair = cr<vecpair<K, V>>;
+    template <typename K, typename V>
+    using crpair = cr<std::pair<K, V>>;
     
     template <typename K, typename V>
     using umap = std::unordered_map<K, V>;
@@ -101,7 +106,10 @@ namespace dt
     using arr = std::array<T, N>;
     using str = std::string;
     using crstr = cr<std::string>;
+    using crstrh = cr<StringHandle>;
     using string_hash = size_t;
+    template <typename Sig>
+    using func = std::function<Sig>;
     
     template <typename T, typename... Args>
     std::unique_ptr<T> mup(Args&&... args)

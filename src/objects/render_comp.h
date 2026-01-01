@@ -9,12 +9,14 @@
 
 namespace dt
 {
+    struct RenderObject;
     class Mesh;
     class Material;
 
     class RenderComp final : public Comp
     {
     public:
+        void Awake() override;
         void Start() override;
         void OnEnable() override;
         void OnDisable() override;
@@ -25,16 +27,18 @@ namespace dt
         bool HasOddNegativeScale() const;
         sp<Mesh> GetMesh() const { return m_mesh;}
         sp<Material> GetMaterial() const { return m_material;}
+        sp<RenderObject> GetRenderObject() const { return m_renderObject;}
 
         void LoadFromJson(const nlohmann::json& objJson) override;
 
     private:
         sp<Mesh> m_mesh = nullptr;
         sp<Material> m_material = nullptr;
+        sp<RenderObject> m_renderObject = nullptr;
     
-        EventHandler m_onTransformDirtyHandler = 0;
         bool m_transformDirty = true;
         Bounds m_worldBounds;
+        EventHandler m_onTransformDirtyHandler = 0;
 
         void OnTransformDirty();
 

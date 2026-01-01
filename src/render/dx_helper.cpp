@@ -3,10 +3,13 @@
 #include <cstdint>
 #include <directx/d3dx12_barriers.h>
 
-#include "desc_handle_pool.h"
+#include "descriptor_pool.h"
+#include "render_target.h"
+#include "render_thread.h"
 #include "common/const.h"
 #include "common/material.h"
 #include "common/mesh.h"
+#include "common/render_texture.h"
 #include "common/shader.h"
 #include "common/utils.h"
 
@@ -71,7 +74,9 @@ namespace dt
 
         if (bindResource)
         {
-            SrvDescPool::Ins()->Bind(cmdList, bindResource->rootParameterIndex);
+            cmdList->SetGraphicsRootDescriptorTable(
+                bindResource->rootParameterIndex,
+                DescriptorPool::Ins()->GetSrvDescHeap()->GetGPUDescriptorHandleForHeapStart());
         }
         
         bindResource = find_if(shader->GetBindResources(), [](cr<Shader::BindResource> x)
@@ -82,7 +87,9 @@ namespace dt
 
         if (bindResource)
         {
-            SamplerDescPool::Ins()->Bind(cmdList, bindResource->rootParameterIndex);
+            cmdList->SetGraphicsRootDescriptorTable(
+                bindResource->rootParameterIndex,
+                DescriptorPool::Ins()->GetSamplerDescHeap()->GetGPUDescriptorHandleForHeapStart());
         }
     }
 
@@ -92,33 +99,51 @@ namespace dt
         cmdList->IASetVertexBuffers(0, 1, &mesh->GetVertexBufferView());
     }
     
-    void DxHelper::AddTransition(crsp<DxResource> resource, const D3D12_RESOURCE_STATES state)
+    void DxHelper::AddTransition(RenderThreadContext& context, crsp<DxResource> resource, const D3D12_RESOURCE_STATES state)
     {
-        m_transitions.push_back({ resource, state });
-    }
-
-    void DxHelper::ApplyTransitions(ID3D12GraphicsCommandList* cmdList)
-    {
-        static vec<D3D12_RESOURCE_BARRIER> dxTransitions;
-        for (auto& transition : m_transitions)
+        auto transition = find_if(context.transitions, [resource](crpair<sp<DxResource>, D3D12_RESOURCE_STATES> x)
         {
-            if (transition.resource->GetState() == transition.state)
-            {
-                continue;
-            }
-            
-            dxTransitions.push_back(
-                CD3DX12_RESOURCE_BARRIER::Transition(
-                    transition.resource->GetResource(),
-                    transition.resource->GetState(),
-                    transition.state));
-
-            transition.resource->m_state = transition.state;
+            return x.first == resource;
+        });
+        if (transition)
+        {
+            transition->second = state;
+            return;
         }
         
-        cmdList->ResourceBarrier(m_transitions.size(), dxTransitions.data());
+        context.transitions.emplace_back(resource, state);
+    }
+
+    void DxHelper::ApplyTransitions(ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context)
+    {
+        if (context.transitions.empty())
+        {
+            return;
+        }
         
-        m_transitions.clear();
+        static vec<D3D12_RESOURCE_BARRIER> dxTransitions;
+        for (auto& [resource, state] : context.transitions)
+        {
+            if (resource->GetState() != state)
+            {
+                dxTransitions.push_back(
+                    CD3DX12_RESOURCE_BARRIER::Transition(
+                        resource->GetResource(),
+                        resource->GetState(),
+                        state));
+
+                resource->m_state = state;
+            }
+        }
+
+        if (dxTransitions.empty())
+        {
+            return;
+        }
+        
+        cmdList->ResourceBarrier(dxTransitions.size(), dxTransitions.data());
+        
+        context.transitions.clear();
         dxTransitions.clear();
     }
 
@@ -137,8 +162,91 @@ namespace dt
         }
     }
 
-    void DxHelper::SetHeaps(ID3D12GraphicsCommandList* cmdList, ID3D12DescriptorHeap* const* heaps, uint32_t heapCount)
+    void DxHelper::SetHeaps(ID3D12GraphicsCommandList* cmdList, DescriptorPool* descPool)
     {
-        cmdList->SetDescriptorHeaps(heapCount, heaps);
+        descPool->SetHeaps(cmdList);
+    }
+
+    void DxHelper::SetRenderTarget(ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context, crsp<RenderTarget> renderTarget)
+    {
+        if (context.curRenderTarget == renderTarget)
+        {
+            return;
+        }
+
+        if (context.curRenderTarget)
+        {
+            UnsetRenderTarget(context, context.curRenderTarget);
+        }
+        
+        for (auto& rt : renderTarget->GetColorAttachments())
+        {
+            AddTransition(context, rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+        }
+        if (auto rt = renderTarget->GetDepthAttachment())
+        {
+            AddTransition(context, rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+        }
+        
+        ApplyTransitions(cmdList, context);
+        
+        auto& rtvHandles = renderTarget->GetRtvHandles();
+        auto& dsvHandle = renderTarget->GetDsvHandle();
+
+        cmdList->OMSetRenderTargets(
+            rtvHandles.size(),
+            rtvHandles.size() > 0 ? &rtvHandles[0]->data : nullptr,
+            true,
+            dsvHandle ? &dsvHandle->data : nullptr);
+
+        SetViewport(cmdList, renderTarget->GetSize().x, renderTarget->GetSize().y);
+
+        context.curRenderTarget = renderTarget;
+    }
+
+    void DxHelper::UnsetRenderTarget(RenderThreadContext& context, crsp<RenderTarget> renderTarget)
+    {
+        assert(context.curRenderTarget == renderTarget);
+        
+        for (auto& rt : renderTarget->GetColorAttachments())
+        {
+            AddTransition(context, rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+        }
+        if (auto rt = renderTarget->GetDepthAttachment())
+        {
+            AddTransition(context, rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+        }
+
+        context.curRenderTarget = nullptr;
+    }
+
+    void DxHelper::PrepareCmdList(ID3D12GraphicsCommandList* cmdList)
+    {
+        cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        
+        SetHeaps(cmdList, DescriptorPool::Ins());
+    }
+
+    void DxHelper::Blit(ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context, const Material* material, crsp<RenderTarget> renderTarget)
+    {
+        SetRenderTarget(cmdList, context, renderTarget);
+
+        auto blitMat = material ? material : GameResource::Ins()->blitMat.get();
+        auto mesh = GameResource::Ins()->quadMesh.get();
+
+        BindRootSignature(cmdList, blitMat->GetShader().get());
+        BindPso(cmdList, blitMat);
+        
+        BindCbuffer(cmdList, blitMat->GetShader().get(), GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER).get());
+        BindCbuffer(cmdList, blitMat->GetShader().get(), GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
+        if (blitMat->GetCbuffer())
+        {
+            BindCbuffer(cmdList, blitMat->GetShader().get(), blitMat->GetCbuffer());
+        }
+        BindMesh(cmdList, mesh);
+        
+        cmdList->DrawIndexedInstanced(mesh->GetIndicesCount(), 1, 0, 0, 0);
+
+        UnsetRenderTarget(context, renderTarget);
     }
 }
