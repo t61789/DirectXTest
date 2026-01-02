@@ -131,7 +131,7 @@ namespace dt
         auto& localToWorld = GetOwner()->transform->GetLocalToWorld();
         auto viewCenter = GetPosition(localToWorld);
         auto viewMatrix = XMMatrixLookToLH(GetPosition(localToWorld), GetForward(localToWorld), GetUp(localToWorld));
-        auto projMatrix = XMMatrixPerspectiveFovLH(fov, aspect, nearClip, farClip);
+        auto projMatrix = XMMatrixPerspectiveFovLH(fov * DEG2RAD, aspect, nearClip, farClip);
 
         return ViewProjInfo::Create(viewMatrix, projMatrix, viewCenter, true);
     }

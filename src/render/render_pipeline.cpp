@@ -36,9 +36,14 @@ namespace dt
         gBufferColorDesc.dxDesc.height = Window::Ins()->GetHeight();
         gBufferColorDesc.dxDesc.channelCount = 4;
         gBufferColorDesc.dxDesc.hasMipmap = false;
+        gBufferColorDesc.clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
         m_gBufferRt0 = msp<RenderTexture>(gBufferColorDesc);
         m_gBufferRt1 = msp<RenderTexture>(gBufferColorDesc);
         m_gBufferRt2 = msp<RenderTexture>(gBufferColorDesc);
+
+        GetGlobalCbuffer()->Write(GBUFFER_0_TEX, m_gBufferRt0->GetTextureIndex());
+        GetGlobalCbuffer()->Write(GBUFFER_1_TEX, m_gBufferRt1->GetTextureIndex());
+        GetGlobalCbuffer()->Write(GBUFFER_2_TEX, m_gBufferRt2->GetTextureIndex());
 
         RenderTextureDesc gBufferDepthDesc;
         gBufferDepthDesc.dxDesc.type = TextureType::TEXTURE_2D;
@@ -48,7 +53,8 @@ namespace dt
         gBufferDepthDesc.dxDesc.width = Window::Ins()->GetWidth();
         gBufferDepthDesc.dxDesc.height = Window::Ins()->GetHeight();
         gBufferDepthDesc.dxDesc.channelCount = 1;
-        gBufferColorDesc.dxDesc.hasMipmap = false;
+        gBufferDepthDesc.dxDesc.hasMipmap = false;
+        gBufferDepthDesc.clearColor = { 1.0f, 0.0f, 0.0f, 0.0f };
         m_gBufferRtDepth = msp<RenderTexture>(gBufferDepthDesc);
 
         m_gBufferRenderTarget = RenderTarget::Create({ m_gBufferRt0, m_gBufferRt1, m_gBufferRt2 }, m_gBufferRtDepth);
@@ -76,63 +82,5 @@ namespace dt
         m_preparePass->Execute();
         m_renderScenePass->Execute();
         m_finalPass->Execute();
-    }
-
-    void RenderPipeline::RenderScene(ID3D12GraphicsCommandList* cmdList, const Scene* scene)
-    {
-        // Shader* shader = nullptr;
-        // Material* material = nullptr;
-        // Mesh* mesh = nullptr;
-        //
-        // scene->GetRenderTree()->Foreach([&](const RenderObject* ro)
-        // {
-        //     auto rebindRootSignature = ro->shader != shader;
-        //     auto rebindPso = ro->material != material;
-        //     auto rebindGlobalCbuffer = rebindRootSignature;
-        //     auto rebindPerViewCbuffer = rebindRootSignature;
-        //     auto rebindPerMaterialCbuffer = rebindRootSignature || ro->material != material;
-        //     auto rebindMesh = ro->mesh != mesh;
-        //     
-        //     if (rebindRootSignature)
-        //     {
-        //         DxHelper::BindRootSignature(cmdList, ro->material->GetShader());
-        //     }
-        //
-        //     if (rebindPso)
-        //     {
-        //         DxHelper::BindPso(cmdList, ro->material);
-        //     }
-        //
-        //     if (rebindGlobalCbuffer)
-        //     {
-        //         DxHelper::BindCbuffer(cmdList, ro->shader, GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER).get());
-        //     }
-        //
-        //     if (rebindPerViewCbuffer)
-        //     {
-        //         DxHelper::BindCbuffer(cmdList, ro->shader, GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
-        //     }
-        //
-        //     DxHelper::BindCbuffer(cmdList, ro->shader, ro->perObjectCbuffer.get());
-        //
-        //     if (rebindPerMaterialCbuffer)
-        //     {
-        //         if (ro->material->GetCbuffer())
-        //         {
-        //             DxHelper::BindCbuffer(cmdList, ro->shader, ro->material->GetCbuffer());
-        //         }
-        //     }
-        //
-        //     if (rebindMesh)
-        //     {
-        //         DxHelper::BindMesh(cmdList, ro->mesh);
-        //     }
-        //     
-        //     cmdList->DrawIndexedInstanced(ro->mesh->GetIndicesCount(), 1, 0, 0, 0);
-        //
-        //     shader = ro->shader;
-        //     material = ro->material;
-        //     mesh = ro->mesh;
-        // });
     }
 }

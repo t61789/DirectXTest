@@ -37,7 +37,6 @@ namespace dt
         sp<RenderTarget> GetGBufferRenderTarget() const { return m_gBufferRenderTarget; }
 
         void Render();
-        static void RenderScene(ID3D12GraphicsCommandList* cmdList, const Scene* scene);
 
     private:
         sp<PreparePass> m_preparePass;

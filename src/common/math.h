@@ -49,7 +49,7 @@ namespace dt
 
     inline XMVECTOR GetForward(cr<XMMATRIX> m)
     {
-        return m.r[0];
+        return m.r[2];
     }
 
     inline XMVECTOR GetUp(cr<XMMATRIX> m)
@@ -59,12 +59,24 @@ namespace dt
 
     inline XMVECTOR GetRight(cr<XMMATRIX> m)
     {
-        return m.r[2];
+        return m.r[0];
     }
 
     inline XMVECTOR GetPosition(cr<XMMATRIX> m)
     {
         return m.r[3];
+    }
+    
+    inline XMFLOAT4X4 Store(cr<XMMATRIX> m)
+    {
+        XMFLOAT4X4 result;
+        XMStoreFloat4x4(&result, m);
+        return result;
+    }
+
+    inline XMMATRIX Load(cr<XMFLOAT4X4> m)
+    {
+        return XMLoadFloat4x4(&m);
     }
 
     inline XMMATRIX Inverse(cr<XMMATRIX> m)
@@ -76,6 +88,11 @@ namespace dt
 
         return result;
     }
+    
+    inline XMFLOAT4X4 Inverse(cr<XMFLOAT4X4> m)
+    {
+        return Store(Inverse(Load(m)));
+    }
 
     inline bool operator==(const XMINT2& lhs, const XMINT2& rhs)
     {
@@ -85,6 +102,13 @@ namespace dt
     inline bool operator!=(const XMINT2& lhs, const XMINT2& rhs)
     {
         return !(lhs == rhs);
+    }
+    
+    inline XMFLOAT4X4 Transpose(cr<XMFLOAT4X4> val)
+    {
+        XMFLOAT4X4 m;
+        XMStoreFloat4x4(&m, XMMatrixTranspose(XMLoadFloat4x4(&val)));
+        return m;
     }
 }
 

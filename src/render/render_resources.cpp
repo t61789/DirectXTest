@@ -12,14 +12,15 @@ namespace dt
             return;
         }
         curVp = vp;
-        
+
         auto perViewCbuffer = GetPerViewCbuffer();
-        perViewCbuffer->Write(VP, &vp->vpMatrix, sizeof(XMFLOAT4X4));
-        perViewCbuffer->Write(CAMERA_POSITION_WS, &vp->viewCenter, sizeof(XMFLOAT4));
+        perViewCbuffer->Write(V, Transpose(vp->vMatrix));
+        perViewCbuffer->Write(VP, Transpose(vp->vpMatrix));
+        perViewCbuffer->Write(CAMERA_POSITION_WS, vp->viewCenter);
 
         if (vp->ivpMatrix.has_value())
         {
-            perViewCbuffer->Write(IVP, &vp->ivpMatrix, sizeof(XMFLOAT4X4));
+            perViewCbuffer->Write(IVP, Transpose(vp->ivpMatrix.value()));
         }
     }
 }

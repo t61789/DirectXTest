@@ -36,6 +36,7 @@ namespace dt
     STRING_HANDLE(PER_OBJECT_CBUFFER, PerObjectCBuffer)
     STRING_HANDLE(PER_MATERIAL_CBUFFER, PerMaterialCBuffer)
 
+    STRING_HANDLE(V, _V)
     STRING_HANDLE(VP, _VP)
     STRING_HANDLE(IVP, _IVP)
     STRING_HANDLE(MVP, _MVP)
@@ -45,6 +46,10 @@ namespace dt
     STRING_HANDLE(CAMERA_POSITION_WS, _CameraPositionWS)
     STRING_HANDLE(BINDLESS_TEXTURES, _BindlessTextures)
     STRING_HANDLE(BINDLESS_SAMPLERS, _BindlessSamplers)
+    STRING_HANDLE(GBUFFER_0_TEX, _GBuffer0Tex)
+    STRING_HANDLE(GBUFFER_1_TEX, _GBuffer1Tex)
+    STRING_HANDLE(GBUFFER_2_TEX, _GBuffer2Tex)
+    
 
     static const uint32_t MAX_REGISTER_COUNT = 16;
     static const auto UNNAMED_OBJECT = StringHandle("Unnamed Object");

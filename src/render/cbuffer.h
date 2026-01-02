@@ -48,6 +48,8 @@ namespace dt
         
         bool HasField(string_hash nameId, ParamType type, uint32_t repeatCount) const;
 
+        template <typename T>
+        bool Write(string_hash name, T val);
         bool Write(string_hash name, const void* data, uint32_t sizeB);
         
         static void UpdateDirtyCbuffers();
@@ -67,4 +69,10 @@ namespace dt
 
         inline static std::set<sp<Cbuffer>> s_dirtyCbuffers;
     };
+
+    template <typename T>
+    bool Cbuffer::Write(const string_hash name, T val)
+    {
+        return Write(name, &val, sizeof(T));
+    }
 }

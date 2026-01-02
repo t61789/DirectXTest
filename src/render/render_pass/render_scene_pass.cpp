@@ -14,7 +14,7 @@ namespace dt
         RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         {
             RenderRes()->SetVp(RenderRes()->mainCameraVp);
-            DxHelper::SetRenderTarget(cmdList, RenderRes()->gBufferRenderTarget);
+            DxHelper::SetRenderTarget(cmdList, RenderRes()->gBufferRenderTarget, true);
             
             Shader* shader = nullptr;
             Material* material = nullptr;

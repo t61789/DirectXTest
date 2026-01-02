@@ -54,7 +54,7 @@ namespace dt
         clearValue.Color[1] = clearColor.y;
         clearValue.Color[2] = clearColor.z;
         clearValue.Color[3] = clearColor.w;
-        clearValue.DepthStencil.Depth = 1.0f;
+        clearValue.DepthStencil.Depth = clearColor.x;
         clearValue.DepthStencil.Stencil = 0;
 
         sp<DxResource> resultDxResource;

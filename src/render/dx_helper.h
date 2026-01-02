@@ -33,7 +33,7 @@ namespace dt
         static uint32_t GetRegisterType(D3D_SHADER_INPUT_TYPE resourceType);
         
         static void SetHeaps(ID3D12GraphicsCommandList* cmdList, DescriptorPool* descPool);
-        static void SetRenderTarget(ID3D12GraphicsCommandList* cmdList, crsp<RenderTarget> renderTarget);
+        static void SetRenderTarget(ID3D12GraphicsCommandList* cmdList, crsp<RenderTarget> renderTarget, bool clear = false);
         static void UnsetRenderTarget(crsp<RenderTarget> renderTarget);
 
         static void PrepareCmdList(ID3D12GraphicsCommandList* cmdList);

@@ -189,7 +189,7 @@ namespace dt
             param.texture = image;
             param.sizeB = sizeof(uint32_t);
             
-            auto textureIndex = GetTextureIndex(image);
+            auto textureIndex = image->GetTextureIndex();
             param.data.resize(param.sizeB);
             memcpy(param.data.data(), &textureIndex, param.sizeB);
         }
@@ -199,15 +199,6 @@ namespace dt
         }
 
         return param;
-    }
-
-    uint32_t Material::GetTextureIndex(crsp<ITexture> texture)
-    {
-        uint32_t srvDescIndex = texture->GetSrvDescIndex();
-        uint32_t samplerDescIndex = texture->GetSamplerDescIndex();
-
-        constexpr uint32_t SRV_MASK = 0xFFFF;
-        return (srvDescIndex & SRV_MASK) | (samplerDescIndex << 20);
     }
 
     bool Material::IsTextureParam(cr<StringHandle> name)

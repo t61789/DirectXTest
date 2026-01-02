@@ -10,7 +10,7 @@ namespace dt
 {
     void ViewProjInfo::UpdateIVP()
     {
-        XMStoreFloat4x4(&vpMatrix, Inverse(XMLoadFloat4x4(&vpMatrix)));
+        ivpMatrix = Inverse(vpMatrix);
     }
 
     sp<ViewProjInfo> ViewProjInfo::Create(cr<XMMATRIX> vMatrix, cr<XMMATRIX> pMatrix, const bool useIVP)

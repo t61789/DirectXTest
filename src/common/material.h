@@ -65,7 +65,6 @@ namespace dt
         static void TypeCheck();
         static bool IsTextureParam(cr<StringHandle> name);
         static Param LoadParamInfo(cr<nlohmann::json> matJson, cr<StringHandle> paramName);
-        static uint32_t GetTextureIndex(crsp<ITexture> texture);
 
         DepthMode m_depthMode = DepthMode::LESS;
         bool m_depthWrite = true;
@@ -98,7 +97,7 @@ namespace dt
 
     inline void Material::SetParam(const string_hash nameId, crsp<ITexture> texture)
     {
-        auto val = GetTextureIndex(texture);
+        auto val = texture->GetTextureIndex();
         SetParamImp(nameId, &val, sizeof(uint32_t), texture);
     }
 

@@ -169,7 +169,7 @@ namespace dt
         descPool->SetHeaps(cmdList);
     }
 
-    void DxHelper::SetRenderTarget(ID3D12GraphicsCommandList* cmdList, crsp<RenderTarget> renderTarget)
+    void DxHelper::SetRenderTarget(ID3D12GraphicsCommandList* cmdList, crsp<RenderTarget> renderTarget, const bool clear)
     {
         if (RenderRes()->curRenderTarget == renderTarget)
         {
@@ -191,9 +191,22 @@ namespace dt
         }
         
         ApplyTransitions(cmdList);
-        
+
         auto& rtvHandles = renderTarget->GetRtvHandles();
         auto& dsvHandle = renderTarget->GetDsvHandle();
+
+        if (clear)
+        {
+            for (uint32_t i = 0; i < rtvHandles.size(); ++i)
+            {
+                cmdList->ClearRenderTargetView(rtvHandles[i]->data, &renderTarget->GetColorAttachments()[i]->GetClearColor().x, 0, nullptr);
+            }
+
+            if (dsvHandle)
+            {
+                cmdList->ClearDepthStencilView(dsvHandle->data, D3D12_CLEAR_FLAG_DEPTH, renderTarget->GetDepthAttachment()->GetClearColor().x, 0, 0, nullptr);
+            }
+        }
 
         cmdList->OMSetRenderTargets(
             rtvHandles.size(),
