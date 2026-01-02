@@ -11,7 +11,6 @@ namespace dt
 {
     void RenderScenePass::Execute()
     {
-        return;
         RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         {
             RenderRes()->SetVp(RenderRes()->mainCameraVp);
@@ -25,6 +24,7 @@ namespace dt
             {
                 auto rebindRootSignature = ro->shader.get() != shader;
                 auto rebindPso = ro->material.get() != material;
+                auto rebindTextures = rebindRootSignature;
                 auto rebindGlobalCbuffer = rebindRootSignature;
                 auto rebindPerViewCbuffer = rebindRootSignature;
                 auto rebindPerMaterialCbuffer = rebindRootSignature || ro->material.get() != material;
@@ -42,6 +42,11 @@ namespace dt
                 if (rebindPso)
                 {
                     DxHelper::BindPso(cmdList, material);
+                }
+
+                if (rebindTextures)
+                {
+                    DxHelper::BindBindlessTextures(cmdList, shader);
                 }
             
                 if (rebindGlobalCbuffer)

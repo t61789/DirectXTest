@@ -21,7 +21,6 @@ namespace dt
     enum class TextureFormat : uint8_t
     {
         RGBA,
-        RGB,
         DEPTH,
         DEPTH_STENCIL
     };

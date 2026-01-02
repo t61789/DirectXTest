@@ -2,5 +2,5 @@
     "shader": "shaders/blit.shader",
     "depthWrite": false,
     "depthMode": "Always",
-    "_MainTex": "built_in/textures/miss.png"
+    "_MainTex": "textures/o2.png"
 }

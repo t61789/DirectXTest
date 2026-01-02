@@ -71,7 +71,7 @@ namespace dt
         {
             ZoneScopedN("Load Image Data");
             
-            data = stbi_load(Utils::ToAbsPath(assetPath).c_str(), &width, &height, &nChannels, 0);
+            data = stbi_load(Utils::ToAbsPath(assetPath).c_str(), &width, &height, &nChannels, 4);
             if(!data)
             {
                 throw std::exception();
@@ -83,7 +83,7 @@ namespace dt
             throw;
         }
 
-        auto sizeB = width * height * nChannels;
+        auto sizeB = width * height * 4;
         vec<uint8_t> dataVec(sizeB);
         memcpy(dataVec.data(), data, sizeB);
 
@@ -91,10 +91,10 @@ namespace dt
 
         DxTextureDesc dxTextureDesc;
         dxTextureDesc.type = TextureType::TEXTURE_2D;
-        dxTextureDesc.format = nChannels == 4 ? TextureFormat::RGBA : TextureFormat::RGB;
+        dxTextureDesc.format = TextureFormat::RGBA;
         dxTextureDesc.width = width;
         dxTextureDesc.height = height;
-        dxTextureDesc.channelCount = nChannels;
+        dxTextureDesc.channelCount = 4;
         dxTextureDesc.wrapMode = importConfig.wrapMode;
         dxTextureDesc.filterMode = importConfig.filterMode;
         dxTextureDesc.hasMipmap = importConfig.needMipmap;
@@ -112,20 +112,9 @@ namespace dt
 
         RT()->AddCmd([dxTexture, cache=std::move(cache)](ID3D12GraphicsCommandList* cmdList)
         {
-            auto dxTextureResourceDesc = dxTexture->GetDxResource()->GetDesc();
+            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(dxTexture->GetDxResource()->GetResource(), 0, 1);
             
-            size_t uploadBytes;
-            Dx()->GetDevice()->GetCopyableFootprints(
-                &dxTextureResourceDesc,
-                0,
-                1,
-                0,
-                nullptr,
-                nullptr,
-                nullptr,
-                &uploadBytes);
-            
-            auto uploadBuffer = DxResource::CreateUploadBuffer(nullptr, uploadBytes);
+            auto uploadBuffer = DxResource::CreateUploadBuffer(nullptr, uploadBufferSize);
             
             D3D12_SUBRESOURCE_DATA srcData;
             srcData.pData = cache.data.data();

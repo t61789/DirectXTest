@@ -85,7 +85,6 @@ namespace dt
         static const umap<TextureFormat, DXGI_FORMAT> FORMAT_MAP =
         {
             { TextureFormat::RGBA, DXGI_FORMAT_R8G8B8A8_UNORM },
-            { TextureFormat::RGB, DXGI_FORMAT_R8G8B8A8_UNORM },
             { TextureFormat::DEPTH, DXGI_FORMAT_D32_FLOAT },
             { TextureFormat::DEPTH_STENCIL, DXGI_FORMAT_D32_FLOAT_S8X24_UINT },
         };

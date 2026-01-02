@@ -14,7 +14,7 @@ namespace dt
         struct ImportConfig
         {
             bool needFlipVertical = true;
-            bool needMipmap = true;
+            bool needMipmap = false;
             TextureWrapMode wrapMode = TextureWrapMode::CLAMP;
             TextureFilterMode filterMode = TextureFilterMode::BILINEAR;
 
