@@ -15,6 +15,7 @@ namespace dt
 
         auto perViewCbuffer = GetPerViewCbuffer();
         perViewCbuffer->Write(V, Transpose(vp->vMatrix));
+        perViewCbuffer->Write(P, Transpose(vp->pMatrix));
         perViewCbuffer->Write(VP, Transpose(vp->vpMatrix));
         perViewCbuffer->Write(CAMERA_POSITION_WS, vp->viewCenter);
 

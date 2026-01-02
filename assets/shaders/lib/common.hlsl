@@ -13,7 +13,7 @@ struct VSInput
 struct PSInput
 {
     float4 positionCS : SV_POSITION;
-    float3 positionVS : TEXCOORD0;
+    float4 positionVS : TEXCOORD0;
     float2 uv0 : TEXCOORD1;
 };
 
@@ -35,6 +35,7 @@ cbuffer GlobalCBuffer : register(b0)
 cbuffer PerViewCBuffer : register(b1)
 {
     float4x4 _V;
+    float4x4 _P;
     float4x4 _VP;
     float4x4 _IVP;
     float4 _CameraPositionWS;
@@ -71,7 +72,7 @@ float3 TransformObjectToWorld(float3 positionOS)
 
 float3 TransformObjectToView(float3 positionOS)
 {
-    return mul(float4(positionOS, 1.0f), _V).xyz;
+    return mul(mul(float4(positionOS, 1.0f), GetLocalToWorld()), _V).xyz;
 }
 
 float4 TransformObjectToHClip(float3 positionOS, float4x4 localToWorld)

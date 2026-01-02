@@ -95,12 +95,7 @@ namespace dt
 
     void RenderComp::UpdatePerObjectBuffer()
     {
-        XMFLOAT4X4 localToWorld;
-        XMStoreFloat4x4(&localToWorld, GetOwner()->transform->GetLocalToWorld());
-        XMFLOAT4X4 worldToLocal;
-        XMStoreFloat4x4(&worldToLocal, GetOwner()->transform->GetWorldToLocal());
-
-        m_renderObject->perObjectCbuffer->Write(M, &localToWorld, sizeof(XMFLOAT4X4));
-        m_renderObject->perObjectCbuffer->Write(IM, &worldToLocal, sizeof(XMFLOAT4X4));
+        m_renderObject->perObjectCbuffer->Write(M, Transpose(Store(GetOwner()->transform->GetLocalToWorld())));
+        m_renderObject->perObjectCbuffer->Write(IM, Transpose(Store(GetOwner()->transform->GetWorldToLocal())));
     }
 }

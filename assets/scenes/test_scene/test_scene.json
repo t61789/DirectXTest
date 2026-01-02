@@ -35,7 +35,7 @@
                     "name": "TransformComp",
                     "position": [
                         0,
-                        0,
+                        1,
                         -5
                     ],
                     "rotation": [
@@ -47,8 +47,8 @@
                 {
                     "name": "CameraComp",
                     "fov": 45,
-                    "nearClip": 1,
-                    "farClip": 10
+                    "nearClip": 0.05,
+                    "farClip": 300
                 }
             ]
         },
@@ -100,7 +100,7 @@
             ]
         },
         {
-            "name": "Ground",
+            "name": "Beast",
             "comps": [
                 {
                     "name": "TransformComp",
@@ -108,6 +108,54 @@
                         1,
                         1,
                         1
+                    ],
+                    "position": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        0
+                    ]
+                },
+                {
+                    "name": "RenderComp",
+                    "mesh": "meshes/beast.obj",
+                    "material": "materials/test.mtl"
+                }
+            ],
+            "children": [
+                {
+                    "name": "Cube",
+                    "comps": [
+                        {
+                            "name": "TransformComp",
+                            "position": [
+                                3,
+                                1,
+                                0
+                            ]
+                        },
+                        {
+                            "name": "RenderComp",
+                            "mesh": "meshes/smooth_cube.obj",
+                            "material": "materials/test.mtl"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Ground",
+            "comps": [
+                {
+                    "name": "TransformComp",
+                    "scale": [
+                        10,
+                        10,
+                        10
                     ],
                     "position": [
                         0,

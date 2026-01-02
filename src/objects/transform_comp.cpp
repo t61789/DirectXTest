@@ -142,6 +142,7 @@ namespace dt
         try_get_val(objJson, "position", m_position.localVal);
 
         try_get_val(objJson, "rotation", m_eulerAngles.localVal);
+        m_rotation.localVal = XMQuaternionRotationRollPitchYaw(XMVectorGetX(m_eulerAngles.localVal), XMVectorGetY(m_eulerAngles.localVal), XMVectorGetZ(m_eulerAngles.localVal));
 
         try_get_val(objJson, "scale", m_scale.localVal);
     }
