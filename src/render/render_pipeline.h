@@ -8,6 +8,7 @@
 
 namespace dt
 {
+    class RenderScenePass;
     class RenderTexture;
     class RenderTarget;
     class FinalPass;
@@ -40,6 +41,7 @@ namespace dt
 
     private:
         sp<PreparePass> m_preparePass;
+        sp<RenderScenePass> m_renderScenePass;
         sp<FinalPass> m_finalPass;
         sp<RenderResources> m_renderResources;
 

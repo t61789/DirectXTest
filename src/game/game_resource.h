@@ -77,6 +77,8 @@ namespace dt
 
     static GameResource* GR() { return GameResource::Ins(); }
 
+    static sp<Cbuffer> GetGlobalCbuffer() { return GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER); }
+
     static sp<Cbuffer> GetPerViewCbuffer() { return GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER); }
 
     static sp<Cbuffer> GetPerObjectCbuffer() { return GR()->GetPredefinedCbuffer(PER_OBJECT_CBUFFER); }

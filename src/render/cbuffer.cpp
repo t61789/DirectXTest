@@ -133,5 +133,8 @@ namespace dt
             L"Cbuffer");
         CD3DX12_RANGE range(0, 0);
         THROW_IF_FAILED(m_dxResource->Map(0, &range, &m_gpuWriteDest));
+
+        vec<uint8_t> emptyData(m_layout->desc.Size);
+        memcpy(m_gpuWriteDest, emptyData.data(), emptyData.size());
     }
 }

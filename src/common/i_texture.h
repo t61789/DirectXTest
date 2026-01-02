@@ -16,6 +16,7 @@ namespace dt
 
         virtual DxTexture* GetDxTexture() = 0;
         virtual uint32_t GetSrvDescIndex() = 0;
+        virtual uint32_t GetSamplerDescIndex() = 0;
         virtual XMINT2 GetSize() = 0;
     };
 }

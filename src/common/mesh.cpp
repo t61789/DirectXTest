@@ -20,23 +20,6 @@
 
 namespace dt
 {
-    static crumap<VertexAttr, Mesh::VertexAttrInfo> GetFullVertexAttribInfo()
-    {
-        static umap<VertexAttr, Mesh::VertexAttrInfo> vertexAttribInfo;
-        if (vertexAttribInfo.empty())
-        {
-            for (auto& attrDefine : VERTEX_ATTR_DEFINES)
-            {
-                vertexAttribInfo[attrDefine.attr] = {
-                    true,
-                    attrDefine.offsetF * sizeof(float)
-                };
-            }
-        }
-
-        return vertexAttribInfo;
-    }
-    
     static vec<D3D12_INPUT_ELEMENT_DESC> GetD3dVertexLayout(crumap<VertexAttr, Mesh::VertexAttrInfo> vertexAttribInfo)
     {
         static umap<VertexAttr, D3D12_INPUT_ELEMENT_DESC> INPUT_ELEMENT_DESC_MAPPER =
@@ -310,23 +293,6 @@ namespace dt
         }
     }
 
-    crumap<VertexAttr, Mesh::VertexAttrInfo> Mesh::GetFullVertexAttribInfo()
-    {
-        static umap<VertexAttr, VertexAttrInfo> vertexAttribInfo;
-        if (vertexAttribInfo.empty())
-        {
-            for (auto& attrInfo : VERTEX_ATTR_DEFINES)
-            {
-                VertexAttrInfo meshVertexAttrInfo;
-                meshVertexAttrInfo.enabled = true;
-                meshVertexAttrInfo.offsetB = attrInfo.offsetF * sizeof(float);
-                vertexAttribInfo.emplace(attrInfo.attr, meshVertexAttrInfo);
-            }
-        }
-
-        return vertexAttribInfo;
-    }
-
     void Mesh::GetMeshLoadConfig(crstr modelPath, float& initScale, bool& flipWindingOrder)
     {
         auto config = Utils::GetResourceMeta(modelPath);
@@ -336,39 +302,5 @@ namespace dt
 
         flipWindingOrder = false;
         try_get_val(config, "flip_winding_order", flipWindingOrder);
-    }
-    
-    crvec<float> Mesh::GetFullVertexData(const Mesh* mesh)
-    {
-        auto vertexCount = mesh->GetVertexCount();
-        auto& rawVertexData = mesh->GetVertexData();
-        auto rawVertexStrideF = mesh->GetVertexDataStrideB() / sizeof(float);
-        
-        static std::vector<float> vertexData;
-        vertexData.resize(MAX_VERTEX_ATTR_STRIDE_F * vertexCount);
-
-        uint32_t curOffsetF = 0;
-        for (auto& attrInfo : VERTEX_ATTR_DEFINES)
-        {
-            auto aa = attrInfo.name;
-            auto& meshVertexAttrInfo = mesh->GetVertexAttribInfo().at(attrInfo.attr);
-            if (meshVertexAttrInfo.enabled)
-            {
-                auto rawAttrOffsetF = meshVertexAttrInfo.offsetB / sizeof(float);
-                for (uint32_t vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex)
-                {
-                    for (uint32_t j = 0; j < attrInfo.strideF; ++j)
-                    {
-                        auto dstIndex = vertexIndex * MAX_VERTEX_ATTR_STRIDE_F + curOffsetF + j;
-                        auto srcIndex = vertexIndex * rawVertexStrideF + rawAttrOffsetF + j;
-                        vertexData[dstIndex] = rawVertexData[srcIndex];
-                    }
-                }
-            }
-
-            curOffsetF += attrInfo.strideF;
-        }
-
-        return vertexData;
     }
 }

@@ -235,15 +235,17 @@ namespace dt
 
         auto blitMat = material ? material : GameResource::Ins()->blitMat.get();
         auto mesh = GameResource::Ins()->quadMesh.get();
+        auto shader = blitMat->GetShader().get();
 
-        BindRootSignature(cmdList, blitMat->GetShader().get());
+        BindRootSignature(cmdList, shader);
         BindPso(cmdList, blitMat);
+        BindBindlessTextures(cmdList, shader);
         
-        BindCbuffer(cmdList, blitMat->GetShader().get(), GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER).get());
-        BindCbuffer(cmdList, blitMat->GetShader().get(), GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
+        BindCbuffer(cmdList, shader, GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER).get());
+        BindCbuffer(cmdList, shader, GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
         if (blitMat->GetCbuffer())
         {
-            BindCbuffer(cmdList, blitMat->GetShader().get(), blitMat->GetCbuffer());
+            BindCbuffer(cmdList, shader, blitMat->GetCbuffer());
         }
         BindMesh(cmdList, mesh);
         

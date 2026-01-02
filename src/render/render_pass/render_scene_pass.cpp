@@ -11,6 +11,7 @@ namespace dt
 {
     void RenderScenePass::Execute()
     {
+        return;
         RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         {
             RenderRes()->SetVp(RenderRes()->mainCameraVp);

@@ -2,6 +2,7 @@
 
 #include <d3d12.h>
 
+#include "cbuffer.h"
 #include "directx.h"
 #include "dx_helper.h"
 #include "render_context.h"
@@ -15,6 +16,7 @@
 #include "render/render_resources.h"
 #include "render_pass/final_pass.h"
 #include "render_pass/prepare_pass.h"
+#include "render_pass/render_scene_pass.h"
 
 namespace dt
 {
@@ -22,6 +24,7 @@ namespace dt
     {
         m_preparePass = msp<PreparePass>();
         m_finalPass = msp<FinalPass>();
+        m_renderScenePass = msp<RenderScenePass>();
         m_renderResources = msp<RenderResources>();
 
         RenderTextureDesc gBufferColorDesc;
@@ -62,6 +65,7 @@ namespace dt
         
         m_renderResources.reset();
         m_finalPass.reset();
+        m_renderScenePass.reset();
         m_preparePass.reset();
     }
 
@@ -70,6 +74,7 @@ namespace dt
         ZoneScopedN("Render");
         
         m_preparePass->Execute();
+        m_renderScenePass->Execute();
         m_finalPass->Execute();
     }
 

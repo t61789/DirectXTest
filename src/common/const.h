@@ -13,8 +13,8 @@ namespace dt
 
     #define JOB_THREAD_COUNT 3
 
-    #define SRV_DESC_POOL_SIZE 16384
-    #define SAMPLER_DESC_POOL_SIZE 100
+    #define SRV_DESC_POOL_SIZE 0xFFFF
+    #define SAMPLER_DESC_POOL_SIZE 0xFF
     #define RTV_DESC_POOL_SIZE 128
     
     #define PI 3.1415926535f

@@ -20,6 +20,7 @@ namespace dt
         XMINT2 GetSize() override { return m_dxTexture->GetSize(); }
         DxTexture* GetDxTexture() override { return m_dxTexture.get(); }
         uint32_t GetSrvDescIndex() override { return m_shaderResource->GetSrvIndex(); }
+        uint32_t GetSamplerDescIndex() override { return m_shaderResource->GetSamplerIndex(); }
 
     private:
         sp<DxTexture> m_dxTexture;

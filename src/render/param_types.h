@@ -36,11 +36,11 @@ namespace dt
         {
             return ParamType::FLOAT;
         }
-        else if constexpr (std::is_same_v<T, DirectX::XMFLOAT4>)
+        else if constexpr (std::is_same_v<T, XMFLOAT4>)
         {
             return ParamType::VEC4;
         }
-        else if constexpr (std::is_same_v<T, DirectX::XMFLOAT4X4>)
+        else if constexpr (std::is_same_v<T, XMFLOAT4X4>)
         {
             return ParamType::MATRIX;
         }

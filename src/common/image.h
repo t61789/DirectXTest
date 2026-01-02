@@ -36,6 +36,7 @@ namespace dt
         DxTexture* GetDxTexture() override { return m_dxTexture.get();}
         cr<StringHandle> GetPath() override { return m_path;}
         uint32_t GetSrvDescIndex() override { return m_shaderResource->GetSrvIndex(); }
+        uint32_t GetSamplerDescIndex() override { return m_shaderResource->GetSamplerIndex(); }
 
         static sp<Image> LoadFromFile(cr<StringHandle> path);
 

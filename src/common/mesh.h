@@ -51,19 +51,15 @@ namespace dt
         };
         
     private:
-        static sp<Mesh> LoadFromFileImp(crstr modelPath);
         static up<Assimp::Importer> ImportFile(crstr modelPath);
         static void GetMeshLoadConfig(crstr modelPath, float& initScale, bool& flipWindingOrder);
         static void CalcVertexAttrOffset(umap<VertexAttr, VertexAttrInfo>& vertexAttribInfo);
-        static crumap<VertexAttr, VertexAttrInfo> GetFullVertexAttribInfo();
         static sp<Mesh> CreateMesh(
             vec<float>&& vertexData,
             vec<uint32_t>&& indices,
             uint32_t vertexCount,
             crumap<VertexAttr, VertexAttrInfo> vertexAttribInfo,
             cr<Bounds> bounds);
-        
-        static crvec<float> GetFullVertexData(const Mesh* mesh);
         
         struct Cache
         {
