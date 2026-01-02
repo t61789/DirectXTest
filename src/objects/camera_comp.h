@@ -14,7 +14,7 @@ namespace dt
         void Start() override;
         void Update() override;
 
-        sp<ViewProjInfo> CreateVPMatrix();
+        sp<ViewProjInfo> CreateVPMatrix(float aspect);
         
         void LoadFromJson(cr<nlohmann::json> objJson) override;
         

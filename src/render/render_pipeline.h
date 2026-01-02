@@ -8,6 +8,8 @@
 
 namespace dt
 {
+    class RenderTexture;
+    class RenderTarget;
     class FinalPass;
     class RenderThread;
     struct RenderResources;
@@ -31,6 +33,7 @@ namespace dt
         RenderPipeline& operator=(RenderPipeline&& other) noexcept = delete;
 
         RenderResources* GetRenderResources() const { return m_renderResources.get(); }
+        sp<RenderTarget> GetGBufferRenderTarget() const { return m_gBufferRenderTarget; }
 
         void Render();
         static void RenderScene(ID3D12GraphicsCommandList* cmdList, const Scene* scene);
@@ -39,6 +42,12 @@ namespace dt
         sp<PreparePass> m_preparePass;
         sp<FinalPass> m_finalPass;
         sp<RenderResources> m_renderResources;
+
+        sp<RenderTexture> m_gBufferRt0;
+        sp<RenderTexture> m_gBufferRt1;
+        sp<RenderTexture> m_gBufferRt2;
+        sp<RenderTexture> m_gBufferRtDepth;
+        sp<RenderTarget> m_gBufferRenderTarget;
     };
 
     static RenderResources* RenderRes()

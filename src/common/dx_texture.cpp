@@ -46,7 +46,7 @@ namespace dt
             1,
             1,
             0,
-            D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+            IsDepthFormat(desc.format) ? D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL : D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
         D3D12_CLEAR_VALUE clearValue;
         clearValue.Format = dxResourceDesc.Format;
@@ -67,7 +67,7 @@ namespace dt
             resultDxResource = DxResource::Create(
                 CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
                 dxResourceDesc,
-                D3D12_RESOURCE_STATE_RENDER_TARGET,
+                IsDepthFormat(desc.format) ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET,
                 &clearValue,
                 D3D12_HEAP_FLAG_NONE,
                 L"Image");
@@ -86,10 +86,22 @@ namespace dt
         {
             { TextureFormat::RGBA, DXGI_FORMAT_R8G8B8A8_UNORM },
             { TextureFormat::RGB, DXGI_FORMAT_R8G8B8A8_UNORM },
-            { TextureFormat::Depth, DXGI_FORMAT_D32_FLOAT },
-            { TextureFormat::DepthStencil, DXGI_FORMAT_D32_FLOAT_S8X24_UINT },
+            { TextureFormat::DEPTH, DXGI_FORMAT_D32_FLOAT },
+            { TextureFormat::DEPTH_STENCIL, DXGI_FORMAT_D32_FLOAT_S8X24_UINT },
         };
 
         return FORMAT_MAP.at(format);
+    }
+
+    bool DxTexture::IsDepthFormat(const TextureFormat format)
+    {
+        switch (format)
+        {
+            case TextureFormat::DEPTH:
+            case TextureFormat::DEPTH_STENCIL:
+                return true;
+            default:
+                return false;
+        }
     }
 }

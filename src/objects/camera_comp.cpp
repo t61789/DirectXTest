@@ -126,12 +126,11 @@ namespace dt
         return m_cameras[0];
     }
 
-    sp<ViewProjInfo> CameraComp::CreateVPMatrix()
+    sp<ViewProjInfo> CameraComp::CreateVPMatrix(const float aspect)
     {
         auto& localToWorld = GetOwner()->transform->GetLocalToWorld();
         auto viewCenter = GetPosition(localToWorld);
         auto viewMatrix = XMMatrixLookToLH(GetPosition(localToWorld), GetForward(localToWorld), GetUp(localToWorld));
-        auto aspect = static_cast<float>(RC()->screenWidth) / static_cast<float>(RC()->screenHeight);
         auto projMatrix = XMMatrixPerspectiveFovLH(fov, aspect, nearClip, farClip);
 
         return ViewProjInfo::Create(viewMatrix, projMatrix, viewCenter, true);

@@ -15,16 +15,10 @@ namespace dt
     class DxResource;
     using namespace Microsoft::WRL;
 
-    struct RenderThreadContext
-    {
-        sp<RenderTarget> curRenderTarget = nullptr;
-        vecpair<sp<DxResource>, D3D12_RESOURCE_STATES> transitions;
-    };
-    
     class RenderThread
     {
     public:
-        using RenderCmd = std::function<void(ID3D12GraphicsCommandList*, RenderThreadContext&)>;
+        using RenderCmd = std::function<void(ID3D12GraphicsCommandList*)>;
 
         explicit RenderThread(const char* name = nullptr);
         ~RenderThread();
@@ -55,8 +49,6 @@ namespace dt
         vec<RenderCmd> m_pendingCmds;
 
         std::atomic<bool> m_recording = false;
-
-        RenderThreadContext m_context;
 
         bool m_first = true;
         

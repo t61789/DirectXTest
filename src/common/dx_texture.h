@@ -22,8 +22,8 @@ namespace dt
     {
         RGBA,
         RGB,
-        Depth,
-        DepthStencil
+        DEPTH,
+        DEPTH_STENCIL
     };
 
     enum class TextureWrapMode : uint8_t
@@ -63,6 +63,7 @@ namespace dt
         static sp<DxTexture> CreateImage(cr<DxTextureDesc> desc);
         static sp<DxTexture> CreateRenderTexture(cr<DxTextureDesc> desc, cr<XMFLOAT4> clearColor, crsp<DxResource> dxResource = nullptr);
         static DXGI_FORMAT ToDxgiFormat(TextureFormat format);
+        static bool IsDepthFormat(TextureFormat format);
         
     private:
         DxTextureDesc m_desc;

@@ -2,6 +2,7 @@
 
 #include <tracy/Tracy.hpp>
 
+#include "cbuffer.h"
 #include "directx.h"
 #include "utils/recycle_bin.h"
 
@@ -9,8 +10,8 @@ namespace dt
 {
     RenderThread::RenderThread(const char* name)
     {
-        m_thread = mup<ConsumerThread<RenderCmd>>([this](cr<RenderCmd> cmd) { cmd(m_cmdList.Get(), m_context); }, name);
-        m_thread->Enqueue([this](const ID3D12GraphicsCommandList*, RenderThreadContext&) { ThreadInit(); });
+        m_thread = mup<ConsumerThread<RenderCmd>>([this](cr<RenderCmd> cmd) { cmd(m_cmdList.Get()); }, name);
+        m_thread->Enqueue([this](const ID3D12GraphicsCommandList*) { ThreadInit(); });
         
         THROW_IF_FAILED(Dx()->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_ID3D12Fence, &m_fence));
         m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -19,7 +20,7 @@ namespace dt
 
     RenderThread::~RenderThread()
     {
-        m_thread->Enqueue([this](const ID3D12GraphicsCommandList*, RenderThreadContext&) { ThreadRelease(); });
+        m_thread->Enqueue([this](const ID3D12GraphicsCommandList*) { ThreadRelease(); });
         m_thread->Stop(false);
         m_thread->Join();
         
@@ -54,7 +55,7 @@ namespace dt
     {
         assert(Utils::IsMainThread() && m_recording.load());
 
-        AddCmd([this](ID3D12GraphicsCommandList* cmdList, RenderThreadContext&)
+        AddCmd([this](ID3D12GraphicsCommandList* cmdList)
         {
             ZoneScopedN("Execute");
             
@@ -166,6 +167,7 @@ namespace dt
         }
 
         RecycleBin::Ins()->Flush();
+        Cbuffer::UpdateDirtyCbuffers();
 
         m_renderThread->StartRecording();
 

@@ -4,6 +4,8 @@
 #include <directx/d3dx12_barriers.h>
 
 #include "descriptor_pool.h"
+#include "render_pipeline.h"
+#include "render_resources.h"
 #include "render_target.h"
 #include "render_thread.h"
 #include "common/const.h"
@@ -99,9 +101,9 @@ namespace dt
         cmdList->IASetVertexBuffers(0, 1, &mesh->GetVertexBufferView());
     }
     
-    void DxHelper::AddTransition(RenderThreadContext& context, crsp<DxResource> resource, const D3D12_RESOURCE_STATES state)
+    void DxHelper::AddTransition(crsp<DxResource> resource, const D3D12_RESOURCE_STATES state)
     {
-        auto transition = find_if(context.transitions, [resource](crpair<sp<DxResource>, D3D12_RESOURCE_STATES> x)
+        auto transition = find_if(RenderRes()->transitions, [resource](crpair<sp<DxResource>, D3D12_RESOURCE_STATES> x)
         {
             return x.first == resource;
         });
@@ -111,18 +113,18 @@ namespace dt
             return;
         }
         
-        context.transitions.emplace_back(resource, state);
+        RenderRes()->transitions.emplace_back(resource, state);
     }
 
-    void DxHelper::ApplyTransitions(ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context)
+    void DxHelper::ApplyTransitions(ID3D12GraphicsCommandList* cmdList)
     {
-        if (context.transitions.empty())
+        if (RenderRes()->transitions.empty())
         {
             return;
         }
         
         static vec<D3D12_RESOURCE_BARRIER> dxTransitions;
-        for (auto& [resource, state] : context.transitions)
+        for (auto& [resource, state] : RenderRes()->transitions)
         {
             if (resource->GetState() != state)
             {
@@ -143,7 +145,7 @@ namespace dt
         
         cmdList->ResourceBarrier(dxTransitions.size(), dxTransitions.data());
         
-        context.transitions.clear();
+        RenderRes()->transitions.clear();
         dxTransitions.clear();
     }
 
@@ -167,28 +169,28 @@ namespace dt
         descPool->SetHeaps(cmdList);
     }
 
-    void DxHelper::SetRenderTarget(ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context, crsp<RenderTarget> renderTarget)
+    void DxHelper::SetRenderTarget(ID3D12GraphicsCommandList* cmdList, crsp<RenderTarget> renderTarget)
     {
-        if (context.curRenderTarget == renderTarget)
+        if (RenderRes()->curRenderTarget == renderTarget)
         {
             return;
         }
 
-        if (context.curRenderTarget)
+        if (RenderRes()->curRenderTarget)
         {
-            UnsetRenderTarget(context, context.curRenderTarget);
+            UnsetRenderTarget(RenderRes()->curRenderTarget);
         }
         
         for (auto& rt : renderTarget->GetColorAttachments())
         {
-            AddTransition(context, rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+            AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
         }
         if (auto rt = renderTarget->GetDepthAttachment())
         {
-            AddTransition(context, rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
         }
         
-        ApplyTransitions(cmdList, context);
+        ApplyTransitions(cmdList);
         
         auto& rtvHandles = renderTarget->GetRtvHandles();
         auto& dsvHandle = renderTarget->GetDsvHandle();
@@ -201,23 +203,23 @@ namespace dt
 
         SetViewport(cmdList, renderTarget->GetSize().x, renderTarget->GetSize().y);
 
-        context.curRenderTarget = renderTarget;
+        RenderRes()->curRenderTarget = renderTarget;
     }
 
-    void DxHelper::UnsetRenderTarget(RenderThreadContext& context, crsp<RenderTarget> renderTarget)
+    void DxHelper::UnsetRenderTarget(crsp<RenderTarget> renderTarget)
     {
-        assert(context.curRenderTarget == renderTarget);
+        assert(RenderRes()->curRenderTarget == renderTarget);
         
         for (auto& rt : renderTarget->GetColorAttachments())
         {
-            AddTransition(context, rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+            AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
         }
         if (auto rt = renderTarget->GetDepthAttachment())
         {
-            AddTransition(context, rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
         }
 
-        context.curRenderTarget = nullptr;
+        RenderRes()->curRenderTarget = nullptr;
     }
 
     void DxHelper::PrepareCmdList(ID3D12GraphicsCommandList* cmdList)
@@ -227,9 +229,9 @@ namespace dt
         SetHeaps(cmdList, DescriptorPool::Ins());
     }
 
-    void DxHelper::Blit(ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context, const Material* material, crsp<RenderTarget> renderTarget)
+    void DxHelper::Blit(ID3D12GraphicsCommandList* cmdList, const Material* material, crsp<RenderTarget> renderTarget)
     {
-        SetRenderTarget(cmdList, context, renderTarget);
+        SetRenderTarget(cmdList, renderTarget);
 
         auto blitMat = material ? material : GameResource::Ins()->blitMat.get();
         auto mesh = GameResource::Ins()->quadMesh.get();
@@ -247,6 +249,6 @@ namespace dt
         
         cmdList->DrawIndexedInstanced(mesh->GetIndicesCount(), 1, 0, 0, 0);
 
-        UnsetRenderTarget(context, renderTarget);
+        UnsetRenderTarget(renderTarget);
     }
 }

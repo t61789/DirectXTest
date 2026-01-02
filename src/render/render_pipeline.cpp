@@ -9,6 +9,7 @@
 #include "window.h"
 #include "common/material.h"
 #include "common/mesh.h"
+#include "common/render_texture.h"
 #include "game/game_resource.h"
 #include "objects/scene.h"
 #include "render/render_resources.h"
@@ -22,10 +23,43 @@ namespace dt
         m_preparePass = msp<PreparePass>();
         m_finalPass = msp<FinalPass>();
         m_renderResources = msp<RenderResources>();
+
+        RenderTextureDesc gBufferColorDesc;
+        gBufferColorDesc.dxDesc.type = TextureType::TEXTURE_2D;
+        gBufferColorDesc.dxDesc.format = TextureFormat::RGBA;
+        gBufferColorDesc.dxDesc.wrapMode = TextureWrapMode::CLAMP;
+        gBufferColorDesc.dxDesc.filterMode = TextureFilterMode::BILINEAR;
+        gBufferColorDesc.dxDesc.width = Window::Ins()->GetWidth();
+        gBufferColorDesc.dxDesc.height = Window::Ins()->GetHeight();
+        gBufferColorDesc.dxDesc.channelCount = 4;
+        gBufferColorDesc.dxDesc.hasMipmap = false;
+        m_gBufferRt0 = msp<RenderTexture>(gBufferColorDesc);
+        m_gBufferRt1 = msp<RenderTexture>(gBufferColorDesc);
+        m_gBufferRt2 = msp<RenderTexture>(gBufferColorDesc);
+
+        RenderTextureDesc gBufferDepthDesc;
+        gBufferDepthDesc.dxDesc.type = TextureType::TEXTURE_2D;
+        gBufferDepthDesc.dxDesc.format = TextureFormat::DEPTH_STENCIL;
+        gBufferDepthDesc.dxDesc.wrapMode = TextureWrapMode::CLAMP;
+        gBufferDepthDesc.dxDesc.filterMode = TextureFilterMode::NEAREST;
+        gBufferDepthDesc.dxDesc.width = Window::Ins()->GetWidth();
+        gBufferDepthDesc.dxDesc.height = Window::Ins()->GetHeight();
+        gBufferDepthDesc.dxDesc.channelCount = 1;
+        gBufferColorDesc.dxDesc.hasMipmap = false;
+        m_gBufferRtDepth = msp<RenderTexture>(gBufferDepthDesc);
+
+        m_gBufferRenderTarget = RenderTarget::Create({ m_gBufferRt0, m_gBufferRt1, m_gBufferRt2 }, m_gBufferRtDepth);
     }
 
     RenderPipeline::~RenderPipeline()
     {
+        m_gBufferRenderTarget.reset();
+        
+        m_gBufferRt0.reset();
+        m_gBufferRt1.reset();
+        m_gBufferRt2.reset();
+        m_gBufferRtDepth.reset();
+        
         m_renderResources.reset();
         m_finalPass.reset();
         m_preparePass.reset();

@@ -20,6 +20,8 @@ namespace dt
         Window& operator=(Window&& other) noexcept = delete;
         
         HWND GetHandle() const { return m_hwnd; }
+        uint32_t GetWidth() const { return m_width; }
+        uint32_t GetHeight() const { return m_height; }
 
         bool Create();
         void Destroy();

@@ -13,18 +13,18 @@ namespace dt
 {
     void FinalPass::Execute()
     {
-        RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context)
+        RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         {
             ZoneScopedN("Final Pass");
             
-            DxHelper::Blit(cmdList, context, nullptr, Dx()->GetBackBufferRenderTarget());
+            DxHelper::Blit(cmdList, nullptr, Dx()->GetBackBufferRenderTarget());
             
             for (auto& rt : Dx()->GetBackBufferRenderTarget()->GetColorAttachments())
             {
-                DxHelper::AddTransition(context, rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_PRESENT);
+                DxHelper::AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_PRESENT);
             }
 
-            DxHelper::ApplyTransitions(cmdList, context);
+            DxHelper::ApplyTransitions(cmdList);
         });
 
         RenderThreadMgr::Ins()->ExecuteAllThreads();

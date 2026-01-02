@@ -27,7 +27,6 @@ namespace dt
     {
         m_windowHwnd = Window::Ins()->GetHandle();
 
-
         CreateDebugLayer();
 
         CreateFactory();

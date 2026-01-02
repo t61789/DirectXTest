@@ -16,21 +16,21 @@ namespace dt
 
         auto uploadBuffer = CreateUploadBuffer(data, sizeB);
 
-        RT()->AddCmd([self=shared_from_this(), uploadBuffer](ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context)
+        RT()->AddCmd([self=shared_from_this(), uploadBuffer](ID3D12GraphicsCommandList* cmdList)
         {
             auto preState = self->m_state.load();
             
             if (preState != D3D12_RESOURCE_STATE_COPY_DEST)
             {
-                DxHelper::AddTransition(context, self, D3D12_RESOURCE_STATE_COPY_DEST);
-                DxHelper::ApplyTransitions(cmdList, context);
+                DxHelper::AddTransition(self, D3D12_RESOURCE_STATE_COPY_DEST);
+                DxHelper::ApplyTransitions(cmdList);
             }
 
             cmdList->CopyResource(self->m_resource.Get(), uploadBuffer->GetResource());
 
             if (preState != D3D12_RESOURCE_STATE_COPY_DEST)
             {
-                DxHelper::AddTransition(context, self, preState);
+                DxHelper::AddTransition(self, preState);
             }
         });
     }

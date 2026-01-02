@@ -110,7 +110,7 @@ namespace dt
     {
         auto dxTexture = DxTexture::CreateImage(cache.desc);
 
-        RT()->AddCmd([dxTexture, cache=std::move(cache)](ID3D12GraphicsCommandList* cmdList, RenderThreadContext& context)
+        RT()->AddCmd([dxTexture, cache=std::move(cache)](ID3D12GraphicsCommandList* cmdList)
         {
             auto dxTextureResourceDesc = dxTexture->GetDxResource()->GetDesc();
             
@@ -141,7 +141,7 @@ namespace dt
                 1,
                 &srcData));
             
-            DxHelper::AddTransition(context, dxTexture->GetDxResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            DxHelper::AddTransition(dxTexture->GetDxResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         });
 
         auto result = msp<Image>();
