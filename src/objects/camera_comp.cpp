@@ -103,8 +103,7 @@ namespace dt
             m_targetRotation.y += deltaTime * rotateSpeed;
         }
 
-        auto targetRotationQ = XMQuaternionRotationRollPitchYawFromVector(XMLoadFloat3(&m_targetRotation) * XMVectorReplicate(DEG2RAD));
-        auto r = XMQuaternionSlerp(GetOwner()->transform->GetRotation(), targetRotationQ, damp);
+        auto r = XMQuaternionSlerp(GetOwner()->transform->GetRotation(), ToRotation(Load(m_targetRotation)), damp);
         GetOwner()->transform->SetRotation(r);
     }
 

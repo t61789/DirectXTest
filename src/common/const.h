@@ -50,6 +50,7 @@ namespace dt
     STRING_HANDLE(GBUFFER_0_TEX, _GBuffer0Tex)
     STRING_HANDLE(GBUFFER_1_TEX, _GBuffer1Tex)
     STRING_HANDLE(GBUFFER_2_TEX, _GBuffer2Tex)
+    STRING_HANDLE(MAIN_TEX, _MainTex)
     
 
     static const uint32_t MAX_REGISTER_COUNT = 16;

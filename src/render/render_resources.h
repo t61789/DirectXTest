@@ -29,9 +29,11 @@ namespace dt
 
         // Render Resources
         XMUINT2 screenSize = { 0, 0 };
+        sp<RenderTexture> gBufferRt1 = nullptr;
         sp<RenderTarget> gBufferRenderTarget = nullptr;
         sp<ViewProjInfo> mainCameraVp = nullptr;
         vecsp<RenderObject> renderObjects;
+        sp<RenderTexture> litResultRt = nullptr;
 
         // Render States
         sp<ViewProjInfo> curVp = nullptr;

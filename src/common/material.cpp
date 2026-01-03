@@ -9,6 +9,15 @@
 
 namespace dt
 {
+    sp<Material> Material::CreateFromShader(cr<StringHandle> shaderPath)
+    {
+        auto shader = Shader::LoadFromFile(shaderPath);
+        auto result = msp<Material>();
+        result->BindShader(shader);
+
+        return result;
+    }
+
     sp<Material> Material::LoadFromFile(cr<StringHandle> path)
     {
         {
@@ -20,10 +29,7 @@ namespace dt
 
         auto matJson = Utils::LoadJson(path);
 
-        auto result = msp<Material>();
-        
-        auto shader = Shader::LoadFromFile(matJson.at("shader").get<str>());
-        result->BindShader(shader);
+        auto result = CreateFromShader(matJson.at("shader").get<str>());
         result->LoadParams(matJson);
 
         GR()->RegisterResource(path, result);

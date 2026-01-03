@@ -1,0 +1,5 @@
+{
+    "shader": "shaders/deferred_lit.shader",
+    "depthWrite": false,
+    "depthMode": "Always"
+}

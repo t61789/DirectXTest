@@ -8,6 +8,7 @@
 
 namespace dt
 {
+    class IRenderPass;
     class RenderScenePass;
     class RenderTexture;
     class RenderTarget;
@@ -34,21 +35,13 @@ namespace dt
         RenderPipeline& operator=(RenderPipeline&& other) noexcept = delete;
 
         RenderResources* GetRenderResources() const { return m_renderResources.get(); }
-        sp<RenderTarget> GetGBufferRenderTarget() const { return m_gBufferRenderTarget; }
+        crvecsp<IRenderPass> GetPasses() const { return m_passes; }
 
         void Render();
 
     private:
-        sp<PreparePass> m_preparePass;
-        sp<RenderScenePass> m_renderScenePass;
-        sp<FinalPass> m_finalPass;
+        vecsp<IRenderPass> m_passes;
         sp<RenderResources> m_renderResources;
-
-        sp<RenderTexture> m_gBufferRt0;
-        sp<RenderTexture> m_gBufferRt1;
-        sp<RenderTexture> m_gBufferRt2;
-        sp<RenderTexture> m_gBufferRtDepth;
-        sp<RenderTarget> m_gBufferRenderTarget;
     };
 
     static RenderResources* RenderRes()

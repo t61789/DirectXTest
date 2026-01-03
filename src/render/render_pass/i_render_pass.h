@@ -1,8 +1,9 @@
 ﻿#pragma once
-#include <d3d12.h>
 
 namespace dt
 {
+    struct RenderResources;
+    
     class IRenderPass
     {
     public:
@@ -15,5 +16,7 @@ namespace dt
         
         virtual const char* GetName() = 0;
         virtual void Execute() = 0;
+        
+        virtual void PrepareContext(RenderResources* context) {}
     };
 }

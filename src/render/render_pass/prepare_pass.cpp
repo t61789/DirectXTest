@@ -20,9 +20,13 @@ namespace dt
         *RenderRes() = RenderResources();
         RenderRes()->screenSize = { Window::Ins()->GetWidth(), Window::Ins()->GetHeight() };
         auto aspect = static_cast<float>(RenderRes()->screenSize.x) / static_cast<float>(RenderRes()->screenSize.y);
-        RenderRes()->gBufferRenderTarget = RenderPipeline::Ins()->GetGBufferRenderTarget();
         RenderRes()->mainCameraVp = CameraComp::GetMainCamera()->CreateVPMatrix(aspect);
         RenderRes()->renderObjects = GR()->mainScene->GetRenderTree()->GetRenderObjects();
+
+        for (auto& pass : RenderPipeline::Ins()->GetPasses())
+        {
+            pass->PrepareContext(RenderRes());
+        }
 
         RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         {

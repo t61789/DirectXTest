@@ -81,7 +81,7 @@ namespace dt
 
     void Shader::DoLoad(cr<StringHandle> path)
     {
-        log_info("Loading shader: %s", path.CStr());
+        log_info("Load shader: %s", path.CStr());
 
         m_ps = CompileShader(path.CStr(), "PS_Main", "ps_5_1");
         m_vs = CompileShader(path.CStr(), "VS_Main", "vs_5_1");
@@ -101,6 +101,7 @@ namespace dt
         LoadShaderStage(m_ps, reflectionPack);
         LoadInputResources(reflectionPack);
         LoadCbuffers(reflectionPack);
+        LoadOutputResources(reflectionPack);
 
         CreateRootSignature(reflectionPack);
         
@@ -241,7 +242,12 @@ namespace dt
         }
     }
 
-    void Shader::LoadVertexLayout(ReflectionPack& reflectionPack)
+    void Shader::LoadOutputResources(const ReflectionPack& reflectionPack)
+    {
+        m_outputCount = reflectionPack.shaderDesc.OutputParameters;
+    }
+
+    void Shader::LoadVertexLayout(const ReflectionPack& reflectionPack)
     {
         uint32_t curOffset = 0;
         m_semanticNames.resize(reflectionPack.shaderDesc.InputParameters);

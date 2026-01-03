@@ -66,12 +66,36 @@ namespace dt
     {
         return m.r[3];
     }
+
+    inline XMFLOAT3 Store3(cr<XMVECTOR> f3)
+    {
+        XMFLOAT3 result;
+        XMStoreFloat3(&result, f3);
+        return result;
+    }
+
+    inline XMFLOAT4 Store4(cr<XMVECTOR> f4)
+    {
+        XMFLOAT4 result;
+        XMStoreFloat4(&result, f4);
+        return result;
+    }
     
     inline XMFLOAT4X4 Store(cr<XMMATRIX> m)
     {
         XMFLOAT4X4 result;
         XMStoreFloat4x4(&result, m);
         return result;
+    }
+
+    inline XMVECTOR Load(cr<XMFLOAT3> m)
+    {
+        return XMLoadFloat3(&m);
+    }
+
+    inline XMVECTOR Load(cr<XMFLOAT4> m)
+    {
+        return XMLoadFloat4(&m);
     }
 
     inline XMMATRIX Load(cr<XMFLOAT4X4> m)
@@ -94,12 +118,38 @@ namespace dt
         return Store(Inverse(Load(m)));
     }
 
+    inline XMVECTOR ToRotation(cr<XMVECTOR> eulerAngles)
+    {
+        auto eaRadius = Store3(eulerAngles * DEG2RAD);
+        return XMQuaternionRotationRollPitchYaw(eaRadius.x, eaRadius.y, eaRadius.z);
+    }
+
     inline bool operator==(const XMINT2& lhs, const XMINT2& rhs)
     {
         return lhs.x == rhs.x && lhs.y == rhs.y;
     }
 
     inline bool operator!=(const XMINT2& lhs, const XMINT2& rhs)
+    {
+        return !(lhs == rhs);
+    }
+    
+    inline bool operator==(const XMFLOAT3& lhs, const XMFLOAT3& rhs)
+    {
+        return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+    }
+
+    inline bool operator!=(const XMFLOAT3& lhs, const XMFLOAT3& rhs)
+    {
+        return !(lhs == rhs);
+    }
+
+    inline bool operator==(const XMFLOAT4& lhs, const XMFLOAT4& rhs)
+    {
+        return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
+    }
+
+    inline bool operator!=(const XMFLOAT4& lhs, const XMFLOAT4& rhs)
     {
         return !(lhs == rhs);
     }

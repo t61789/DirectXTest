@@ -52,6 +52,7 @@ namespace dt
         template <typename T>
         T GetParam(string_hash name);
         
+        static sp<Material> CreateFromShader(cr<StringHandle> shaderPath);
         static sp<Material> LoadFromFile(cr<StringHandle> path);
 
     private:

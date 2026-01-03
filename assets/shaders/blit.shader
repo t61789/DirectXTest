@@ -17,7 +17,7 @@ PSInput VS_Main(VSInput input)
 
 float4 PS_Main(PSInput input) : SV_TARGET
 {
-    float4 col = SampleTexture(_GBuffer0Tex, input.uv0);
+    float4 col = SampleTexture(_MainTex, input.uv0);
 
-    return float4(col.rgb,1);
+    return float4(col.rgb, 1);
 }

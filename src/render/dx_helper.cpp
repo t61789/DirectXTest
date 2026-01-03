@@ -44,9 +44,9 @@ namespace dt
     void DxHelper::BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material)
     {
         auto pso = material->GetShader()->GetPso();
-        
+
         pso->SetDepthMode(material->m_depthMode);
-        pso->SetDepthWrite(material->m_depthWrite);
+        pso->SetDepthWrite(material->m_depthWrite && RenderRes()->curRenderTarget->GetDepthAttachment() != nullptr);
         pso->SetCullMode(material->m_cullMode);
 
         cmdList->SetPipelineState(pso->CurPso());
@@ -225,7 +225,7 @@ namespace dt
         
         for (auto& rt : renderTarget->GetColorAttachments())
         {
-            AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+            AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         }
         if (auto rt = renderTarget->GetDepthAttachment())
         {

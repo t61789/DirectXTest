@@ -41,6 +41,7 @@ namespace dt
         cr<StringHandle> GetPath() override { return m_path; }
         Pso* GetPso() const { return m_pso.get(); }
         crvec<BindResource> GetBindResources() const { return m_bindResources; }
+        uint32_t GetOutputCount() const { return m_outputCount; }
         
         sp<Cbuffer> CreateCbuffer();
         
@@ -49,8 +50,9 @@ namespace dt
     private:
         void DoLoad(cr<StringHandle> path);
         void LoadShaderInfo();
-        void LoadVertexLayout(ReflectionPack& reflectionPack);
+        void LoadVertexLayout(const ReflectionPack& reflectionPack);
         void LoadCbuffers(const ReflectionPack& reflectionPack);
+        void LoadOutputResources(const ReflectionPack& reflectionPack);
         void CreateRootSignature(const ReflectionPack& reflectionPack);
         
         static void LoadShaderStage(cr<ComPtr<ID3DBlob>> blob, ReflectionPack& reflectionPack);
@@ -72,6 +74,8 @@ namespace dt
         sp<Pso> m_pso = nullptr;
 
         vec<str> m_semanticNames = {};
+
+        uint32_t m_outputCount = 0;
 
         struct ReflectionPack
         {

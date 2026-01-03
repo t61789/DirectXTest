@@ -20,10 +20,15 @@ namespace dt
         m_desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         m_desc.SampleMask = UINT_MAX;
         m_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        m_desc.NumRenderTargets = 1;
-        m_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+        m_desc.DSVFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
         m_desc.SampleDesc.Count = 1;
         m_desc.SampleDesc.Quality = 0;
+        
+        m_desc.NumRenderTargets = shader->GetOutputCount();
+        for (uint32_t i = 0; i < shader->GetOutputCount(); ++i)
+        {
+            m_desc.RTVFormats[i] = DXGI_FORMAT_R8G8B8A8_UNORM;
+        }
     }
 
     ID3D12PipelineState* Pso::CurPso()
@@ -79,6 +84,7 @@ namespace dt
 
         m_desc.DepthStencilState.DepthEnable = enable;
         m_desc.DepthStencilState.DepthWriteMask = enable ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+        m_desc.DSVFormat = enable ? DXGI_FORMAT_D32_FLOAT_S8X24_UINT : DXGI_FORMAT_UNKNOWN;
     }
 
     void Pso::SetCullMode(const CullMode mode)
