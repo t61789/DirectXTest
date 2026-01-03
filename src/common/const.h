@@ -53,6 +53,7 @@ namespace dt
     STRING_HANDLE(MAIN_TEX, _MainTex)
     STRING_HANDLE(MAIN_LIGHT_DIR, _MainLightDir)
     STRING_HANDLE(MAIN_LIGHT_COLOR, _MainLightColor)
+    STRING_HANDLE(SHC, _Shc)
 
     static constexpr uint32_t MAX_REGISTER_COUNT = 16;
     static const auto UNNAMED_OBJECT = StringHandle("Unnamed Object");

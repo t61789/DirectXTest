@@ -6,14 +6,14 @@
             0.54
         ],
         "ambientLightColorEquator": [
-            0.36,
-            0.36,
-            0.43
+            0.46,
+            0.46,
+            0.53
         ],
         "ambientLightColorGround": [
-            0.40,
-            0.40,
-            0.46
+            1.10,
+            1.10,
+            1.16
         ],
         "mainLightColor": [
             3.7,

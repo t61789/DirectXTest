@@ -103,6 +103,11 @@ namespace dt
         return XMLoadFloat4x4(&m);
     }
 
+    inline XMFLOAT3 Normalize(cr<XMFLOAT3> f3)
+    {
+        return Store3(XMVector3Normalize(Load(f3)));
+    }
+
     inline XMMATRIX Inverse(cr<XMMATRIX> m)
     {
         XMVECTOR determinant;

@@ -42,6 +42,8 @@
 
         float4 _MainLightDir;
         float4 _MainLightColor;
+
+        float4 _Shc[7];
     };
 
     cbuffer PerViewCBuffer : register(b1)
@@ -166,5 +168,6 @@
         pos /= pos.w;
         return pos.xyz;
     }
+
 
 #endif // !defined(__COMMON_HLSL_INCLUDED__)

@@ -14,6 +14,7 @@ namespace dt
         FLOAT,
         VEC4,
         MATRIX,
+        VEC4_ARRAY,
         FLOAT_ARRAY
     };
 
@@ -78,7 +79,13 @@ namespace dt
         {
             if (typeDesc.Type == D3D_SVT_FLOAT && typeDesc.Rows == 1 && typeDesc.Columns == 4)
             {
-                return ParamType::VEC4;
+                if (typeDesc.Elements == 0)
+                {
+                    return ParamType::VEC4;
+                }
+
+                repeatCount = typeDesc.Elements;
+                return ParamType::VEC4_ARRAY;
             }
         }
         else if (typeDesc.Class == D3D_SVC_MATRIX_COLUMNS)
@@ -104,6 +111,8 @@ namespace dt
                 return sizeof(float) * 4;
             case ParamType::MATRIX:
                 return sizeof(float) * 16;
+            case ParamType::VEC4_ARRAY:
+                return sizeof(float) * 4 * repeatCount;
             case ParamType::FLOAT_ARRAY:
                 return sizeof(float) * 4 * repeatCount;
         }

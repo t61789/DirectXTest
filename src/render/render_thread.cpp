@@ -166,9 +166,6 @@ namespace dt
             m_renderThread->Wait();
         }
 
-        RecycleBin::Ins()->Flush();
-        Cbuffer::UpdateDirtyCbuffers();
-
         m_renderThread->StartRecording();
 
         m_executing = false;

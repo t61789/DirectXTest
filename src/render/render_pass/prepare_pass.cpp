@@ -9,6 +9,7 @@
 #include "render/cbuffer.h"
 #include "render/directx.h"
 #include "render/dx_helper.h"
+#include "render/indirect_lighting.h"
 #include "render/render_pipeline.h"
 #include "render/render_resources.h"
 #include "render/render_thread.h"
@@ -31,6 +32,9 @@ namespace dt
         {
             pass->PrepareContext(RenderRes());
         }
+        
+        RecycleBin::Ins()->Flush();
+        Cbuffer::UpdateDirtyCbuffers();
 
         RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         {
@@ -58,5 +62,10 @@ namespace dt
 
         GetGlobalCbuffer()->Write(MAIN_LIGHT_DIR, lightDir);
         GetGlobalCbuffer()->Write(MAIN_LIGHT_COLOR, lightColor);
+
+        IndirectLighting::SetGradientAmbientColor(
+            GR()->mainScene->ambientLightColorSky,
+            GR()->mainScene->ambientLightColorEquator,
+            GR()->mainScene->ambientLightColorGround);
     }
 }
