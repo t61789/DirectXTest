@@ -6,6 +6,9 @@
 
     #define PIXEL_TYPE_LIT 1.0f
 
+    #define PI 3.14159265359f
+    #define EPSION 1e-5f
+
     struct VSInput 
     {
         float4 positionOS : POSITION;
@@ -18,23 +21,27 @@
     struct PSInput
     {
         float4 positionCS : SV_POSITION;
-        float3 normalWS : TEXCOORD0;
-        float2 uv0 : TEXCOORD1;
+        float4 positionSS : TEXCOORD0;
+        float3 positionWS : TEXCOORD1;
+        float3 normalWS : TEXCOORD2;
+        float2 uv0 : TEXCOORD3;
     };
 
     struct GBufferPSOutput
     {
         float4 color0 : SV_TARGET0;
         float4 color1 : SV_TARGET1;
-        float4 color2 : SV_TARGET2;
+        float color2 : SV_TARGET2;
     };
 
     cbuffer GlobalCBuffer : register(b0)
     {
-        float4 _Dummy;
         uint _GBuffer0Tex;
         uint _GBuffer1Tex;
         uint _GBuffer2Tex;
+
+        float4 _MainLightDir;
+        float4 _MainLightColor;
     };
 
     cbuffer PerViewCBuffer : register(b1)
@@ -107,6 +114,7 @@
 
     float4 SampleTexture(uint textureIndex, float2 uv)
     {
+        uv.y = 1.0f - uv.y;
         uint srvIndex = textureIndex & 0xFFFF;
         uint samplerIndex = (textureIndex >> 20) & 0xFF;
         return _BindlessTextures[srvIndex].Sample(_BindlessSamplers[samplerIndex], uv);
@@ -137,18 +145,26 @@
         depth = color.r;
     }
 
-    GBufferPSOutput CreateOutput(float3 albedo, float3 normalWS, float pixelType)
+    GBufferPSOutput CreateOutput(float3 albedo, float3 normalWS, float pixelType, float depth)
     {
         GBufferPSOutput output;
         output.color0 = float4(albedo, pixelType);
         output.color1 = float4(normalWS * 0.5f + 0.5f, 0.0f);
-        output.color2 = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        output.color2 = depth;
         return output;
     }
 
     bool PixelTypeEquals(float pixelType, float checkType)
     {
         return abs(pixelType - checkType) < 0.01f;
+    }
+
+    float3 RebuildWorldPosition(float2 screenUv, float depth)
+    {
+        float4 pos = float4(screenUv * 2.0f - 1.0f, depth, 1.0f);
+        pos = mul(transpose(_IVP), pos);
+        pos /= pos.w;
+        return pos.xyz;
     }
 
 #endif // !defined(__COMMON_HLSL_INCLUDED__)

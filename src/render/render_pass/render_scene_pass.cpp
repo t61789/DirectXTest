@@ -13,6 +13,8 @@ namespace dt
     {
         RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         {
+            ZoneScopedN("Render Scene Pass");
+            
             RenderRes()->SetVp(RenderRes()->mainCameraVp);
             DxHelper::SetRenderTarget(cmdList, RenderRes()->gBufferRenderTarget, true);
             

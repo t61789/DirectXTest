@@ -9,5 +9,7 @@ namespace dt
         const char* GetName() override { return "Prepare Pass"; }
         
         void Execute() override;
+
+        void PrepareLight();
     };
 }

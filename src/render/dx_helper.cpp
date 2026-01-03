@@ -48,6 +48,7 @@ namespace dt
         pso->SetDepthMode(material->m_depthMode);
         pso->SetDepthWrite(material->m_depthWrite && RenderRes()->curRenderTarget->GetDepthAttachment() != nullptr);
         pso->SetCullMode(material->m_cullMode);
+        pso->SetRenderTarget(RenderRes()->curRenderTarget.get());
 
         cmdList->SetPipelineState(pso->CurPso());
     }

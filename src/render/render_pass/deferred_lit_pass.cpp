@@ -41,7 +41,14 @@ namespace dt
         gBufferColorDesc.dxDesc.hasMipmap = false;
         gBufferColorDesc.clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
         m_gBufferRt0 = msp<RenderTexture>(gBufferColorDesc);
+
+        gBufferColorDesc.dxDesc.format = TextureFormat::RGBA16;
         m_gBufferRt1 = msp<RenderTexture>(gBufferColorDesc);
+
+        gBufferColorDesc.dxDesc.format = TextureFormat::R32;
+        gBufferColorDesc.dxDesc.filterMode = TextureFilterMode::NEAREST;
+        gBufferColorDesc.dxDesc.channelCount = 1;
+        gBufferColorDesc.clearColor = { 1.0f, 0.0f, 0.0f, 0.0f };
         m_gBufferRt2 = msp<RenderTexture>(gBufferColorDesc);
 
         GetGlobalCbuffer()->Write(GBUFFER_0_TEX, m_gBufferRt0->GetTextureIndex());

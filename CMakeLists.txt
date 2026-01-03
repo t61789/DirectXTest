@@ -18,6 +18,28 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+option(USE_ASAN "Enable Address Sanitizer" OFF)
+
+if(USE_ASAN)
+    if(MSVC)
+        # 开启 ASan 标志
+		add_compile_options(/fsanitize=address)
+		
+		# 必须开启调试符号，否则 ASan 报告没有行号
+		add_compile_options(/Zi) 
+		
+		# 链接器也需要开启 ASan
+		add_link_options(/fsanitize=address)
+		
+		# 禁用增量链接（ASan 不支持）
+		string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+    else()
+        # GCC/Clang
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=address)
+    endif()
+endif()
+
 file(GLOB_RECURSE SOURCES 
 	src/*
 )

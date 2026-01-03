@@ -3,6 +3,8 @@
 #include <directx/d3dx12_core.h>
 
 #include "directx.h"
+#include "render_target.h"
+#include "common/render_texture.h"
 #include "common/shader.h"
 #include "common/utils.h"
 
@@ -20,14 +22,12 @@ namespace dt
         m_desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         m_desc.SampleMask = UINT_MAX;
         m_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        m_desc.DSVFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+        m_desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
         m_desc.SampleDesc.Count = 1;
         m_desc.SampleDesc.Quality = 0;
-        
-        m_desc.NumRenderTargets = shader->GetOutputCount();
-        for (uint32_t i = 0; i < shader->GetOutputCount(); ++i)
+        for (auto& RTVFormat : m_desc.RTVFormats)
         {
-            m_desc.RTVFormats[i] = DXGI_FORMAT_R8G8B8A8_UNORM;
+            RTVFormat = DXGI_FORMAT_UNKNOWN;
         }
     }
 
@@ -84,7 +84,6 @@ namespace dt
 
         m_desc.DepthStencilState.DepthEnable = enable;
         m_desc.DepthStencilState.DepthWriteMask = enable ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-        m_desc.DSVFormat = enable ? DXGI_FORMAT_D32_FLOAT_S8X24_UINT : DXGI_FORMAT_UNKNOWN;
     }
 
     void Pso::SetCullMode(const CullMode mode)
@@ -110,14 +109,32 @@ namespace dt
         }
     }
 
-    void Pso::SetRenderTargetFormat(const uint32_t index, const DXGI_FORMAT format)
+    void Pso::SetRenderTarget(const RenderTarget* renderTarget)
     {
-        if (m_desc.RTVFormats[index] == format)
-        {
-            return;
-        }
         m_dirty = true;
-        m_desc.RTVFormats[index] = format;
+        
+        auto& colorAttachments = renderTarget->GetColorAttachments();
+        for (uint32_t i = 0; i < 8; ++i)
+        {
+            if (i < colorAttachments.size())
+            {
+                m_desc.RTVFormats[i] = DxTexture::ToDxgiFormat(colorAttachments[i]->GetDxTexture()->GetDesc().format);
+            }
+            else
+            {
+                m_desc.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+            }
+        }
+        m_desc.NumRenderTargets = colorAttachments.size();
+
+        if (auto depthAttachment = renderTarget->GetDepthAttachment())
+        {
+            m_desc.DSVFormat = DxTexture::ToDxgiFormat(depthAttachment->GetDxTexture()->GetDesc().format);
+        }
+        else
+        {
+            m_desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+        }
     }
 
     void Pso::Update()

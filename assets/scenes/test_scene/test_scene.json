@@ -66,12 +66,12 @@
                 {
                     "name": "LightComp",
                     "color": [
-                        3.7,
-                        3.7,
-                        3.7
+                        0.7,
+                        0.7,
+                        0.7
                     ],
                     "light_type": 0,
-                    "intensity": 1
+                    "intensity": 3
                 }
             ]
         },

@@ -6,6 +6,7 @@ md build
 
 cd build
 
+:: conan install .. --build=* --settings build_type=Debug -pr:h=asan_profile -pr:b=default
 conan install .. --build=missing --settings build_type=Debug
 :: conan install .. --build=missing --settings build_type=Release
 
@@ -18,7 +19,8 @@ rd /s /q %ninja_path%
 
 cmake -G "Visual Studio 17 2022" -S %cmake_path% -B %build_path%\project
 call %vsvarsall_path% x64
-cmake -G "Ninja" -S %cmake_path% -B %ninja_path%
+:: cmake -G "Ninja" -S %cmake_path% -B %ninja_path% -DCMAKE_BUILD_TYPE=Debug -DUSE_ASAN=ON
+cmake -G "Ninja" -S %cmake_path% -B %ninja_path% -DCMAKE_BUILD_TYPE=Debug -DUSE_ASAN=OFF
 :: cmake -G "Ninja" -S %cmake_path% -B %ninja_path% -DCMAKE_BUILD_TYPE=Release
 
 pause

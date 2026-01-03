@@ -7,6 +7,7 @@
 
 namespace dt
 {
+    class RenderTarget;
     class Shader;
     using namespace Microsoft::WRL;
     
@@ -20,7 +21,7 @@ namespace dt
         void SetDepthMode(DepthMode mode);
         void SetDepthWrite(bool enable);
         void SetCullMode(CullMode mode);
-        void SetRenderTargetFormat(uint32_t index, DXGI_FORMAT format);
+        void SetRenderTarget(const RenderTarget* renderTarget);
 
         void Update();
 

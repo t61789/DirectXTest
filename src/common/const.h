@@ -51,9 +51,10 @@ namespace dt
     STRING_HANDLE(GBUFFER_1_TEX, _GBuffer1Tex)
     STRING_HANDLE(GBUFFER_2_TEX, _GBuffer2Tex)
     STRING_HANDLE(MAIN_TEX, _MainTex)
-    
+    STRING_HANDLE(MAIN_LIGHT_DIR, _MainLightDir)
+    STRING_HANDLE(MAIN_LIGHT_COLOR, _MainLightColor)
 
-    static const uint32_t MAX_REGISTER_COUNT = 16;
+    static constexpr uint32_t MAX_REGISTER_COUNT = 16;
     static const auto UNNAMED_OBJECT = StringHandle("Unnamed Object");
     
     template <typename T>

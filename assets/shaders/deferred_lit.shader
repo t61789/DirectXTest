@@ -1,28 +1,37 @@
 #include "lib/common.hlsl"
+#include "lib/lighting.hlsl"
 
 PSInput VS_Main(VSInput input)
 {
     PSInput output = (PSInput)0;
 
     output.positionCS = float4(input.positionOS.xyz, 1.0f);
-    output.uv0 = input.uv0;
+    output.positionSS = output.positionCS;
 
     return output;
 }
 
 float4 PS_Main(PSInput input) : SV_TARGET
 {
+    float2 screenUv = (input.positionSS.xy / input.positionSS.w) * 0.5f + 0.5f;
+
     float3 albedo, normalWS;
-    float pixelType;
+    float pixelType, depth;
 
-    ReadGBuffer0(input.uv0, albedo, pixelType);
-    ReadGBuffer1(input.uv0, normalWS);
+    ReadGBuffer0(screenUv, albedo, pixelType);
+    ReadGBuffer1(screenUv, normalWS);
+    ReadGBuffer2(screenUv, depth);
 
-    float4 finalColor = float4(albedo, 1.0f);
+    float3 positionWS = RebuildWorldPosition(screenUv, depth);
+    float3 viewDirWS = normalize(_CameraPositionWS - positionWS);
+
+    float3 litColor = albedo;
     if (PixelTypeEquals(pixelType, PIXEL_TYPE_LIT))
     {
-        finalColor.rgb = saturate(dot(normalWS, normalize(float3(1,1,1)))) * albedo;
+        // litColor = SimpleLit(normalWS);
+        litColor = Lit(albedo, normalWS, viewDirWS, 0.3f, 0.0f);
     }
 
+    float4 finalColor = float4(litColor, 1.0f);
     return finalColor;
 }
