@@ -87,7 +87,7 @@ namespace dt
             
         if (compAccessor.addFunc(comp, it->second))
         {
-            m_pendingComps.push_back(comp);
+            m_allComps.push_back(comp);
         }
     }
 

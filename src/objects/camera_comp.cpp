@@ -55,7 +55,7 @@ namespace dt
             XMStoreFloat3(&m_targetPosition, XMLoadFloat3(&m_targetPosition) + forward * deltaTime * moveSpeed);
         }
     
-        if (Keyboard::Ins()->KeyPressed(KeyCode::W))
+        if (Keyboard::Ins()->KeyPressed(KeyCode::S))
         {
             XMStoreFloat3(&m_targetPosition, XMLoadFloat3(&m_targetPosition) - forward * deltaTime * moveSpeed);
         }
