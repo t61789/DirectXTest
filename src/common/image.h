@@ -13,7 +13,7 @@ namespace dt
     {
         struct ImportConfig
         {
-            bool needFlipVertical = true;
+            bool needFlipVertical = false;
             bool needMipmap = false;
             TextureWrapMode wrapMode = TextureWrapMode::CLAMP;
             TextureFilterMode filterMode = TextureFilterMode::BILINEAR;
@@ -25,7 +25,7 @@ namespace dt
         struct ImageCache
         {
             DxTextureDesc desc;
-            vec<uint8_t> data;
+            vec<vec<uint8_t>> mipmaps;
 
             template <typename Archive>
             void serialize(Archive& ar, uint32_t const version);
@@ -45,8 +45,8 @@ namespace dt
 
     private:
         static ImportConfig LoadImageImportConfig(crstr assetPath);
+        static vec<vec<uint8_t>> CreateMipmaps(const uint8_t* rawData, uint32_t width, uint32_t height);
 
-    private:
         StringHandle m_path = {};
         
         sp<DxTexture> m_dxTexture = nullptr;
@@ -72,6 +72,6 @@ namespace dt
     void Image::ImageCache::serialize(Archive& ar, uint32_t const version)
     {
         ar & desc;
-        ar & data;
+        ar & mipmaps;
     }
 }

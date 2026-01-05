@@ -17,7 +17,7 @@ namespace dt
             desc.width,
             desc.height,
             1,
-            1,
+            (std::min)(Utils::Log2(desc.width) + 1, Utils::Log2(desc.height) + 1),
             1,
             0,
             D3D12_RESOURCE_FLAG_NONE);

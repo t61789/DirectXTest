@@ -1,5 +1,5 @@
 {
     "shader": "shaders/pbr_basic.shader",
     "depthWrite": true,
-    "_Color": [1.0, 0.0, 1.0, 1.0]
+    "_MainTex": "textures/o2.png"
 }

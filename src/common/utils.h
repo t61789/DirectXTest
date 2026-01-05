@@ -63,6 +63,8 @@ namespace dt
         static std::string Join(const std::vector<std::string>& strings, const std::string& delimiter);
 
         static bool IsMainThread();
+
+        static uint32_t Log2(uint32_t v);
     };
     
     template <typename... Args>
