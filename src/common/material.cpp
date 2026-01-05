@@ -48,7 +48,16 @@ namespace dt
 
     void Material::LoadParams(cr<nlohmann::json> matJson)
     {
-        for (const auto& elem : matJson.items())
+        auto finalMatJson = matJson;
+        for (const auto& param : m_shader->GetDefaultParams().items())
+        {
+            if (!matJson.contains(param.key()))
+            {
+                finalMatJson[param.key()] = param.value();
+            }
+        }
+        
+        for (const auto& elem : finalMatJson.items())
         { 
             const auto& elemKey = StringHandle(elem.key());
             const auto& elemValue = elem.value();
@@ -84,7 +93,7 @@ namespace dt
                 continue;
             }
 
-            auto param = LoadParamInfo(matJson, elemKey);
+            auto param = LoadParamInfo(finalMatJson, elemKey);
             SetParamImp(param.nameId, param.data.data(), param.sizeB, param.texture);
         }
     }

@@ -87,6 +87,8 @@ namespace dt
         m_vs = CompileShader(path.CStr(), "VS_Main", "vs_5_1");
 
         LoadShaderInfo();
+
+        m_defaultParams = Utils::GetResourceMeta(path);
     }
 
     void Shader::LoadShaderInfo()

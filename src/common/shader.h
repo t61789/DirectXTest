@@ -42,6 +42,7 @@ namespace dt
         Pso* GetPso() const { return m_pso.get(); }
         crvec<BindResource> GetBindResources() const { return m_bindResources; }
         uint32_t GetOutputCount() const { return m_outputCount; }
+        cr<nlohmann::json> GetDefaultParams() const { return m_defaultParams; }
         
         sp<Cbuffer> CreateCbuffer();
         
@@ -76,6 +77,8 @@ namespace dt
         vec<str> m_semanticNames = {};
 
         uint32_t m_outputCount = 0;
+
+        nlohmann::json m_defaultParams;
 
         struct ReflectionPack
         {
