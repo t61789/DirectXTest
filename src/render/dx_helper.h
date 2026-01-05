@@ -3,6 +3,8 @@
 #include <directx/d3d12.h>
 
 #include "dx_resource.h"
+#include "render_context.h"
+#include "render_resources.h"
 #include "render_target.h"
 #include "render_thread.h"
 #include "common/material.h"
@@ -39,5 +41,7 @@ namespace dt
         static void PrepareCmdList(ID3D12GraphicsCommandList* cmdList);
 
         static void Blit(ID3D12GraphicsCommandList* cmdList, const Material* material, crsp<RenderTarget> renderTarget);
+        static void RenderScene(ID3D12GraphicsCommandList* cmdList, crvecsp<RenderObject> renderObjects,
+                                crsp<Cbuffer> viewCbuffer, crsp<RenderTarget> renderTarget, crsp<Material> replaceMaterial);
     };
 }

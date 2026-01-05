@@ -32,14 +32,15 @@ namespace dt
         sp<RenderTexture> gBufferRt1 = nullptr;
         sp<RenderTarget> gBufferRenderTarget = nullptr;
         sp<ViewProjInfo> mainCameraVp = nullptr;
+        sp<Cbuffer> mainCameraViewCbuffer = nullptr;
         vecsp<RenderObject> renderObjects;
         sp<RenderTexture> litResultRt = nullptr;
+        sp<RenderTexture> shadowmapRt = nullptr;
+        XMFLOAT3 mainLightDir = { 1.0f, 1.0f, 1.0f };
 
         // Render States
         sp<ViewProjInfo> curVp = nullptr;
         sp<RenderTarget> curRenderTarget = nullptr;
         vecpair<sp<DxResource>, D3D12_RESOURCE_STATES> transitions;
-
-        void SetVp(crsp<ViewProjInfo> vp);
     };
 }

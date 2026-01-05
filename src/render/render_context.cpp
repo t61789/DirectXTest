@@ -13,6 +13,19 @@ namespace dt
         ivpMatrix = Inverse(vpMatrix);
     }
 
+    void ViewProjInfo::WriteToCbuffer(Cbuffer* cbuffer)
+    {
+        cbuffer->Write(V, Transpose(vMatrix));
+        cbuffer->Write(P, Transpose(pMatrix));
+        cbuffer->Write(VP, Transpose(vpMatrix));
+        cbuffer->Write(CAMERA_POSITION_WS, viewCenter);
+
+        if (ivpMatrix.has_value())
+        {
+            cbuffer->Write(IVP, Transpose(ivpMatrix.value()));
+        }
+    }
+
     sp<ViewProjInfo> ViewProjInfo::Create(cr<XMMATRIX> vMatrix, cr<XMMATRIX> pMatrix, const bool useIVP)
     {
         auto invV = Inverse(vMatrix);

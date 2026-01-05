@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "common/const.h"
+#include "common/utils.h"
 
 namespace dt
 {
@@ -114,7 +115,9 @@ namespace dt
             case ParamType::VEC4_ARRAY:
                 return sizeof(float) * 4 * repeatCount;
             case ParamType::FLOAT_ARRAY:
-                return sizeof(float) * 4 * repeatCount;
+                THROW_ERROR("Do not use float array, use vec4 array instead.")
+            default:
+                THROW_ERROR("Unsupported parameter type");
         }
     }
 }

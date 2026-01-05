@@ -15,7 +15,8 @@ namespace dt
     
     enum class TextureType : uint8_t
     {
-        TEXTURE_2D
+        TEXTURE_2D,
+        TEXTURE_CUBE
     };
 
     enum class TextureFormat : uint8_t
@@ -24,7 +25,8 @@ namespace dt
         RGBA16,
         R32,
         DEPTH,
-        DEPTH_STENCIL
+        DEPTH_STENCIL,
+        SHADOW_MAP
     };
 
     enum class TextureWrapMode : uint8_t
@@ -63,9 +65,15 @@ namespace dt
         
         static sp<DxTexture> CreateImage(cr<DxTextureDesc> desc);
         static sp<DxTexture> CreateRenderTexture(cr<DxTextureDesc> desc, cr<XMFLOAT4> clearColor, crsp<DxResource> dxResource = nullptr);
-        static DXGI_FORMAT ToDxgiFormat(TextureFormat format);
-        static bool IsDepthFormat(TextureFormat format);
         
+        static DXGI_FORMAT GetDxgiFormat(TextureFormat format);
+        static D3D12_RESOURCE_STATES GetInitState(TextureFormat format);
+        static D3D12_RESOURCE_FLAGS GetRenderTargetResourceFlag(TextureFormat format);
+        static D3D12_SRV_DIMENSION GetSrvDimension(TextureType type);
+        static DXGI_FORMAT GetDsvFormat(TextureFormat format);
+        static DXGI_FORMAT GetSrvFormat(TextureFormat format);
+        static DXGI_FORMAT GetClearFormat(TextureFormat format);
+
     private:
         DxTextureDesc m_desc;
         sp<DxResource> m_dxResource;

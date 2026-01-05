@@ -88,10 +88,13 @@ namespace dt
         CapsLock,
         
         // 修饰键
+        Shift,
         LeftShift,
         RightShift,
+        Control,
         LeftControl,
         RightControl,
+        Alt,
         LeftAlt,
         RightAlt,
         
@@ -125,6 +128,7 @@ namespace dt
         Decimal,
         Divide,
         NumLock,
+        Separator,
         
         // 符号键
         Comma,
@@ -137,12 +141,14 @@ namespace dt
         Minus,
         Plus,
         Grave,
+        Slash,
         
         // 其他
         PrintScreen,
         ScrollLock,
         Pause,
         Apps,  // 应用程序键
+        Sleep,
         
         Unknown
     };

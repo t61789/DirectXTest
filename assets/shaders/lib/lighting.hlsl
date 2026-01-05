@@ -3,6 +3,30 @@
 
     #include "lib/common.hlsl"
 
+    float GetShadowAttenuation(float3 positionWS)
+    {
+        float4 shadowPos = mul(float4(positionWS.xyz, 1.0f), _MainLightShadowVP);
+        shadowPos /= shadowPos.w;
+        shadowPos.xy = shadowPos.xy * 0.5f + 0.5f;
+
+        float shadowDepth = SampleTexture(_MainLightShadowTex, shadowPos.xy).r;
+        float currentDepth = shadowPos.z;
+
+        float bias = 0.001f;
+        shadowDepth += bias;
+
+        if (currentDepth < shadowDepth || 
+            shadowPos.x < 0.0f || shadowPos.x > 1.0f ||
+            shadowPos.y < 0.0f || shadowPos.y > 1.0f)
+        {
+            return 1.0f;
+        }
+        else
+        {
+            return 0.0f;
+        }
+    }
+
     struct LightData
     {
         float3 dirWS;
@@ -83,7 +107,7 @@
         return ggx1 * ggx2;
     }
 
-    float3 Lit(float3 albedo, float3 normalWS, float3 viewDirWS, float roughness, float metallic)
+    float3 Lit(float3 albedo, float3 positionWS, float3 normalWS, float3 viewDirWS, float roughness, float metallic)
     {
         LightData mainLight = GetMainLight();
 
@@ -108,7 +132,7 @@
         kD *= 1.0f - metallic;
         float3 diffuse = kD * albedo / PI;
 
-        float directResult = (diffuse + specular) * mainLight.color * ndl;
+        float3 directResult = (diffuse + specular) * mainLight.color * ndl * GetShadowAttenuation(positionWS);
 
         float3 indirectResult = IndirectRadiance(normalWS) * albedo * kD;
 

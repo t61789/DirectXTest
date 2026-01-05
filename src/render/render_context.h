@@ -9,6 +9,7 @@
 
 namespace dt
 {
+    class Cbuffer;
     class RenderTargetPool;
     class RenderTarget;
     class RenderTexture;
@@ -28,6 +29,7 @@ namespace dt
         std::optional<XMFLOAT4X4> ivpMatrix;
 
         void UpdateIVP();
+        void WriteToCbuffer(Cbuffer* cbuffer);
 
         static sp<ViewProjInfo> Create(cr<XMMATRIX> vMatrix, cr<XMMATRIX> pMatrix, bool useIVP = false);
         static sp<ViewProjInfo> Create(cr<XMMATRIX> vMatrix, cr<XMMATRIX> pMatrix, cr<XMVECTOR> viewCenter, bool useIVP = false);

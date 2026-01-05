@@ -188,7 +188,10 @@ namespace dt
         }
         if (auto rt = renderTarget->GetDepthAttachment())
         {
-            AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            if (rt->GetDxTexture()->GetDesc().format == TextureFormat::SHADOW_MAP)
+            {
+                AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            }
         }
         
         ApplyTransitions(cmdList);
@@ -230,7 +233,10 @@ namespace dt
         }
         if (auto rt = renderTarget->GetDepthAttachment())
         {
-            AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            if (rt->GetDxTexture()->GetDesc().format == TextureFormat::SHADOW_MAP)
+            {
+                AddTransition(rt->GetDxTexture()->GetDxResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            }
         }
 
         RenderRes()->curRenderTarget = nullptr;
@@ -264,6 +270,83 @@ namespace dt
         BindMesh(cmdList, mesh);
         
         cmdList->DrawIndexedInstanced(mesh->GetIndicesCount(), 1, 0, 0, 0);
+
+        UnsetRenderTarget(renderTarget);
+    }
+
+    void DxHelper::RenderScene(
+        ID3D12GraphicsCommandList* cmdList,
+        crvecsp<RenderObject> renderObjects,
+        crsp<Cbuffer> viewCbuffer,
+        crsp<RenderTarget> renderTarget,
+        crsp<Material> replaceMaterial)
+    {
+        SetRenderTarget(cmdList, renderTarget, true);
+        
+        Shader* shader = nullptr;
+        Material* material = nullptr;
+        Mesh* mesh = nullptr;
+
+        for (const auto& ro : renderObjects)
+        {
+            auto curShader = replaceMaterial ? replaceMaterial->GetShader().get() : ro->shader.get();
+            auto curMaterial = replaceMaterial ? replaceMaterial.get() : ro->material.get();
+            auto curMesh = ro->mesh.get();
+            
+            auto rebindRootSignature = curShader != shader;
+            auto rebindPso = curMaterial != material;
+            auto rebindTextures = rebindRootSignature;
+            auto rebindGlobalCbuffer = rebindRootSignature;
+            auto rebindPerViewCbuffer = rebindRootSignature;
+            auto rebindPerMaterialCbuffer = rebindRootSignature || curMaterial != material;
+            auto rebindMesh = curMesh != mesh;
+            
+            shader = curShader;
+            material = curMaterial;
+            mesh = curMesh;
+            
+            if (rebindRootSignature)
+            {
+                BindRootSignature(cmdList, shader);
+            }
+        
+            if (rebindPso)
+            {
+                BindPso(cmdList, material);
+            }
+
+            if (rebindTextures)
+            {
+                BindBindlessTextures(cmdList, shader);
+            }
+        
+            if (rebindGlobalCbuffer)
+            {
+                BindCbuffer(cmdList, shader, GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER).get());
+            }
+        
+            if (rebindPerViewCbuffer)
+            {
+                BindCbuffer(cmdList, shader, viewCbuffer.get());
+            }
+        
+            BindCbuffer(cmdList, shader, ro->perObjectCbuffer.get());
+        
+            if (rebindPerMaterialCbuffer)
+            {
+                if (material->GetCbuffer())
+                {
+                    BindCbuffer(cmdList, shader, material->GetCbuffer());
+                }
+            }
+        
+            if (rebindMesh)
+            {
+                BindMesh(cmdList, mesh);
+            }
+            
+            cmdList->DrawIndexedInstanced(mesh->GetIndicesCount(), 1, 0, 0, 0);
+        }
 
         UnsetRenderTarget(renderTarget);
     }

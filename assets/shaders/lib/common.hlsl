@@ -4,7 +4,7 @@
     #define DESC_HANDLE_POOL_SIZE 0xFFFF
     #define SAMPLER_DESC_POOL_SIZE 0xFF
 
-    #define PIXEL_TYPE_LIT 1.0f
+    #define PIXEL_TYPE_LIT 0.1f
 
     #define PI 3.14159265359f
     #define EPSION 1e-5f
@@ -44,6 +44,9 @@
         float4 _MainLightColor;
 
         float4 _Shc[7];
+
+        uint _MainLightShadowTex;
+        float4x4 _MainLightShadowVP;
     };
 
     cbuffer PerViewCBuffer : register(b1)
@@ -164,7 +167,7 @@
     float3 RebuildWorldPosition(float2 screenUv, float depth)
     {
         float4 pos = float4(screenUv * 2.0f - 1.0f, depth, 1.0f);
-        pos = mul(transpose(_IVP), pos);
+        pos = mul(pos, _IVP);
         pos /= pos.w;
         return pos.xyz;
     }

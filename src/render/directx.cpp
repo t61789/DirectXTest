@@ -230,7 +230,7 @@ namespace dt
     void DirectX::CreateSwapChain()
     {
         auto format = TextureFormat::RGBA;
-        auto dxFormat = DxTexture::ToDxgiFormat(format);
+        auto dxFormat = DxTexture::GetDxgiFormat(format);
         
         m_swapChainDesc1 = {};
         m_swapChainDesc1.Width = 1600;

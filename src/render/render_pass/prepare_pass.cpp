@@ -16,6 +16,11 @@
 
 namespace dt
 {
+    PreparePass::PreparePass()
+    {
+        m_mainCameraViewCbuffer = msp<Cbuffer>(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER)->GetLayout());
+    }
+
     void PreparePass::Execute()
     {
         RenderThreadMgr::Ins()->WaitForDone();
@@ -24,6 +29,9 @@ namespace dt
         RenderRes()->screenSize = { Window::Ins()->GetWidth(), Window::Ins()->GetHeight() };
         auto aspect = static_cast<float>(RenderRes()->screenSize.x) / static_cast<float>(RenderRes()->screenSize.y);
         RenderRes()->mainCameraVp = CameraComp::GetMainCamera()->CreateVPMatrix(aspect);
+        RenderRes()->mainCameraViewCbuffer = m_mainCameraViewCbuffer;
+        RenderRes()->mainCameraVp->WriteToCbuffer(RenderRes()->mainCameraViewCbuffer.get());
+        RenderRes()->mainCameraVp->WriteToCbuffer(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
         RenderRes()->renderObjects = GR()->mainScene->GetRenderTree()->GetRenderObjects();
 
         PrepareLight();
@@ -59,6 +67,8 @@ namespace dt
             lightDir = Store3(-GetForward(lightComp->GetOwner()->transform->GetLocalToWorld()));
             lightColor = lightComp->GetColor();
         }
+
+        RenderRes()->mainLightDir = lightDir;
 
         GetGlobalCbuffer()->Write(MAIN_LIGHT_DIR, lightDir);
         GetGlobalCbuffer()->Write(MAIN_LIGHT_COLOR, lightColor);

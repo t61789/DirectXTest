@@ -8,7 +8,10 @@ namespace dt
     sp<RenderTarget> RenderTarget::Create(crsp<RenderTexture> colorAttachment, crsp<RenderTexture> depthAttachment)
     {
         static vecsp<RenderTexture> tempColorAttachments;
-        tempColorAttachments.push_back(colorAttachment);
+        if (colorAttachment)
+        {
+            tempColorAttachments.push_back(colorAttachment);
+        }
 
         auto result = Create(tempColorAttachments, depthAttachment);
         tempColorAttachments.clear();

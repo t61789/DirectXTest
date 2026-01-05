@@ -16,6 +16,7 @@
 #include "render/render_resources.h"
 #include "render_pass/deferred_lit_pass.h"
 #include "render_pass/final_pass.h"
+#include "render_pass/main_light_shadow_pass.h"
 #include "render_pass/prepare_pass.h"
 #include "render_pass/render_scene_pass.h"
 
@@ -24,6 +25,7 @@ namespace dt
     RenderPipeline::RenderPipeline()
     {
         m_passes.push_back(msp<PreparePass>());
+        m_passes.push_back(msp<MainLightShadowPass>());
         m_passes.push_back(msp<RenderScenePass>());
         m_passes.push_back(msp<DeferredLitPass>());
         m_passes.push_back(msp<FinalPass>());

@@ -36,6 +36,7 @@ namespace dt
 
         Scene* mainScene = nullptr;
 
+        sp<Material> testMat = nullptr;
         sp<Material> blitMat = nullptr;
         sp<Mesh> quadMesh = nullptr;
 

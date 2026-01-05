@@ -15,7 +15,9 @@ namespace dt
         void Update() override;
 
         sp<ViewProjInfo> CreateVPMatrix(float aspect);
-        
+        sp<ViewProjInfo> CreateShadowVPMatrix(XMFLOAT3 lightDirection, float screenAspect, float shadowRange,
+                                              uint32_t shadowTexSize);
+
         void LoadFromJson(cr<nlohmann::json> objJson) override;
         
         static CameraComp* GetMainCamera();

@@ -47,8 +47,8 @@
                 {
                     "name": "CameraComp",
                     "fov": 45,
-                    "nearClip": 0.05,
-                    "farClip": 300
+                    "nearClip": 0.01,
+                    "farClip": 300 
                 }
             ]
         },

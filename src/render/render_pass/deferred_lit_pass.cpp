@@ -21,7 +21,7 @@ namespace dt
         rtDesc.dxDesc.type = TextureType::TEXTURE_2D;
         rtDesc.dxDesc.format = TextureFormat::RGBA;
         rtDesc.dxDesc.wrapMode = TextureWrapMode::CLAMP;
-        rtDesc.dxDesc.filterMode = TextureFilterMode::NEAREST;
+        rtDesc.dxDesc.filterMode = TextureFilterMode::BILINEAR;
         rtDesc.dxDesc.width = Window::Ins()->GetWidth();
         rtDesc.dxDesc.height = Window::Ins()->GetHeight();
         rtDesc.dxDesc.channelCount = 4;
@@ -34,19 +34,16 @@ namespace dt
         gBufferColorDesc.dxDesc.type = TextureType::TEXTURE_2D;
         gBufferColorDesc.dxDesc.format = TextureFormat::RGBA;
         gBufferColorDesc.dxDesc.wrapMode = TextureWrapMode::CLAMP;
-        gBufferColorDesc.dxDesc.filterMode = TextureFilterMode::BILINEAR;
+        gBufferColorDesc.dxDesc.filterMode = TextureFilterMode::NEAREST;
         gBufferColorDesc.dxDesc.width = Window::Ins()->GetWidth();
         gBufferColorDesc.dxDesc.height = Window::Ins()->GetHeight();
         gBufferColorDesc.dxDesc.channelCount = 4;
         gBufferColorDesc.dxDesc.hasMipmap = false;
         gBufferColorDesc.clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
         m_gBufferRt0 = msp<RenderTexture>(gBufferColorDesc);
-
         gBufferColorDesc.dxDesc.format = TextureFormat::RGBA16;
         m_gBufferRt1 = msp<RenderTexture>(gBufferColorDesc);
-
         gBufferColorDesc.dxDesc.format = TextureFormat::R32;
-        gBufferColorDesc.dxDesc.filterMode = TextureFilterMode::NEAREST;
         gBufferColorDesc.dxDesc.channelCount = 1;
         gBufferColorDesc.clearColor = { 1.0f, 0.0f, 0.0f, 0.0f };
         m_gBufferRt2 = msp<RenderTexture>(gBufferColorDesc);

@@ -29,7 +29,7 @@ float4 PS_Main(PSInput input) : SV_TARGET
     if (PixelTypeEquals(pixelType, PIXEL_TYPE_LIT))
     {
         // litColor = SimpleLit(normalWS);
-        litColor = Lit(albedo, normalWS, viewDirWS, 0.3f, 0.0f);
+        litColor = Lit(albedo, positionWS, normalWS, viewDirWS, 0.3f, 0.0f);
     }
 
     float4 finalColor = float4(litColor, 1.0f);

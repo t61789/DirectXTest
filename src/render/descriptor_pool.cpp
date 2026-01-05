@@ -91,9 +91,27 @@ namespace dt
             static_cast<INT>(srvHandle->GetIndex()),
             m_srvDescSizeB
         };
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format = DxTexture::GetSrvFormat(dxTexture->GetDesc().format);
+        srvDesc.ViewDimension = DxTexture::GetSrvDimension(dxTexture->GetDesc().type);
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+        if (dxTexture->GetDesc().type == TextureType::TEXTURE_2D)
+        {
+            srvDesc.Texture2D.MipLevels = 1; // TODO mipmap
+            srvDesc.Texture2D.PlaneSlice = 0;
+            srvDesc.Texture2D.MostDetailedMip = 0;
+            srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+        }
+        else
+        {
+            THROW_ERROR("Not implemented")
+        }
+        
         Dx()->GetDevice()->CreateShaderResourceView(
             dxTexture->GetDxResource()->GetResource(),
-            nullptr,
+            &srvDesc,
             srvCpuHandle);
         srvHandle->data = srvCpuHandle;
 
@@ -153,6 +171,7 @@ namespace dt
                     static_cast<INT>(rtvHandle->GetIndex()),
                     m_rtvDescSizeB
                 };
+                
                 Dx()->GetDevice()->CreateRenderTargetView(
                     colorAttachments[i]->GetDxResource()->GetResource(),
                     nullptr,
@@ -170,9 +189,16 @@ namespace dt
                 static_cast<INT>(dsvHandle->GetIndex()),
                 m_dsvDescSizeB
             };
+
+            D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
+            desc.Format = DxTexture::GetDsvFormat(depthAttachment->GetDesc().format);
+            desc.Flags = D3D12_DSV_FLAG_NONE;
+            desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+            desc.Texture2D.MipSlice = 0;
+
             Dx()->GetDevice()->CreateDepthStencilView(
                 depthAttachment->GetDxResource()->GetResource(),
-                nullptr,
+                &desc,
                 dsvCpuHandle);
             dsvHandle->data = dsvCpuHandle;
         }

@@ -129,6 +129,59 @@ namespace dt
         return XMQuaternionRotationRollPitchYaw(eaRadius.x, eaRadius.y, eaRadius.z);
     }
 
+    inline float Dot3(cr<XMVECTOR> a, cr<XMVECTOR> b)
+    {
+        return XMVectorGetX(XMVector3Dot(a, b));
+    }
+
+    inline float Length3(cr<XMVECTOR> a)
+    {
+        return XMVectorGetX(XMVector3Length(a));
+    }
+
+    inline void GramSchmidtOrtho(
+        cr<XMVECTOR> up,
+        cr<XMVECTOR> forward,
+        XMVECTOR& resultRight,
+        XMVECTOR& resultUp,
+        XMVECTOR& resultForward)
+    {
+        resultForward = XMVector3Normalize(forward);
+        resultRight = XMVector3Cross(up, resultForward);
+        resultRight = XMVector3Normalize(resultRight);
+        resultUp = XMVector3Cross(resultForward, resultRight);
+    }
+
+    static void GetFrustumCorners(
+        cr<XMVECTOR> cameraRight,
+        cr<XMVECTOR> cameraUp,
+        cr<XMVECTOR> cameraForward,
+        cr<XMVECTOR> cameraPos,
+        const float verticalFov,
+        const float nearClip,
+        const float farClip,
+        const float aspect,
+        XMVECTOR* corners)
+    {
+        auto tan = std::tan(verticalFov * 0.5f * DEG2RAD);
+        auto nearCenter = cameraPos + cameraForward * nearClip;
+        auto farCenter = cameraPos + cameraForward * farClip;
+        auto nearHeight = tan * nearClip;
+        auto farHeight = tan * farClip;
+        auto nearWidth = nearHeight * aspect;
+        auto farWidth = farHeight * aspect;
+
+        corners[0] = nearCenter - cameraRight * nearWidth - cameraUp * nearHeight; // nlb
+        corners[1] = nearCenter - cameraRight * nearWidth + cameraUp * nearHeight; // nlt
+        corners[2] = nearCenter + cameraRight * nearWidth + cameraUp * nearHeight; // nrt
+        corners[3] = nearCenter + cameraRight * nearWidth - cameraUp * nearHeight; // nrb
+        
+        corners[4] = farCenter - cameraRight * farWidth - cameraUp * farHeight; // flb
+        corners[5] = farCenter - cameraRight * farWidth + cameraUp * farHeight; // flt
+        corners[6] = farCenter + cameraRight * farWidth + cameraUp * farHeight; // frt
+        corners[7] = farCenter + cameraRight * farWidth - cameraUp * farHeight; // frb
+    }
+
     inline bool operator==(const XMINT2& lhs, const XMINT2& rhs)
     {
         return lhs.x == rhs.x && lhs.y == rhs.y;

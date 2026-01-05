@@ -11,6 +11,7 @@ namespace dt
 {
     GameResource::GameResource()
     {
+        testMat = Material::LoadFromFile("materials/deferred_lit.mtl");
         errorTex = Image::LoadFromFile("built_in/textures/error.png");
         
         blitMat = Material::LoadFromFile("built_in/materials/blit.mtl");
@@ -22,6 +23,7 @@ namespace dt
         errorTex.reset();
         blitMat.reset();
         quadMesh.reset();
+        testMat.reset();
         
         m_predefinedCbuffers.clear();
     }
