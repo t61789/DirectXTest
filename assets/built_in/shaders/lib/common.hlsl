@@ -7,6 +7,9 @@
     #define PIXEL_TYPE_LIT 0.1f
     #define PIXEL_TYPE_SKYBOX 0.2f
 
+    #define MAX_POINT_LIGHT_COUNT 5
+    #define POINT_LIGHT_STRIDE_VEC4 2
+
     #define PI 3.14159265359f
     #define EPSION 1e-5f
 
@@ -43,6 +46,9 @@
 
         float4 _MainLightDir;
         float4 _MainLightColor;
+
+        uint _PointLightCount;
+        float4 _PointLightInfos[MAX_POINT_LIGHT_COUNT * POINT_LIGHT_STRIDE_VEC4]; // para0: xyz: positionWS, w: radius, para1: xyz: color, w: unused
 
         float4 _Shc[7];
 

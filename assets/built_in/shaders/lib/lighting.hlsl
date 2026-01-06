@@ -41,6 +41,27 @@
         return light;
     }
 
+    LightData GetPointLight(uint index, float3 positionWS)
+    {
+        float4 lightInfo0 = _PointLightInfos[index * POINT_LIGHT_STRIDE_VEC4 + 0];
+        float4 lightInfo1 = _PointLightInfos[index * POINT_LIGHT_STRIDE_VEC4 + 1];
+
+        float3 lightPositionWS = lightInfo0.xyz;
+        float lightRadius = lightInfo0.w;
+        float3 lightColor = lightInfo1.xyz;
+
+        float3 toLight = lightPositionWS - positionWS;
+        float d = length(toLight);
+        float i = 1 / (1 + lightRadius * d);
+        lightColor *= i;
+
+        LightData light = (LightData)0;
+        light.dirWS = normalize(toLight);
+        light.color = lightColor;
+
+        return light;
+    }
+
     float3 SimpleLit(float3 normalWS)
     {
         LightData mainLight = GetMainLight();
@@ -107,15 +128,13 @@
         return ggx1 * ggx2;
     }
 
-    float3 Lit(float3 albedo, float3 positionWS, float3 normalWS, float3 viewDirWS, float roughness, float metallic)
+    float3 DirectLit(LightData light, float3 albedo, float3 positionWS, float3 normalWS, float3 viewDirWS, float roughness, float metallic)
     {
-        LightData mainLight = GetMainLight();
-
         float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
 
-        float3 h = normalize(viewDirWS + mainLight.dirWS);
+        float3 h = normalize(viewDirWS + light.dirWS);
         float ndv = saturate(dot(normalWS, viewDirWS));
-        float ndl = saturate(dot(normalWS, mainLight.dirWS));
+        float ndl = saturate(dot(normalWS, light.dirWS));
         float ndh = saturate(dot(normalWS, h));
         float vdh = saturate(dot(viewDirWS, h));
 
@@ -132,11 +151,41 @@
         kD *= 1.0f - metallic;
         float3 diffuse = kD * albedo / PI;
 
-        float3 directResult = (diffuse + specular) * mainLight.color * ndl * GetShadowAttenuation(positionWS);
+        return (diffuse + specular) * light.color * ndl * GetShadowAttenuation(positionWS);
+    }
 
-        float3 indirectResult = IndirectRadiance(normalWS) * albedo * kD;
+    float3 IndirectLit(float3 albedo, float3 normalWS, float3 viewDirWS, float3 metallic)
+    {
+        float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
+        float3 h = normalize(viewDirWS + normalWS);
+        float vdh = saturate(dot(viewDirWS, h));
+        float3 F = FresnelSchlick(vdh, F0);
 
-        return directResult + indirectResult;
+        float3 kS = F;
+        float3 kD = 1.0f - kS;
+        kD *= 1.0f - metallic;
+
+        return IndirectRadiance(normalWS) * albedo * kD;
+    }
+
+    float3 Lit(float3 albedo, float3 positionWS, float3 normalWS, float3 viewDirWS, float roughness, float metallic)
+    {
+        float3 result = float3(0.0f, 0.0f, 0.0f);
+
+        // Main light
+        result += DirectLit(GetMainLight(), albedo, positionWS, normalWS, viewDirWS, roughness, metallic);
+
+        // Point lights
+        for (uint i = 0; i < _PointLightCount; i++)
+        {
+            LightData pointLight = GetPointLight(i, positionWS);
+            result += DirectLit(pointLight, albedo, positionWS, normalWS, viewDirWS, roughness, metallic);
+        }
+
+        // Indirect light
+        result += IndirectLit(albedo, normalWS, viewDirWS, metallic);
+
+        return result;
     }
 
 #endif // !defined(__LIGHTING_HLSL_INCLUDED__)

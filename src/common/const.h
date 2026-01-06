@@ -16,6 +16,8 @@ namespace dt
     #define SRV_DESC_POOL_SIZE 0xFFFF
     #define SAMPLER_DESC_POOL_SIZE 0xFF
     #define RTV_DESC_POOL_SIZE 128
+
+    #define MAX_POINT_LIGHT_COUNT 5
     
     #define PI 3.1415926535f
     #define DEG2RAD 0.0174532925f
@@ -54,6 +56,8 @@ namespace dt
     STRING_HANDLE(MAIN_TEX, _MainTex)
     STRING_HANDLE(MAIN_LIGHT_DIR, _MainLightDir)
     STRING_HANDLE(MAIN_LIGHT_COLOR, _MainLightColor)
+    STRING_HANDLE(POINT_LIGHT_COUNT, _PointLightCount)
+    STRING_HANDLE(POINT_LIGHT_INFOS, _PointLightInfos)
     STRING_HANDLE(SHC, _Shc)
     STRING_HANDLE(MAIN_LIGHT_SHADOW_TEX, _MainLightShadowTex)
     STRING_HANDLE(MAIN_LIGHT_SHADOW_VP, _MainLightShadowVP)

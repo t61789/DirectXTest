@@ -58,22 +58,48 @@ namespace dt
     {
         XMFLOAT3 lightDir = Store3(XMVector3Normalize(XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f)));
         XMFLOAT3 lightColor = { 0.0f, 0.0f, 0.0f };
+
+        auto& lightComps = GR()->mainScene->GetRegistry()->GetCompStorage()->GetComps<LightComp>();
         
-        auto lightCompWp = find_if(GR()->mainScene->GetRegistry()->GetCompStorage()->GetComps<LightComp>(), [](crwp<LightComp> comp)
+        auto mainLightCompWp = find_if(lightComps, [](crwp<LightComp> comp)
         {
-            return comp.lock();
+            return comp.lock() && comp.lock()->lightType == 0;
         });
-        if (lightCompWp)
+        if (mainLightCompWp)
         {
-            auto lightComp = lightCompWp->lock();
+            auto lightComp = mainLightCompWp->lock();
             lightDir = Store3(-GetForward(lightComp->GetOwner()->transform->GetLocalToWorld()));
             lightColor = lightComp->GetColor();
+        }
+
+        constexpr uint32_t pointLightStrideVec4 = 2;
+        uint32_t pointLightCount = 0;
+        vec<XMFLOAT4> pointLightInfos(MAX_POINT_LIGHT_COUNT);
+        for (auto& compWp : lightComps)
+        {
+            if (!compWp.lock() || compWp.lock()->lightType != 1)
+            {
+                continue;
+            }
+            
+            auto pointLightComp = compWp.lock();
+            
+            auto positionWS = Store3(pointLightComp->GetOwner()->transform->GetWorldPosition());
+            auto radius = pointLightComp->radius;
+            auto color = pointLightComp->GetColor();
+
+            pointLightInfos[pointLightCount * pointLightStrideVec4 + 0] = { positionWS.x, positionWS.y, positionWS.z, radius };
+            pointLightInfos[pointLightCount * pointLightStrideVec4 + 1] = { color.x, color.y, color.z, 0.0f };
+
+            pointLightCount++;
         }
 
         RenderRes()->mainLightDir = lightDir;
 
         GetGlobalCbuffer()->Write(MAIN_LIGHT_DIR, lightDir);
         GetGlobalCbuffer()->Write(MAIN_LIGHT_COLOR, lightColor);
+        GetGlobalCbuffer()->Write(POINT_LIGHT_COUNT, pointLightCount);
+        GetGlobalCbuffer()->Write(POINT_LIGHT_INFOS, pointLightInfos.data(), pointLightInfos.size() * sizeof(XMFLOAT4));
 
         IndirectLighting::SetGradientAmbientColor(
             GR()->mainScene->ambientLightColorSky,
