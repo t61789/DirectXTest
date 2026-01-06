@@ -1,0 +1,6 @@
+{
+    "shader": "built_in/shaders/skybox.shader",
+    "depthWrite": true,
+    "cullMode": "Front",
+    "_SkyboxTex": "built_in/textures/skybox"
+}

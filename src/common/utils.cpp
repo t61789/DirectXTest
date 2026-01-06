@@ -174,6 +174,11 @@ namespace dt
         static std::hash<std::string> hasher;
         return hasher(std::string(static_cast<const char*>(data), sizeB));
     }
+
+    bool Utils::IsDir(crstr path)
+    {
+        return std::filesystem::is_directory(ToAbsPath(path));
+    }
     
     bool Utils::AssetExists(const std::string& path)
     {

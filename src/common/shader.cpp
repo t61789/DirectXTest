@@ -137,11 +137,25 @@ namespace dt
             }
             else if (bindResource.resourceType == D3D_SIT_TEXTURE)
             {
-                if (bindResource.resourceName != BINDLESS_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 1)
+                if (bindResource.resourceDimension == D3D_SRV_DIMENSION_TEXTURE2D)
                 {
-                    THROW_ERROR("Texture resource needs to be bindless with t0 and space1")
+                    if (bindResource.resourceName != BINDLESS_2D_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 1)
+                    {
+                        THROW_ERROR("Texture2d resource needs to be bindless with t0 and space1")
+                    }
                 }
-
+                else if (bindResource.resourceDimension == D3D_SRV_DIMENSION_TEXTURECUBE)
+                {
+                    if (bindResource.resourceName != BINDLESS_CUBE_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 2)
+                    {
+                        THROW_ERROR("TextureCube resource needs to be bindless with t0 and space2")
+                    }
+                }
+                else
+                {
+                    THROW_ERROR("Unsupported texture resource dimension")
+                }
+                
                 auto range = mup<CD3DX12_DESCRIPTOR_RANGE1>();
                 range->Init(
                     D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
@@ -220,14 +234,20 @@ namespace dt
             bindResource.registerIndex = resourceDesc.BindPoint;
             bindResource.registerSpace = resourceDesc.Space;
             bindResource.resourceType = resourceDesc.Type;
+            bindResource.resourceDimension = resourceDesc.Dimension;
             bindResource.registerType = DxHelper::GetRegisterType(bindResource.resourceType);
             bindResource.bindCount = resourceDesc.BindCount;
 
             auto found = find_if(reflectionPack.bindResources, [&bindResource](cr<BindResource> x)
             {
-                if (x.registerIndex == bindResource.registerIndex && x.registerType == bindResource.registerType && x.registerSpace == bindResource.registerSpace)
+                if (x.registerIndex == bindResource.registerIndex &&
+                    x.registerType == bindResource.registerType &&
+                    x.registerSpace == bindResource.registerSpace)
                 {
-                    if (x.resourceName != bindResource.resourceName || x.resourceType != bindResource.resourceType || x.bindCount != bindResource.bindCount)
+                    if (x.resourceName != bindResource.resourceName ||
+                        x.resourceType != bindResource.resourceType ||
+                        x.bindCount != bindResource.bindCount ||
+                        x.resourceDimension != bindResource.resourceDimension)
                     {
                         throw std::runtime_error("Different shader stage bound different resource in same register");
                     }
@@ -311,6 +331,8 @@ namespace dt
 
     ComPtr<ID3DBlob> Shader::CompileShader(crstr filePath, crstr entryPoint, crstr target)
     {
+        ASSERT_THROW(Utils::AssetExists(filePath));
+        
         ComPtr<ID3DBlob> shaderBlob;
         ComPtr<ID3DBlob> errorBlob;
 

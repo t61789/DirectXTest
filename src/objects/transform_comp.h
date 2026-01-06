@@ -7,7 +7,7 @@
 
 namespace dt
 {
-    class TransformComp final : public Comp
+    class TransformComp final : public Comp, public std::enable_shared_from_this<TransformComp>
     {
         template <typename T>
         class TransformCompProp
@@ -21,7 +21,7 @@ namespace dt
         };
         
     public:
-        Event<> dirtyEvent;
+        Event<> matrixChangedEvent;
 
         void Awake() override;
 
@@ -45,6 +45,8 @@ namespace dt
 
         void LoadFromJson(const nlohmann::json& objJson) override;
 
+        static void UpdateAllDirtyComps();
+
     private:
     
         bool m_dirty = true;
@@ -56,6 +58,8 @@ namespace dt
         TransformCompProp<XMVECTOR> m_eulerAngles = XMQuaternionIdentity();
         TransformCompProp<XMVECTOR> m_scale = XMVectorReplicate(1.0f);
         TransformCompProp<XMMATRIX> m_matrix = XMMatrixIdentity();
+
+        inline static uset<sp<TransformComp>> m_dirtyTransforms;
 
         static void SetDirty(const Object* object);
     };

@@ -41,7 +41,8 @@ namespace dt
         static size_t GetFileHash(const std::string& path);
         static size_t CombineHash(size_t hash1, size_t hash2);
         static size_t GetMemoryHash(const void* data, size_t sizeB);
-        
+
+        static bool IsDir(crstr path);
         static bool AssetExists(const std::string& path);
         static nlohmann::json GetResourceMeta(const std::string& assetPath);
         static str GetResourceMetaPath(crstr assetPath);

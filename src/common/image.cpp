@@ -81,6 +81,51 @@ namespace dt
         return importConfig;
     }
 
+    vec<vec<uint8_t>> Image::LoadTexture2dWithMipmaps(crstr path, uint32_t& width, uint32_t& height, ImportConfig& importConfig)
+    {
+        importConfig = LoadImageImportConfig(path);
+        
+        uint8_t* data = nullptr;
+        uint32_t nChannels = 0;
+        LoadTextureData(path, importConfig, data, width, height, nChannels);
+        auto mipmaps = CreateMipmaps(data, width, height);
+        FreeTextureData(data);
+
+        return mipmaps;
+    }
+
+    vec<vec<uint8_t>> Image::LoadTextureCubeWithMipmaps(crstr path, uint32_t& width, uint32_t& height, ImportConfig& importConfig)
+    {
+        importConfig = LoadImageImportConfig(path);
+        width = height = 0;
+
+        vec<vec<uint8_t>> result;
+        
+        static constexpr arr<cstr, 6> FACES = {"right", "left", "top", "bottom", "front", "back"};
+        for (uint32_t i = 0; i < FACES.size(); ++i)
+        {
+            auto facePath = path + "/" + FACES[i] + ".png";
+            
+            uint8_t* data = nullptr;
+            uint32_t nChannels = 0;
+            uint32_t faceWidth = 0, faceHeight = 0;
+            LoadTextureData(facePath, importConfig, data, faceWidth, faceHeight, nChannels);
+            if (width != 0 && (width != faceWidth || height != faceHeight))
+            {
+                THROW_ERROR("TextureCube faces size mismatch");
+            }
+            width = faceWidth;
+            height = faceHeight;
+            
+            auto mipmaps = CreateMipmaps(data, width, height);
+            FreeTextureData(data);
+
+            result.insert(result.end(), mipmaps.begin(), mipmaps.end());
+        }
+
+        return result;
+    }
+
     vec<vec<uint8_t>> Image::CreateMipmaps(const uint8_t* rawData, const uint32_t width, const uint32_t height)
     {
         ASSERT_THROWM(width > 0 && height > 0 && (width & (width - 1)) == 0 && (height & (height - 1)) == 0, "Resolution needs to be power of 2");
@@ -136,41 +181,34 @@ namespace dt
 
     Image::ImageCache Image::CreateCacheFromAsset(crstr assetPath)
     {
-        auto importConfig = LoadImageImportConfig(assetPath);
-
-        stbi_set_flip_vertically_on_load(importConfig.needFlipVertical);
+        auto type = Utils::IsDir(assetPath) ? TextureType::TEXTURE_CUBE : TextureType::TEXTURE_2D;
         
-        int width = 0, height = 0, nChannels = 4;
-        stbi_uc* data;
-        try
-        {
-            ZoneScopedN("Load Image Data");
-            
-            data = stbi_load(Utils::ToAbsPath(assetPath).c_str(), &width, &height, &nChannels, 4);
-            if(!data)
-            {
-                throw std::exception();
-            }
-        }
-        catch(cr<std::exception>)
-        {
-            log_info("Failed to load texture: %s", assetPath.c_str());
-            throw;
-        }
+        ImportConfig importConfig;
+        vec<vec<uint8_t>> mipmaps;
+        uint32_t width = 0, height = 0;
 
-        auto mipmaps = CreateMipmaps(data, width, height);
-
-        stbi_image_free(data);
+        if (type == TextureType::TEXTURE_CUBE)
+        {
+            mipmaps = LoadTextureCubeWithMipmaps(assetPath, width, height, importConfig);
+        }
+        else if (type == TextureType::TEXTURE_2D)
+        {
+            mipmaps = LoadTexture2dWithMipmaps(assetPath, width, height, importConfig);
+        }
+        else
+        {
+            THROW_ERROR("Unsupported texture type");
+        }
 
         DxTextureDesc dxTextureDesc;
-        dxTextureDesc.type = TextureType::TEXTURE_2D;
+        dxTextureDesc.type = type;
         dxTextureDesc.format = TextureFormat::RGBA;
         dxTextureDesc.width = width;
         dxTextureDesc.height = height;
         dxTextureDesc.channelCount = 4;
         dxTextureDesc.wrapMode = importConfig.wrapMode;
         dxTextureDesc.filterMode = importConfig.filterMode;
-        dxTextureDesc.hasMipmap = importConfig.needMipmap;
+        dxTextureDesc.hasMipmap = true;
 
         ImageCache cache;
         cache.desc = dxTextureDesc;
@@ -185,16 +223,19 @@ namespace dt
 
         RT()->AddCmd([dxTexture, cache=std::move(cache)](ID3D12GraphicsCommandList* cmdList)
         {
-            auto mipLevels = cache.mipmaps.size();
-            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(dxTexture->GetDxResource()->GetResource(), 0, mipLevels);
+            auto mipmapCount = cache.desc.GetMipmapCount();
+            auto subResourcesCount = cache.mipmaps.size();
+            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(dxTexture->GetDxResource()->GetResource(), 0, subResourcesCount);
             
             auto uploadBuffer = DxResource::CreateUploadBuffer(nullptr, uploadBufferSize);
 
-            std::vector<D3D12_SUBRESOURCE_DATA> subresources(mipLevels);
-            for (UINT i = 0; i < mipLevels; ++i)
+            std::vector<D3D12_SUBRESOURCE_DATA> subresources(subResourcesCount);
+            for (UINT i = 0; i < subResourcesCount; ++i)
             {
+                auto curMipmapLevel = i % mipmapCount;
+                
                 subresources[i].pData = cache.mipmaps[i].data();
-                subresources[i].RowPitch = (cache.desc.width >> i) * cache.desc.channelCount;
+                subresources[i].RowPitch = (cache.desc.width >> curMipmapLevel) * cache.desc.channelCount;
                 subresources[i].SlicePitch = subresources[i].RowPitch * cache.desc.height;
             }
             
@@ -204,7 +245,7 @@ namespace dt
                 uploadBuffer->GetResource(),
                 0,
                 0,
-                mipLevels,
+                subResourcesCount,
                 subresources.data()));
             
             DxHelper::AddTransition(dxTexture->GetDxResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -214,5 +255,36 @@ namespace dt
         result->m_dxTexture = dxTexture;
 
         return result;
+    }
+
+    void Image::LoadTextureData(crstr path, const ImportConfig importConfig, uint8_t*& data, uint32_t& width, uint32_t& height, uint32_t& nChannels)
+    {
+        stbi_set_flip_vertically_on_load(importConfig.needFlipVertical);
+
+        int w = 0, h = 0, c = 0;
+        try
+        {
+            ZoneScopedN("Load Image Data");
+            
+            data = stbi_load(Utils::ToAbsPath(path).c_str(), &w, &h, &c, 4);
+            if(!data)
+            {
+                throw std::exception();
+            }
+        }
+        catch(cr<std::exception>)
+        {
+            log_info("Failed to load texture: %s", path.c_str());
+            throw;
+        }
+
+        width = static_cast<uint32_t>(w);
+        height = static_cast<uint32_t>(h);
+        nChannels = static_cast<uint32_t>(c);
+    }
+
+    void Image::FreeTextureData(uint8_t* data)
+    {
+        stbi_image_free(data);
     }
 }

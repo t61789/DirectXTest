@@ -45,6 +45,10 @@ namespace dt
 
     private:
         static ImportConfig LoadImageImportConfig(crstr assetPath);
+        static vec<vec<uint8_t>> LoadTexture2dWithMipmaps(crstr path, uint32_t& width, uint32_t& height, ImportConfig& importConfig);
+        static vec<vec<uint8_t>> LoadTextureCubeWithMipmaps(crstr path, uint32_t& width, uint32_t& height, ImportConfig& importConfig);
+        static void LoadTextureData(crstr path, ImportConfig importConfig, uint8_t*& data, uint32_t& width, uint32_t& height, uint32_t& nChannels);
+        static void FreeTextureData(uint8_t* data);
         static vec<vec<uint8_t>> CreateMipmaps(const uint8_t* rawData, uint32_t width, uint32_t height);
 
         StringHandle m_path = {};

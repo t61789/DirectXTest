@@ -1,4 +1,4 @@
-#include "lib/common.hlsl"
+#include "built_in/shaders/lib/common.hlsl"
 
 float4 TransformObjectToHClip0(float3 positionOS)
 {

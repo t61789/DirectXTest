@@ -5,6 +5,7 @@
 
 #include "common/math.h"
 #include "object.h"
+#include "skybox_comp.h"
 #include "game/game_resource.h"
 #include "nlohmann/json.hpp"
 #include "objects/comp.h"
@@ -75,6 +76,8 @@ namespace dt
         scene->m_sceneRoot->GetOrAddComp("TransformComp");
         scene->m_registry->RegisterObject(scene->m_sceneRoot);
         LoadChildren(rootObj, json.at("root"));
+
+        scene->m_sceneRoot->GetOrAddComp("SkyboxComp");
 
         GR()->RegisterResource(sceneJsonPath, scene);
         scene->m_path = sceneJsonPath;

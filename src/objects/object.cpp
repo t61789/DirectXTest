@@ -10,6 +10,7 @@ namespace dt
     {
         auto json = nlohmann::json::object();
         json["name"] = name.Str();
+        json["comps"] = nlohmann::json::array();
         return Create(json, parent);
     }
     
@@ -239,7 +240,7 @@ namespace dt
         return false;
     }
 
-    sp<Comp> Object::GetOrAddComp(cr<StringHandle> compName)
+    sp<Comp> Object::GetOrAddComp(cr<StringHandle> compName, cr<nlohmann::json> compJson)
     {
         if (auto comp = GetComp<Comp>(compName))
         {
@@ -247,6 +248,16 @@ namespace dt
         }
 
         auto comp = Comp::Create(compName);
+        comp->LoadFromJson(compJson);
+        BindComp(comp);
+
+        return comp;
+    }
+
+    sp<Comp> Object::AddComp(crstr compName, cr<nlohmann::json> compJson)
+    {
+        auto comp = Comp::Create(compName);
+        comp->LoadFromJson(compJson);
         BindComp(comp);
 
         return comp;

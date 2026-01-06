@@ -30,6 +30,7 @@ namespace dt
         virtual void Awake(){}
         virtual void Start(){}
         virtual void Update(){}
+        virtual void LateUpdate(){}
         virtual void OnDestroy(){}
         virtual void OnEnable(){}
         virtual void OnDisable(){}

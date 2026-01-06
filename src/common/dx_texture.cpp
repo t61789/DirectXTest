@@ -8,6 +8,11 @@
 
 namespace dt
 {
+    uint32_t DxTextureDesc::GetMipmapCount() const
+    {
+        return hasMipmap ? (std::min)(Utils::Log2(width) + 1, Utils::Log2(height) + 1) : 1;
+    }
+
     sp<DxTexture> DxTexture::CreateImage(cr<DxTextureDesc> desc)
     {
         ASSERT_THROW(desc.width > 0 && desc.height > 0);
@@ -16,7 +21,7 @@ namespace dt
             GetDxgiFormat(desc.format),
             desc.width,
             desc.height,
-            1,
+            desc.type == TextureType::TEXTURE_CUBE ? 6 : 1,
             (std::min)(Utils::Log2(desc.width) + 1, Utils::Log2(desc.height) + 1),
             1,
             0,
@@ -39,6 +44,8 @@ namespace dt
 
     sp<DxTexture> DxTexture::CreateRenderTexture(cr<DxTextureDesc> desc, cr<XMFLOAT4> clearColor, crsp<DxResource> dxResource)
     {
+        assert(desc.type == TextureType::TEXTURE_2D);
+        
         auto dxResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
             GetDxgiFormat(desc.format),
             desc.width,

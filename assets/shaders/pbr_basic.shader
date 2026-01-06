@@ -1,4 +1,4 @@
-#include "lib/common.hlsl"
+#include "built_in/shaders/lib/common.hlsl"
 
 cbuffer PerMaterialCBuffer : register(b3)
 {

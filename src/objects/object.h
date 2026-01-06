@@ -36,12 +36,13 @@ namespace dt
 
         bool HasComp(cr<StringHandle> compName);
         sp<Comp> GetComp(cr<StringHandle> compName);
-        sp<Comp> GetOrAddComp(cr<StringHandle> compName);
+        sp<Comp> GetOrAddComp(cr<StringHandle> compName, cr<nlohmann::json> compJson = {});
+        sp<Comp> AddComp(crstr compName, cr<nlohmann::json> compJson = {});
         
         template <typename T>
         sp<T> GetComp(cr<StringHandle> compName);
         template <typename T>
-        sp<T> GetOrAddComp(cr<StringHandle> compName);
+        sp<T> GetOrAddComp(cr<StringHandle> compName, cr<nlohmann::json> compJson = {});
         
         static sp<Object> Create(cr<StringHandle> name = UNNAMED_OBJECT, crsp<Object> parent = nullptr);
         static sp<Object> Create(const nlohmann::json& objJson, crsp<Object> parent = nullptr);
@@ -67,8 +68,8 @@ namespace dt
     }
     
     template <typename T>
-    sp<T> Object::GetOrAddComp(cr<StringHandle> compName)
+    sp<T> Object::GetOrAddComp(cr<StringHandle> compName, cr<nlohmann::json> compJson)
     {
-        return std::dynamic_pointer_cast<T>(GetOrAddComp(compName));
+        return std::dynamic_pointer_cast<T>(GetOrAddComp(compName), compJson);
     }
 }

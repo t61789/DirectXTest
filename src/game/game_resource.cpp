@@ -16,12 +16,14 @@ namespace dt
         
         blitMat = Material::LoadFromFile("built_in/materials/blit.mtl");
         quadMesh = Mesh::LoadFromFile("built_in/meshes/quad.obj");
+        sphereMesh = Mesh::LoadFromFile("built_in/meshes/sphere.obj");
     }
 
     GameResource::~GameResource()
     {
         errorTex.reset();
         blitMat.reset();
+        sphereMesh.reset();
         quadMesh.reset();
         testMat.reset();
         

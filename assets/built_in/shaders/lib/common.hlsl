@@ -5,6 +5,7 @@
     #define SAMPLER_DESC_POOL_SIZE 0xFF
 
     #define PIXEL_TYPE_LIT 0.1f
+    #define PIXEL_TYPE_SKYBOX 0.2f
 
     #define PI 3.14159265359f
     #define EPSION 1e-5f
@@ -64,7 +65,8 @@
         float4x4 _IM;
     };
 
-    Texture2D _BindlessTextures[DESC_HANDLE_POOL_SIZE] : register(t0, space1);
+    Texture2D _Bindless2dTextures[DESC_HANDLE_POOL_SIZE] : register(t0, space1);
+    TextureCube _BindlessCubeTextures[DESC_HANDLE_POOL_SIZE] : register(t0, space2);
     SamplerState _BindlessSamplers[SAMPLER_DESC_POOL_SIZE] : register(s0, space1);
 
     float4x4 GetLocalToWorld()
@@ -122,7 +124,14 @@
         uv.y = 1.0f - uv.y;
         uint srvIndex = textureIndex & 0xFFFF;
         uint samplerIndex = (textureIndex >> 20) & 0xFF;
-        return _BindlessTextures[srvIndex].Sample(_BindlessSamplers[samplerIndex], uv);
+        return _Bindless2dTextures[srvIndex].Sample(_BindlessSamplers[samplerIndex], uv);
+    }
+
+    float4 SampleCubeTexture(uint textureIndex, float3 direction)
+    {
+        uint srvIndex = textureIndex & 0xFFFF;
+        uint samplerIndex = (textureIndex >> 20) & 0xFF;
+        return _BindlessCubeTextures[srvIndex].Sample(_BindlessSamplers[samplerIndex], direction);
     }
 
     void ReadGBuffer0(float2 screenUV, out float3 albedo)

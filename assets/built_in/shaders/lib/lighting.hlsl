@@ -1,7 +1,7 @@
 #if !defined(__LIGHTING_HLSL_INCLUDED__)
     #define __LIGHTING_HLSL_INCLUDED__
 
-    #include "lib/common.hlsl"
+    #include "built_in/shaders/lib/common.hlsl"
 
     float GetShadowAttenuation(float3 positionWS)
     {

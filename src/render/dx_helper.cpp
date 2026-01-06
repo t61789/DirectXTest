@@ -69,10 +69,11 @@ namespace dt
 
     void DxHelper::BindBindlessTextures(ID3D12GraphicsCommandList* cmdList, const Shader* shader)
     {
+        // bind 2d textures
         auto bindResource = find_if(shader->GetBindResources(), [](cr<Shader::BindResource> x)
         {
             static auto textureRegisterType = GetRegisterType(D3D_SIT_TEXTURE);
-            return x.resourceName == BINDLESS_TEXTURES && x.registerType == textureRegisterType;
+            return x.resourceName == BINDLESS_2D_TEXTURES && x.registerType == textureRegisterType;
         });
 
         if (bindResource)
@@ -81,7 +82,22 @@ namespace dt
                 bindResource->rootParameterIndex,
                 DescriptorPool::Ins()->GetSrvDescHeap()->GetGPUDescriptorHandleForHeapStart());
         }
-        
+
+        // bind cube textures
+        bindResource = find_if(shader->GetBindResources(), [](cr<Shader::BindResource> x)
+        {
+            static auto textureRegisterType = GetRegisterType(D3D_SIT_TEXTURE);
+            return x.resourceName == BINDLESS_CUBE_TEXTURES && x.registerType == textureRegisterType;
+        });
+
+        if (bindResource)
+        {
+            cmdList->SetGraphicsRootDescriptorTable(
+                bindResource->rootParameterIndex,
+                DescriptorPool::Ins()->GetSrvDescHeap()->GetGPUDescriptorHandleForHeapStart());
+        }
+
+        // bind samplers
         bindResource = find_if(shader->GetBindResources(), [](cr<Shader::BindResource> x)
         {
             static auto textureRegisterType = GetRegisterType(D3D_SIT_SAMPLER);

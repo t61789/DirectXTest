@@ -50,10 +50,12 @@ namespace dt
         uint32_t width = 0;
         uint32_t height = 0;
         uint32_t channelCount = 0;
-        bool hasMipmap = false;
+        uint32_t hasMipmap = false;
 
         template <typename Archive>
         void serialize(Archive& ar, uint32_t const version);
+
+        uint32_t GetMipmapCount() const;
     };
 
     class DxTexture

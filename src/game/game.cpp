@@ -73,5 +73,15 @@ namespace dt
             
             comp.lock()->CallUpdate();
         }
+
+        for (auto& comp : allComps)
+        {
+            if (comp.expired())
+            {
+                continue;
+            }
+            
+            comp.lock()->LateUpdate();
+        }
     }
 }

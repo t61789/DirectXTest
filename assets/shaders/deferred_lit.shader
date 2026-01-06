@@ -1,5 +1,5 @@
-#include "lib/common.hlsl"
-#include "lib/lighting.hlsl"
+#include "built_in/shaders/lib/common.hlsl"
+#include "built_in/shaders/lib/lighting.hlsl"
 
 PSInput VS_Main(VSInput input)
 {

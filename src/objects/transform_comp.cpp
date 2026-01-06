@@ -147,6 +147,16 @@ namespace dt
         try_get_val(objJson, "scale", m_scale.localVal);
     }
 
+    void TransformComp::UpdateAllDirtyComps()
+    {
+        for (auto& transform : m_dirtyTransforms)
+        {
+            transform->UpdateMatrix();
+        }
+
+        m_dirtyTransforms.clear();
+    }
+
     void TransformComp::UpdateMatrix()
     {
         if (!m_dirty)
@@ -195,6 +205,8 @@ namespace dt
         m_hasOddNegativeScale = det < 0;
 
         m_position.worldVal = m_matrix.localVal.r[3];
+
+        matrixChangedEvent.Invoke();
     }
 
     /// 递归地将当前物体和它的子物体都标记为dirty
@@ -204,9 +216,9 @@ namespace dt
         {
             return;
         }
-        
         object->transform->m_dirty = true;
-        object->transform->dirtyEvent.Invoke();
+
+        m_dirtyTransforms.insert(object->transform->shared_from_this());
     
         if (object->GetChildren().empty())
         {

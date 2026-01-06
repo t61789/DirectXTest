@@ -96,19 +96,11 @@ namespace dt
         srvDesc.Format = DxTexture::GetSrvFormat(dxTexture->GetDesc().format);
         srvDesc.ViewDimension = DxTexture::GetSrvDimension(dxTexture->GetDesc().type);
         srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MipLevels = dxTexture->GetDesc().GetMipmapCount();
+        srvDesc.Texture2D.PlaneSlice = 0;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-        if (dxTexture->GetDesc().type == TextureType::TEXTURE_2D)
-        {
-            srvDesc.Texture2D.MipLevels = 1; // TODO mipmap
-            srvDesc.Texture2D.PlaneSlice = 0;
-            srvDesc.Texture2D.MostDetailedMip = 0;
-            srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-        }
-        else
-        {
-            THROW_ERROR("Not implemented")
-        }
-        
         Dx()->GetDevice()->CreateShaderResourceView(
             dxTexture->GetDxResource()->GetResource(),
             &srvDesc,

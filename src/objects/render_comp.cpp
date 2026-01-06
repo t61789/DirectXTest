@@ -22,7 +22,7 @@ namespace dt
 
     void RenderComp::Start()
     {
-        m_onTransformDirtyHandler = GetOwner()->transform->dirtyEvent.Add(this, &RenderComp::OnTransformDirty);
+        m_onTransformDirtyHandler = GetOwner()->transform->matrixChangedEvent.Add(this, &RenderComp::OnTransformDirty);
     }
 
     void RenderComp::OnEnable()
@@ -41,7 +41,7 @@ namespace dt
     {
         if (m_onTransformDirtyHandler)
         {
-            GetOwner()->transform->dirtyEvent.Remove(m_onTransformDirtyHandler);
+            GetOwner()->transform->matrixChangedEvent.Remove(m_onTransformDirtyHandler);
         }
     }
 
@@ -95,7 +95,9 @@ namespace dt
 
     void RenderComp::UpdatePerObjectBuffer()
     {
-        m_renderObject->perObjectCbuffer->Write(M, Transpose(Store(GetOwner()->transform->GetLocalToWorld())));
-        m_renderObject->perObjectCbuffer->Write(IM, Transpose(Store(GetOwner()->transform->GetWorldToLocal())));
+        auto m = Transpose(Store(GetOwner()->transform->GetLocalToWorld()));
+        auto im = Transpose(Store(GetOwner()->transform->GetWorldToLocal()));
+        m_renderObject->perObjectCbuffer->Write(M, m);
+        m_renderObject->perObjectCbuffer->Write(IM, im);
     }
 }

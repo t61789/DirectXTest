@@ -25,6 +25,9 @@ namespace dt
     {
         RenderThreadMgr::Ins()->WaitForDone();
 
+        TransformComp::UpdateAllDirtyComps();
+        RecycleBin::Ins()->Flush();
+
         *RenderRes() = RenderResources();
         RenderRes()->screenSize = { Window::Ins()->GetWidth(), Window::Ins()->GetHeight() };
         auto aspect = static_cast<float>(RenderRes()->screenSize.x) / static_cast<float>(RenderRes()->screenSize.y);
@@ -41,9 +44,8 @@ namespace dt
             pass->PrepareContext(RenderRes());
         }
         
-        RecycleBin::Ins()->Flush();
         Cbuffer::UpdateDirtyCbuffers();
-
+        
         RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         {
             ZoneScopedN("Prepare Pass");

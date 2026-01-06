@@ -30,6 +30,7 @@ namespace dt
             uint32_t bindCount;
             StringHandle resourceName;
             D3D_SHADER_INPUT_TYPE resourceType;
+            D3D_SRV_DIMENSION resourceDimension;
         };
 
         void* GetVSPointer() const { return m_vs->GetBufferPointer(); }

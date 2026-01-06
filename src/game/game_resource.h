@@ -39,6 +39,7 @@ namespace dt
         sp<Material> testMat = nullptr;
         sp<Material> blitMat = nullptr;
         sp<Mesh> quadMesh = nullptr;
+        sp<Mesh> sphereMesh = nullptr;
 
         sp<Image> errorTex = nullptr;
 
