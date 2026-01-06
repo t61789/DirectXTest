@@ -82,10 +82,10 @@ namespace dt
         {
             THROW_IF_FAILED(m_cmdAllocator->Reset());
             THROW_IF_FAILED(m_cmdList->Reset(m_cmdAllocator.Get(), nullptr));
+            
+            ReleaseCmdResources();
         }
         m_first = false;
-
-        ReleaseCmdResources();
 
         m_recording.store(true);
         

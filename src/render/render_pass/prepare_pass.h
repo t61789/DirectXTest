@@ -13,7 +13,7 @@ namespace dt
         
         const char* GetName() override { return "Prepare Pass"; }
         void Execute() override;
-        void PrepareLight();
+        void PrepareLights();
 
     private:
         sp<Cbuffer> m_mainCameraViewCbuffer = nullptr;

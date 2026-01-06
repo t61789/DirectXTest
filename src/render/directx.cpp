@@ -20,6 +20,7 @@
 #include "common/utils.h"
 #include "common/math.h"
 #include "common/render_texture.h"
+#include "game/gui.h"
 
 namespace dt
 {
@@ -41,6 +42,7 @@ namespace dt
         m_recycleBin = new RecycleBin();
         m_descriptorPool = new DescriptorPool();
         m_renderThread = new RenderThreadMgr();
+        m_gui = new Gui();
 
         CreateSwapChainTextures();
     }
@@ -49,7 +51,8 @@ namespace dt
     {
         m_swapChainRenderTargets.clear();
         m_swapChainRenderTextures.clear();
-        
+
+        delete m_gui;
         delete m_renderThread;
         delete m_descriptorPool;
         m_recycleBin->Flush();

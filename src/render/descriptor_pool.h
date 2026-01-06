@@ -22,8 +22,14 @@ namespace dt
         TextureWrapMode wrapMode;
         TextureFilterMode filterMode;
     };
+
+    struct SrvInfo
+    {
+        CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle;
+        CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle;
+    };
     
-    using SrvPool = SingleElemPool<CD3DX12_CPU_DESCRIPTOR_HANDLE>;
+    using SrvPool = SingleElemPool<SrvInfo>;
     using SamplerPool = SingleElemPool<SamplerInfo>;
     using RtvPool = SingleElemPool<CD3DX12_CPU_DESCRIPTOR_HANDLE>;
     using DsvPool = SingleElemPool<CD3DX12_CPU_DESCRIPTOR_HANDLE>;
@@ -52,6 +58,7 @@ namespace dt
         ID3D12DescriptorHeap* GetSamplerDescHeap() const { return m_samplerDescHeap.Get(); }
 
         sp<ShaderResource> AllocSrv(const DxTexture* dxTexture);
+        sp<SrvPool::Handle> AllocEmptySrvHandle();
         void AllocRtv(
             crvec<DxTexture*> colorAttachments,
             const DxTexture* depthAttachment,

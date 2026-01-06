@@ -1,6 +1,9 @@
 ﻿#include "window.h"
 
 #include <iostream>
+#include <imgui_impl_win32.h>
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace dt
 {
@@ -96,6 +99,11 @@ namespace dt
 
     LRESULT CALLBACK Window::WindowProcStatic(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
     {
+        if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
+        {
+            return true;
+        }
+        
         Window* pWindow = nullptr;
         
         if (uMsg == WM_NCCREATE)

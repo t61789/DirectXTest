@@ -128,7 +128,7 @@
         return ggx1 * ggx2;
     }
 
-    float3 DirectLit(LightData light, float3 albedo, float3 positionWS, float3 normalWS, float3 viewDirWS, float roughness, float metallic)
+    float3 DirectLit(LightData light, float3 albedo, float3 positionWS, float3 normalWS, float3 viewDirWS, float roughness, float metallic, float shadowAttenuation)
     {
         float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
 
@@ -151,7 +151,7 @@
         kD *= 1.0f - metallic;
         float3 diffuse = kD * albedo / PI;
 
-        return (diffuse + specular) * light.color * ndl * GetShadowAttenuation(positionWS);
+        return (diffuse + specular) * light.color * ndl * shadowAttenuation;
     }
 
     float3 IndirectLit(float3 albedo, float3 normalWS, float3 viewDirWS, float3 metallic)
@@ -172,14 +172,16 @@
     {
         float3 result = float3(0.0f, 0.0f, 0.0f);
 
+        float shadowAttenuation = GetShadowAttenuation(positionWS);   
+
         // Main light
-        result += DirectLit(GetMainLight(), albedo, positionWS, normalWS, viewDirWS, roughness, metallic);
+        result += DirectLit(GetMainLight(), albedo, positionWS, normalWS, viewDirWS, roughness, metallic, shadowAttenuation);
 
         // Point lights
         for (uint i = 0; i < _PointLightCount; i++)
         {
             LightData pointLight = GetPointLight(i, positionWS);
-            result += DirectLit(pointLight, albedo, positionWS, normalWS, viewDirWS, roughness, metallic);
+            result += DirectLit(pointLight, albedo, positionWS, normalWS, viewDirWS, roughness, metallic, 1.0f);
         }
 
         // Indirect light

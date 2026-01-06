@@ -1,5 +1,7 @@
 ﻿#include "final_pass.h"
 
+#include <imgui_impl_dx12.h>
+
 #include "common/render_texture.h"
 #include "game/game_resource.h"
 #include "objects/scene.h"
@@ -20,12 +22,14 @@ namespace dt
 
     void FinalPass::Execute()
     {
-        RT()->AddCmd([this](ID3D12GraphicsCommandList* cmdList)
+        RT()->AddCmd([this, imguiDrawData=ImGui::GetDrawData()](ID3D12GraphicsCommandList* cmdList)
         {
             ZoneScopedN("Final Pass");
             
             m_blitMaterial->GetCbuffer()->Write(MAIN_TEX, RenderRes()->litResultRt->GetTextureIndex());
             DxHelper::Blit(cmdList, m_blitMaterial.get(), Dx()->GetBackBufferRenderTarget());
+
+            ImGui_ImplDX12_RenderDrawData(imguiDrawData, cmdList);
             
             for (auto& rt : Dx()->GetBackBufferRenderTarget()->GetColorAttachments())
             {

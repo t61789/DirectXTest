@@ -1,7 +1,12 @@
 ﻿#include "prepare_pass.h"
 
+#include <imgui.h>
+#include <imgui_impl_dx12.h>
+#include <imgui_impl_win32.h>
+
 #include "window.h"
 #include "game/game_resource.h"
+#include "game/gui.h"
 #include "objects/camera_comp.h"
 #include "objects/light_comp.h"
 #include "objects/scene.h"
@@ -23,10 +28,24 @@ namespace dt
 
     void PreparePass::Execute()
     {
-        RenderThreadMgr::Ins()->WaitForDone();
-
         TransformComp::UpdateAllDirtyComps();
-        RecycleBin::Ins()->Flush();
+        RenderThreadMgr::Ins()->WaitForDone();
+        
+        if (GR()->GetFrameCount() > 1)
+        {
+            RecycleBin::Ins()->Flush();
+        }
+        
+        ImGui_ImplWin32_NewFrame();
+        ImGui_ImplDX12_NewFrame();
+        ImGui::NewFrame();
+
+        // todo call gui events
+        ImGui::Begin("Shit");
+        ImGui::Text("FPS: %f", 1.0f / GR()->GetDeltaTime());
+        ImGui::End();
+        
+        ImGui::Render();
 
         *RenderRes() = RenderResources();
         RenderRes()->screenSize = { Window::Ins()->GetWidth(), Window::Ins()->GetHeight() };
@@ -37,7 +56,7 @@ namespace dt
         RenderRes()->mainCameraVp->WriteToCbuffer(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
         RenderRes()->renderObjects = GR()->mainScene->GetRenderTree()->GetRenderObjects();
 
-        PrepareLight();
+        PrepareLights();
 
         for (auto& pass : RenderPipeline::Ins()->GetPasses())
         {
@@ -49,13 +68,17 @@ namespace dt
         RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         {
             ZoneScopedN("Prepare Pass");
-            
+
+            ImGui::SetCurrentContext(Gui::Ins()->GetMainThreadContext());
+
             DxHelper::PrepareCmdList(cmdList);
         });
     }
 
-    void PreparePass::PrepareLight()
+    void PreparePass::PrepareLights()
     {
+        ZoneScoped;
+
         XMFLOAT3 lightDir = Store3(XMVector3Normalize(XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f)));
         XMFLOAT3 lightColor = { 0.0f, 0.0f, 0.0f };
 
@@ -72,7 +95,6 @@ namespace dt
             lightColor = lightComp->GetColor();
         }
 
-        constexpr uint32_t pointLightStrideVec4 = 2;
         uint32_t pointLightCount = 0;
         vec<XMFLOAT4> pointLightInfos(MAX_POINT_LIGHT_COUNT);
         for (auto& compWp : lightComps)
@@ -88,6 +110,7 @@ namespace dt
             auto radius = pointLightComp->radius;
             auto color = pointLightComp->GetColor();
 
+            constexpr uint32_t pointLightStrideVec4 = 2;
             pointLightInfos[pointLightCount * pointLightStrideVec4 + 0] = { positionWS.x, positionWS.y, positionWS.z, radius };
             pointLightInfos[pointLightCount * pointLightStrideVec4 + 1] = { color.x, color.y, color.z, 0.0f };
 

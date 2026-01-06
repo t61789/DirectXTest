@@ -11,6 +11,7 @@
 
 namespace dt
 {
+    class Gui;
     class RecycleBin;
     class RenderTarget;
     class RenderTexture;
@@ -81,6 +82,7 @@ namespace dt
         RecycleBin* m_recycleBin;
         DescriptorPool* m_descriptorPool;
         RenderThreadMgr* m_renderThread;
+        Gui* m_gui;
     };
 
     static DirectX* Dx() { return DirectX::Ins(); }

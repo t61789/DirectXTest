@@ -85,12 +85,7 @@ namespace dt
 
     sp<ShaderResource> DescriptorPool::AllocSrv(const DxTexture* dxTexture)
     {
-        auto srvHandle = m_srvPool.Alloc();
-        CD3DX12_CPU_DESCRIPTOR_HANDLE srvCpuHandle = {
-            m_srvDescHeap->GetCPUDescriptorHandleForHeapStart(),
-            static_cast<INT>(srvHandle->GetIndex()),
-            m_srvDescSizeB
-        };
+        auto srvHandle = AllocEmptySrvHandle();
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
         srvDesc.Format = DxTexture::GetSrvFormat(dxTexture->GetDesc().format);
@@ -104,9 +99,8 @@ namespace dt
         Dx()->GetDevice()->CreateShaderResourceView(
             dxTexture->GetDxResource()->GetResource(),
             &srvDesc,
-            srvCpuHandle);
-        srvHandle->data = srvCpuHandle;
-
+            srvHandle->data.cpuHandle);
+        
         auto filterMode = dxTexture->GetDesc().filterMode;
         auto wrapMode = dxTexture->GetDesc().wrapMode;
         auto samplerHandle = m_samplerPool.Find([this, filterMode, wrapMode](crsp<SamplerPool::Handle> poolHandle)
@@ -142,6 +136,26 @@ namespace dt
         descHandle->m_samplerPoolHandle = samplerHandle;
 
         return descHandle;
+    }
+
+    sp<SrvPool::Handle> DescriptorPool::AllocEmptySrvHandle()
+    {
+        auto srvHandle = m_srvPool.Alloc();
+        CD3DX12_CPU_DESCRIPTOR_HANDLE srvCpuHandle = {
+            m_srvDescHeap->GetCPUDescriptorHandleForHeapStart(),
+            static_cast<INT>(srvHandle->GetIndex()),
+            m_srvDescSizeB
+        };
+        CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpuHandle = {
+            m_srvDescHeap->GetGPUDescriptorHandleForHeapStart(),
+            static_cast<INT>(srvHandle->GetIndex()),
+            m_srvDescSizeB
+        };
+        
+        srvHandle->data.cpuHandle = srvCpuHandle;
+        srvHandle->data.gpuHandle = srvGpuHandle;
+
+        return srvHandle;
     }
 
     void DescriptorPool::AllocRtv(

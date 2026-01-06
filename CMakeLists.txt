@@ -58,6 +58,35 @@ find_package(assimp REQUIRED)
 find_package(Tracy REQUIRED)
 find_package(Boost REQUIRED)
 find_package(stb REQUIRED)
+find_package(imgui REQUIRED)
+
+get_target_property(IMGUI_INCLUDE_DIRS imgui::imgui INTERFACE_INCLUDE_DIRECTORIES)
+
+foreach(_P ${IMGUI_INCLUDE_DIRS})
+    # 如果路径里包含盘符（C:）或者斜杠，说明这部分是路径
+    if(_P MATCHES ":/" OR _P MATCHES "/")
+        # 清洗掉左边的表达式：把直至第一个冒号（:）之前的内容删掉
+        # 比如把 $<$<CONFIG:Debug>:C:/path 变成 C:/path
+        string(REGEX REPLACE "^.*Debug\>:" "" _CLEAN "${_P}")
+        
+        # 清洗掉右边的括号：把末尾的 > 删掉
+        string(REPLACE ">" "" _CLEAN "${_CLEAN}")
+        
+        # 得到纯净路径
+        set(IMGUI_INCLUDE_DIR "${_CLEAN}")
+        break()
+    endif()
+endforeach()
+
+get_filename_component(IMGUI_PACKAGE_ROOT "${IMGUI_INCLUDE_DIR}" DIRECTORY)
+get_filename_component(IMGUI_PACKAGE_ROOT "${IMGUI_PACKAGE_ROOT}" DIRECTORY)
+set(IMGUI_BACKEND_DIR "${IMGUI_PACKAGE_ROOT}/b/src/backends")
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${IMGUI_BACKEND_DIR})
+target_sources(${PROJECT_NAME} PRIVATE 
+    "${IMGUI_BACKEND_DIR}/imgui_impl_win32.cpp"
+    "${IMGUI_BACKEND_DIR}/imgui_impl_dx12.cpp"
+)
 
 # 链接依赖库
 target_link_libraries(${PROJECT_NAME} 
@@ -73,6 +102,7 @@ target_link_libraries(${PROJECT_NAME}
 		Tracy::TracyClient
 		boost::boost
 		stb::stb
+		imgui::imgui
 )
 
 # 安装目标
