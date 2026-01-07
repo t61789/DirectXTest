@@ -220,15 +220,13 @@ namespace dt
     sp<Image> Image::CreateAssetFromCache(ImageCache&& cache)
     {
         auto dxTexture = DxTexture::CreateImage(cache.desc);
+        auto mipmapCount = cache.desc.GetMipmapCount();
+        auto subResourcesCount = cache.mipmaps.size();
+        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(dxTexture->GetDxResource()->GetResource(), 0, subResourcesCount);
+        auto uploadBuffer = DxResource::CreateUploadBuffer(nullptr, uploadBufferSize);
 
-        RT()->AddCmd([dxTexture, cache=std::move(cache)](ID3D12GraphicsCommandList* cmdList)
+        RT()->AddCmd([dxTexture, cache=std::move(cache), subResourcesCount, mipmapCount, uploadBuffer](ID3D12GraphicsCommandList* cmdList)
         {
-            auto mipmapCount = cache.desc.GetMipmapCount();
-            auto subResourcesCount = cache.mipmaps.size();
-            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(dxTexture->GetDxResource()->GetResource(), 0, subResourcesCount);
-            
-            auto uploadBuffer = DxResource::CreateUploadBuffer(nullptr, uploadBufferSize);
-
             std::vector<D3D12_SUBRESOURCE_DATA> subresources(subResourcesCount);
             for (UINT i = 0; i < subResourcesCount; ++i)
             {

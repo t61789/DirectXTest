@@ -31,10 +31,7 @@ namespace dt
         TransformComp::UpdateAllDirtyComps();
         RenderThreadMgr::Ins()->WaitForDone();
         
-        if (GR()->GetFrameCount() > 1)
-        {
-            RecycleBin::Ins()->Flush();
-        }
+        RecycleBin::Ins()->Flush();
         
         ImGui_ImplWin32_NewFrame();
         ImGui_ImplDX12_NewFrame();

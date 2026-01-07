@@ -32,6 +32,8 @@ namespace dt
             {
                 DxHelper::AddTransition(self, preState);
             }
+
+            DxHelper::ApplyTransitions(cmdList);
         });
     }
 
