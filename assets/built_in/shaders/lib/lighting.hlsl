@@ -3,6 +3,45 @@
 
     #include "built_in/shaders/lib/common.hlsl"
 
+    struct LightData
+    {
+        float3 dirWS;
+        float3 color;
+    };
+
+    float TakeShc(uint index)
+    {
+        uint vecIndex = index >> 2;
+        uint componentIndex = index & 3;
+        return _Shc[vecIndex][componentIndex];
+    }
+
+    float3 IndirectRadiance(float3 direction)
+    {
+        direction = normalize(direction);
+        
+        float baseShc[9];
+        baseShc[0] = 0.282095f;
+        baseShc[1] = 0.488603f * direction.y;
+        baseShc[2] = 0.488603f * direction.z;
+        baseShc[3] = 0.488603f * direction.x;
+        baseShc[4] = 1.092548f * direction.y * direction.x;
+        baseShc[5] = 1.092548f * direction.y * direction.z;
+        baseShc[6] = 0.315392f * (-direction.x * direction.x - direction.y * direction.y + 2 * direction.z * direction.z);
+        baseShc[7] = 1.092548f * direction.z * direction.x;
+        baseShc[8] = 0.546274f * (direction.x * direction.x - direction.y * direction.y);
+        
+        float3 result = float3(0.0f, 0.0f, 0.0f);
+        for (int i = 0; i < 9; i++)
+        {
+            result.r += baseShc[i] * TakeShc(i * 3 + 0);
+            result.g += baseShc[i] * TakeShc(i * 3 + 1);
+            result.b += baseShc[i] * TakeShc(i * 3 + 2);
+        }
+        
+        return result;
+    }
+
     float GetShadowAttenuation(float3 positionWS)
     {
         float4 shadowPos = mul(float4(positionWS.xyz, 1.0f), _MainLightShadowVP);
@@ -26,12 +65,6 @@
             return 0.0f;
         }
     }
-
-    struct LightData
-    {
-        float3 dirWS;
-        float3 color;
-    };
 
     LightData GetMainLight()
     {
@@ -66,39 +99,6 @@
     {
         LightData mainLight = GetMainLight();
         return saturate(dot(mainLight.dirWS, normalWS) * 0.5f + 0.5f) * mainLight.color;
-    }
-
-    float TakeShc(uint index)
-    {
-        uint vecIndex = index >> 2;
-        uint componentIndex = index & 3;
-        return _Shc[vecIndex][componentIndex];
-    }
-
-    float3 IndirectRadiance(float3 direction)
-    {
-        direction = normalize(direction);
-        
-        float baseShc[9];
-        baseShc[0] = 0.282095f;
-        baseShc[1] = 0.488603f * direction.y;
-        baseShc[2] = 0.488603f * direction.z;
-        baseShc[3] = 0.488603f * direction.x;
-        baseShc[4] = 1.092548f * direction.y * direction.x;
-        baseShc[5] = 1.092548f * direction.y * direction.z;
-        baseShc[6] = 0.315392f * (-direction.x * direction.x - direction.y * direction.y + 2 * direction.z * direction.z);
-        baseShc[7] = 1.092548f * direction.z * direction.x;
-        baseShc[8] = 0.546274f * (direction.x * direction.x - direction.y * direction.y);
-        
-        float3 result = float3(0.0f, 0.0f, 0.0f);
-        for (int i = 0; i < 9; i++)
-        {
-            result.r += baseShc[i] * TakeShc(i * 3 + 0);
-            result.g += baseShc[i] * TakeShc(i * 3 + 1);
-            result.b += baseShc[i] * TakeShc(i * 3 + 2);
-        }
-        
-        return result;
     }
 
     float DistributionGGX(float ndh, float roughness)
@@ -154,18 +154,35 @@
         return (diffuse + specular) * light.color * ndl * shadowAttenuation;
     }
 
-    float3 IndirectLit(float3 albedo, float3 normalWS, float3 viewDirWS, float3 metallic)
+    float2 ApproximateSpecularBRDF(float ndv, float roughness) 
+    {
+        const float4 c0 = float4(-1.0, -0.0275, -0.572, 0.022);
+        const float4 c1 = float4(1.0, 0.0425, 1.04, -0.04);
+        float4 r = roughness * c0 + c1;
+        float a004 = min(r.x * r.x, exp2(-9.28 * ndv)) * r.x + r.y;
+        return float2(-1.04, 1.04) * a004 + r.zw;
+    }
+
+    float3 IndirectLit(float3 albedo, float3 normalWS, float3 viewDirWS, float roughness, float3 metallic)
     {
         float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metallic);
         float3 h = normalize(viewDirWS + normalWS);
         float vdh = saturate(dot(viewDirWS, h));
+        float ndv = saturate(dot(normalWS, viewDirWS));
         float3 F = FresnelSchlick(vdh, F0);
 
         float3 kS = F;
         float3 kD = 1.0f - kS;
         kD *= 1.0f - metallic;
 
-        return IndirectRadiance(normalWS) * albedo * kD;
+        float diffuse = IndirectRadiance(normalWS) * albedo * kD;
+
+        float MAX_LOD = 5.0f;
+        float3 iblColor = SampleCubeTextureLod(_SkyboxTex, reflect(-viewDirWS, normalWS), roughness * MAX_LOD).rgb;
+        float2 envBRDF = ApproximateSpecularBRDF(ndv, roughness);
+        float3 specular = iblColor * (F * envBRDF.x + envBRDF.y);
+
+        return diffuse + specular;
     }
 
     float3 Lit(float3 albedo, float3 positionWS, float3 normalWS, float3 viewDirWS, float roughness, float metallic)
@@ -185,7 +202,7 @@
         }
 
         // Indirect light
-        result += IndirectLit(albedo, normalWS, viewDirWS, metallic);
+        result += IndirectLit(albedo, normalWS, viewDirWS, roughness, metallic);
 
         return result;
     }

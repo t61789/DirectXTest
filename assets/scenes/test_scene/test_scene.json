@@ -1,19 +1,19 @@
 {
     "config": {
         "ambientLightColorSky": [
-            0.44,
-            0.44,
-            0.54
+            0.74,
+            0.74,
+            0.94
         ],
         "ambientLightColorEquator": [
-            0.46,
-            0.46,
-            0.53
+            0.76,
+            0.66,
+            0.63
         ],
         "ambientLightColorGround": [
             1.10,
             1.10,
-            1.16
+            1.36
         ],
         "mainLightColor": [
             3.7,

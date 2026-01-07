@@ -50,6 +50,8 @@
         uint _PointLightCount;
         float4 _PointLightInfos[MAX_POINT_LIGHT_COUNT * POINT_LIGHT_STRIDE_VEC4]; // para0: xyz: positionWS, w: radius, para1: xyz: color, w: unused
 
+        uint _SkyboxTex;
+
         float4 _Shc[7];
 
         uint _MainLightShadowTex;
@@ -138,6 +140,13 @@
         uint srvIndex = textureIndex & 0xFFFF;
         uint samplerIndex = (textureIndex >> 20) & 0xFF;
         return _BindlessCubeTextures[srvIndex].Sample(_BindlessSamplers[samplerIndex], direction);
+    }
+
+    float4 SampleCubeTextureLod(uint textureIndex, float3 direction, float lod)
+    {
+        uint srvIndex = textureIndex & 0xFFFF;
+        uint samplerIndex = (textureIndex >> 20) & 0xFF;
+        return _BindlessCubeTextures[srvIndex].SampleLevel(_BindlessSamplers[samplerIndex], direction, lod);
     }
 
     void ReadGBuffer0(float2 screenUV, out float3 albedo)

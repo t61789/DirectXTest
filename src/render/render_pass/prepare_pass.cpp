@@ -52,6 +52,7 @@ namespace dt
         RenderRes()->mainCameraVp->WriteToCbuffer(RenderRes()->mainCameraViewCbuffer.get());
         RenderRes()->mainCameraVp->WriteToCbuffer(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
         RenderRes()->renderObjects = GR()->mainScene->GetRenderTree()->GetRenderObjects();
+        GetGlobalCbuffer()->Write(SKYBOX_TEX, GR()->skyboxTex->GetTextureIndex());
 
         PrepareLights();
 

@@ -42,6 +42,7 @@ namespace dt
         sp<Mesh> sphereMesh = nullptr;
 
         sp<Image> errorTex = nullptr;
+        sp<Image> skyboxTex = nullptr;
 
     private:
         uint64_t m_frameCount = 0;

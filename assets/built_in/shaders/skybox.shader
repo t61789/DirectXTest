@@ -1,10 +1,5 @@
 #include "built_in/shaders/lib/common.hlsl"
 
-cbuffer PerMaterialCBuffer : register(b3)
-{
-    uint _SkyboxTex;
-};
-
 PSInput VS_Main(VSInput input)
 {
     PSInput output = (PSInput)0;

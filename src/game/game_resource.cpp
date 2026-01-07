@@ -13,6 +13,7 @@ namespace dt
     {
         testMat = Material::LoadFromFile("materials/deferred_lit.mtl");
         errorTex = Image::LoadFromFile("built_in/textures/error.png");
+        skyboxTex = Image::LoadFromFile("built_in/textures/skybox");
         
         blitMat = Material::LoadFromFile("built_in/materials/blit.mtl");
         quadMesh = Mesh::LoadFromFile("built_in/meshes/quad.obj");
@@ -21,6 +22,7 @@ namespace dt
 
     GameResource::~GameResource()
     {
+        skyboxTex.reset();
         errorTex.reset();
         blitMat.reset();
         sphereMesh.reset();
