@@ -15,6 +15,7 @@
 #include "common/asset_cache.h"
 #include "game/game_resource.h"
 #include "render/directx.h"
+#include "render/dx_buffer.h"
 #include "render/dx_helper.h"
 #include "render/render_thread.h"
 
@@ -46,7 +47,17 @@ namespace dt
 
         return inputLayout;
     }
-    
+
+    cr<D3D12_VERTEX_BUFFER_VIEW> Mesh::GetVertexBufferView() const
+    {
+        return m_vertexBuffer->GetVertexBufferView();
+    }
+
+    cr<D3D12_INDEX_BUFFER_VIEW> Mesh::GetIndexBufferView() const
+    {
+        return m_indexBuffer->GetIndexBufferView();
+    }
+
     sp<Mesh> Mesh::LoadFromFile(crstr modelPath)
     {
         {
@@ -232,40 +243,17 @@ namespace dt
         cr<Bounds> bounds)
     {
         auto vertexDataStrideB = static_cast<int>(vertexData.size() / vertexCount * sizeof(float));
-
         auto vertexDataSizeB = vertexData.size() * sizeof(float);
-        auto vb = DxResource::Create(
-            CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            CD3DX12_RESOURCE_DESC::Buffer(vertexDataSizeB),
-            D3D12_RESOURCE_STATE_COMMON,
-            nullptr,
-            D3D12_HEAP_FLAG_NONE,
-            L"Vertex Buffer");
-        D3D12_VERTEX_BUFFER_VIEW vbView = {};
-        vbView.SizeInBytes = vertexDataSizeB;
-        vbView.StrideInBytes = vertexDataStrideB;
-        vbView.BufferLocation = vb->GetResource()->GetGPUVirtualAddress();
-        vb->Upload(vertexData.data(), vertexDataSizeB);
+        auto vb = DxBuffer::CreateVertexBuffer(vertexDataSizeB, vertexDataStrideB, L"Vertex Buffer");
+        vb->Write(0, vertexDataSizeB, vertexData.data());
 
         auto indicesSizeB = indices.size() * sizeof(uint32_t);
-        auto ib = DxResource::Create(
-            CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            CD3DX12_RESOURCE_DESC::Buffer(indicesSizeB),
-            D3D12_RESOURCE_STATE_COMMON,
-            nullptr,
-            D3D12_HEAP_FLAG_NONE,
-            L"Index Buffer");
-        D3D12_INDEX_BUFFER_VIEW ibView = {};
-        ibView.Format = DXGI_FORMAT_R32_UINT;
-        ibView.SizeInBytes = indicesSizeB;
-        ibView.BufferLocation = ib->GetResource()->GetGPUVirtualAddress();
-        ib->Upload(indices.data(), indicesSizeB);
+        auto ib = DxBuffer::Create(indicesSizeB, L"Index Buffer");
+        ib->Write(0, indicesSizeB, indices.data());
 
         sp<Mesh> result = msp<Mesh>();
-        result->m_vertexBufferView = vbView;
-        result->m_indexBufferView = ibView;
         result->m_vertexCount = vertexCount;
-        result->m_vertexDataStrideB = static_cast<int>(vertexData.size() / vertexCount * sizeof(float));
+        result->m_vertexDataStrideF = static_cast<uint32_t>(vertexData.size() / vertexCount);
         result->m_bounds = bounds;
         result->m_inputLayout = GetD3dVertexLayout(vertexAttribInfo);
         result->m_vertexData = std::move(vertexData);

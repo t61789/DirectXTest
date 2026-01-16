@@ -175,7 +175,7 @@
         float3 kD = 1.0f - kS;
         kD *= 1.0f - metallic;
 
-        float diffuse = IndirectRadiance(normalWS) * albedo * kD;
+        float3 diffuse = IndirectRadiance(normalWS) * albedo * kD;
 
         float MAX_LOD = 5.0f;
         float3 iblColor = SampleCubeTextureLod(_SkyboxTex, reflect(-viewDirWS, normalWS), roughness * MAX_LOD).rgb;

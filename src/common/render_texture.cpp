@@ -9,7 +9,7 @@ namespace dt
 
         if (desc.dxDesc.format != TextureFormat::DEPTH_STENCIL)
         {
-            m_shaderResource = DescriptorPool::Ins()->AllocSrv(m_dxTexture.get());
+            m_shaderResource = DescriptorPool::Ins()->AllocTextureSrv(m_dxTexture.get());
         }
     }
 }

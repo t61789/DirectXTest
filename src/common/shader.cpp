@@ -83,8 +83,11 @@ namespace dt
     {
         log_info("Load shader: %s", path.CStr());
 
-        m_ps = CompileShader(path.CStr(), "PS_Main", "ps_5_1");
-        m_vs = CompileShader(path.CStr(), "VS_Main", "vs_5_1");
+        m_vsDxcResult = CompileShader(path.CStr(), L"VS_Main", L"vs_6_0");
+        m_psDxcResult = CompileShader(path.CStr(), L"PS_Main", L"ps_6_0");
+
+        THROW_IF_FAILED(m_psDxcResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&m_ps), nullptr));
+        THROW_IF_FAILED(m_vsDxcResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&m_vs), nullptr));
 
         LoadShaderInfo();
 
@@ -95,12 +98,12 @@ namespace dt
     {
         ReflectionPack reflectionPack;
         
-        LoadShaderStage(m_vs, reflectionPack);
+        LoadShaderStage(m_vsDxcResult, reflectionPack);
         LoadInputResources(reflectionPack);
         LoadCbuffers(reflectionPack);
         LoadVertexLayout(reflectionPack);
         
-        LoadShaderStage(m_ps, reflectionPack);
+        LoadShaderStage(m_psDxcResult, reflectionPack);
         LoadInputResources(reflectionPack);
         LoadCbuffers(reflectionPack);
         LoadOutputResources(reflectionPack);
@@ -110,13 +113,18 @@ namespace dt
         m_pso = msp<Pso>(this);
     }
 
-    void Shader::LoadShaderStage(cr<ComPtr<ID3DBlob>> blob, ReflectionPack& reflectionPack)
+    void Shader::LoadShaderStage(cr<ComPtr<IDxcResult>> dxcResult, ReflectionPack& reflectionPack)
     {
-        THROW_IF_FAILED(D3DReflect(
-            blob->GetBufferPointer(),
-            blob->GetBufferSize(),
-            IID_ID3D12ShaderReflection,
-            &reflectionPack.shaderReflection));
+        ComPtr<IDxcBlob> pReflectionData;
+        THROW_IF_FAILED(dxcResult->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&pReflectionData), nullptr));
+        assert(pReflectionData != nullptr);
+        
+        DxcBuffer reflectionBuffer;
+        reflectionBuffer.Ptr = pReflectionData->GetBufferPointer();
+        reflectionBuffer.Size = pReflectionData->GetBufferSize();
+        reflectionBuffer.Encoding = 0;
+
+        THROW_IF_FAILED(Dx()->GetDxcUtils()->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&reflectionPack.shaderReflection)));
         
         THROW_IF_FAILED(reflectionPack.shaderReflection->GetDesc(&reflectionPack.shaderDesc));
     }
@@ -125,71 +133,103 @@ namespace dt
     {
         vecup<CD3DX12_DESCRIPTOR_RANGE1> rootParamRanges;
         vec<CD3DX12_ROOT_PARAMETER1> rootParams;
+        rootParamRanges.reserve(reflectionPack.bindResources.size());
+        rootParams.reserve(reflectionPack.bindResources.size());
         
         // Build root parameters from bind resources
         for (auto& bindResource : reflectionPack.bindResources)
         {
             rootParams.emplace_back();
-            
-            if (bindResource.resourceType == D3D_SIT_CBUFFER)
+
+            switch (bindResource.resourceType)
             {
-                rootParams.back().InitAsConstantBufferView(bindResource.registerIndex, bindResource.registerSpace);
-            }
-            else if (bindResource.resourceType == D3D_SIT_TEXTURE)
-            {
-                if (bindResource.resourceDimension == D3D_SRV_DIMENSION_TEXTURE2D)
+            case D3D_SIT_CBUFFER:
                 {
-                    if (bindResource.resourceName != BINDLESS_2D_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 1)
+                    if (bindResource.registerIndex == ROOT_CONSTANTS_CBUFFER_REGISTER_INDEX && bindResource.registerSpace == ROOT_CONSTANTS_CBUFFER_REGISTER_SPACE)
                     {
-                        THROW_ERROR("Texture2d resource needs to be bindless with t0 and space1")
+                        rootParams.back().InitAsConstants(ROOT_CONSTANTS_CBUFFER_32_BIT_COUNT, bindResource.registerIndex, bindResource.registerSpace);
+                        m_rootConstantCbufferRootParamIndex = rootParams.size() - 1;
                     }
-                }
-                else if (bindResource.resourceDimension == D3D_SRV_DIMENSION_TEXTURECUBE)
-                {
-                    if (bindResource.resourceName != BINDLESS_CUBE_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 2)
+                    else
                     {
-                        THROW_ERROR("TextureCube resource needs to be bindless with t0 and space2")
+                        rootParams.back().InitAsConstantBufferView(bindResource.registerIndex, bindResource.registerSpace);
                     }
+                    break;
                 }
-                else
+            case D3D_SIT_BYTEADDRESS:
+            case D3D_SIT_TEXTURE:
+                { 
+                    D3D12_SHADER_VISIBILITY shaderVisibility;
+                    
+                    if (bindResource.resourceDimension == D3D_SRV_DIMENSION_TEXTURE2D)
+                    {
+                        if (bindResource.resourceName != BINDLESS_2D_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 1)
+                        {
+                            THROW_ERROR("Texture2d resource needs to be bindless with t0 and space1")
+                        }
+
+                        shaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+                    }
+                    else if (bindResource.resourceDimension == D3D_SRV_DIMENSION_TEXTURECUBE)
+                    {
+                        if (bindResource.resourceName != BINDLESS_CUBE_TEXTURES || bindResource.registerIndex != 0 || bindResource.registerSpace != 2)
+                        {
+                            THROW_ERROR("TextureCube resource needs to be bindless with t0 and space2")
+                        }
+
+                        shaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+                    }
+                    else if (bindResource.resourceDimension == D3D_SRV_DIMENSION_BUFFER)
+                    {
+                        if (bindResource.resourceName != BINDLESS_BYTE_BUFFERS || bindResource.registerIndex != 0 || bindResource.registerSpace != 3)
+                        {
+                            THROW_ERROR("Byte buffer resource needs to be bindless with t0 and space3")
+                        }
+
+                        shaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+                    }
+                    else
+                    {
+                        THROW_ERROR("Unsupported texture resource dimension")
+                    }
+                    
+                    auto range = mup<CD3DX12_DESCRIPTOR_RANGE1>();
+                    range->Init(
+                        D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+                        bindResource.bindCount,
+                        bindResource.registerIndex,
+                        bindResource.registerSpace,
+                        D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE,
+                        D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+                    rootParamRanges.push_back(std::move(range));
+
+                    rootParams.back().InitAsDescriptorTable(1, rootParamRanges.back().get(), shaderVisibility);
+                    break;
+                }
+            case D3D_SIT_SAMPLER:
                 {
-                    THROW_ERROR("Unsupported texture resource dimension")
+                    if (bindResource.resourceName != BINDLESS_SAMPLERS || bindResource.registerIndex != 0 || bindResource.registerSpace != 1)
+                    {
+                        THROW_ERROR("Sampler resource needs to be bindless with s0 and space1")
+                    }
+                    
+                    auto range = mup<CD3DX12_DESCRIPTOR_RANGE1>();
+                    range->Init(
+                        D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
+                        bindResource.bindCount,
+                        bindResource.registerIndex,
+                        bindResource.registerSpace,
+                        D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE,
+                        D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+                    rootParamRanges.push_back(std::move(range));
+                    
+                    rootParams.back().InitAsDescriptorTable(1, rootParamRanges.back().get(), D3D12_SHADER_VISIBILITY_PIXEL);
+                    break;
                 }
-                
-                auto range = mup<CD3DX12_DESCRIPTOR_RANGE1>();
-                range->Init(
-                    D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-                    bindResource.bindCount,
-                    bindResource.registerIndex,
-                    bindResource.registerSpace,
-                    D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE,
-                    D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
-                rootParamRanges.push_back(std::move(range));
-                
-                rootParams.back().InitAsDescriptorTable(1, rootParamRanges.back().get(), D3D12_SHADER_VISIBILITY_PIXEL); // TODO be visible to vertex
-            }
-            else if (bindResource.resourceType == D3D_SIT_SAMPLER)
-            {
-                if (bindResource.resourceName != BINDLESS_SAMPLERS || bindResource.registerIndex != 0 || bindResource.registerSpace != 1)
+            default:
                 {
-                    THROW_ERROR("Sampler resource needs to be bindless with s0 and space1")
+                    THROW_ERROR("Unsupported resource type")
                 }
-                
-                auto range = mup<CD3DX12_DESCRIPTOR_RANGE1>();
-                range->Init(
-                    D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
-                    bindResource.bindCount,
-                    bindResource.registerIndex,
-                    bindResource.registerSpace,
-                    D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE,
-                    D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
-                rootParamRanges.push_back(std::move(range));
-                
-                rootParams.back().InitAsDescriptorTable(1, rootParamRanges.back().get(), D3D12_SHADER_VISIBILITY_PIXEL);
-            }
-            else
-            {
-                throw std::runtime_error("Unsupported resource type.");
             }
         }
 
@@ -278,6 +318,11 @@ namespace dt
             D3D12_SIGNATURE_PARAMETER_DESC inputParamDesc;
             THROW_IF_FAILED(reflectionPack.shaderReflection->GetInputParameterDesc(i, &inputParamDesc));
 
+            if (inputParamDesc.SystemValueType == D3D_NAME_INSTANCE_ID || inputParamDesc.SystemValueType == D3D_NAME_VERTEX_ID)
+            {
+                continue;
+            }
+
             DXGI_FORMAT fieldFormat;
             uint32_t fieldSizeB;
             GetFieldInfo(inputParamDesc, fieldFormat, fieldSizeB);
@@ -329,38 +374,37 @@ namespace dt
         }
     }
 
-    ComPtr<ID3DBlob> Shader::CompileShader(crstr filePath, crstr entryPoint, crstr target)
+    ComPtr<IDxcResult> Shader::CompileShader(crstr filePath, const wchar_t* entryPoint, const wchar_t* target)
     {
         ASSERT_THROW(Utils::AssetExists(filePath));
-        
-        ComPtr<ID3DBlob> shaderBlob;
-        ComPtr<ID3DBlob> errorBlob;
 
-        uint32_t compileFlags = 0;
-        compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+        LPCWSTR pszArgs[] = {
+            L"shader.hlsl",
+            L"-E", entryPoint,
+            L"-T", target,
+            L"-Zi", // 启用调试
+            L"-flegacy-resource-reservation"
+        };
 
-        auto absFilePath = Utils::StringToWString(Utils::ToAbsPath(filePath));
-        auto result = D3DCompileFromFile(
-            absFilePath.c_str(),
-            nullptr,
-            D3D_COMPILE_STANDARD_FILE_INCLUDE,
-            entryPoint.c_str(),
-            target.c_str(),
-            compileFlags,
-            0,
-            &shaderBlob,
-            &errorBlob);
+        ComPtr<IDxcBlobEncoding> pSourceBlob;
+        THROW_IF_FAILED(Dx()->GetDxcUtils()->LoadFile(Utils::StringToWString(Utils::ToAbsPath(filePath)).c_str(), nullptr, &pSourceBlob));
 
-        if (FAILED(result))
+        DxcBuffer sourceBuffer;
+        sourceBuffer.Ptr = pSourceBlob->GetBufferPointer();
+        sourceBuffer.Size = pSourceBlob->GetBufferSize();
+        sourceBuffer.Encoding = DXC_CP_ACP;
+
+        ComPtr<IDxcResult> result;
+        THROW_IF_FAILED(Dx()->GetDxcCompiler()->Compile(&sourceBuffer, pszArgs, _countof(pszArgs), Dx()->GetDxcIncludeHandler(), IID_PPV_ARGS(&result)));
+
+        ComPtr<IDxcBlobUtf8> pErrors;
+        THROW_IF_FAILED(result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr));
+        if (pErrors && pErrors->GetStringLength() > 0)
         {
-            if (errorBlob)
-            {
-                log_error("Compile shader error:\n%s", static_cast<const char*>(errorBlob->GetBufferPointer()));
-            }
-
+            log_error("Compile shader error:\n%s", pErrors->GetStringPointer());
             throw std::runtime_error("Failed to compile shader.");
         }
 
-        return shaderBlob;
+        return result;
     }
 }

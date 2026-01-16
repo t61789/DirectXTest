@@ -15,8 +15,9 @@ namespace dt
         DeferredLitPass();
         
         const char* GetName() override { return "Deferred Lit Pass"; }
-        void Execute() override;
+        
         void PrepareContext(RenderResources* context) override;
+        func<void(ID3D12GraphicsCommandList*)> ExecuteRenderThread() override;
 
     private:
         sp<Material> m_litMaterial;

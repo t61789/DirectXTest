@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <d3d12shader.h>
 #include <d3dcommon.h>
+#include <dxcapi.h>
 #include <optional>
 #include <directx/d3d12.h>
 #include <directx/d3dx12_root_signature.h>
@@ -10,6 +11,7 @@
 #include "const.h"
 #include "render/cbuffer.h"
 #include "render/pso.h"
+#include "render/batch_rendering/batch_renderer.h"
 
 namespace dt
 {
@@ -44,6 +46,7 @@ namespace dt
         crvec<BindResource> GetBindResources() const { return m_bindResources; }
         uint32_t GetOutputCount() const { return m_outputCount; }
         cr<nlohmann::json> GetDefaultParams() const { return m_defaultParams; }
+        uint32_t GetRootConstantCbufferRootParamIndex() const { return m_rootConstantCbufferRootParamIndex; }
         
         sp<Cbuffer> CreateCbuffer();
         
@@ -57,10 +60,12 @@ namespace dt
         void LoadOutputResources(const ReflectionPack& reflectionPack);
         void CreateRootSignature(const ReflectionPack& reflectionPack);
         
-        static void LoadShaderStage(cr<ComPtr<ID3DBlob>> blob, ReflectionPack& reflectionPack);
+        static void LoadShaderStage(cr<ComPtr<IDxcResult>> dxcResult, ReflectionPack& reflectionPack);
         static void LoadInputResources(ReflectionPack& reflectionPack);
-        static ComPtr<ID3DBlob> CompileShader(crstr filePath, crstr entryPoint, crstr target);
+        static ComPtr<IDxcResult> CompileShader(crstr filePath, const wchar_t* entryPoint, const wchar_t* target);
 
+        ComPtr<IDxcResult> m_vsDxcResult;
+        ComPtr<IDxcResult> m_psDxcResult;
         ComPtr<ID3DBlob> m_vs;
         ComPtr<ID3DBlob> m_ps;
 
@@ -78,6 +83,8 @@ namespace dt
         vec<str> m_semanticNames = {};
 
         uint32_t m_outputCount = 0;
+
+        uint32_t m_rootConstantCbufferRootParamIndex = 0;
 
         nlohmann::json m_defaultParams;
 

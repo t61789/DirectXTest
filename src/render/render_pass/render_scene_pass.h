@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "i_render_pass.h"
+#include "common/const.h"
 
 namespace dt
 {
@@ -7,6 +8,7 @@ namespace dt
     {
     public:
         const char* GetName() override { return "Render Scene Pass"; }
-        void Execute() override;
+        void ExecuteMainThread() override;
+        func<void(ID3D12GraphicsCommandList*)> ExecuteRenderThread() override;
     };
 }

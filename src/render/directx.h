@@ -4,6 +4,7 @@
 #include <dxgi1_4.h>
 #include <directx/d3dx12_root_signature.h>
 #include <wrl/client.h>
+#include <dxcapi.h>
 
 #include "descriptor_pool.h"
 #include "common/const.h"
@@ -11,6 +12,7 @@
 
 namespace dt
 {
+    class RenderThread;
     class Gui;
     class RecycleBin;
     class RenderTarget;
@@ -34,7 +36,11 @@ namespace dt
         crsp<RenderTexture> GetBackBuffer() const { return m_swapChainRenderTextures[m_backBufferIndex]; }
         crsp<RenderTarget> GetBackBufferRenderTarget() const { return m_swapChainRenderTargets[m_backBufferIndex]; }
         ID3D12CommandQueue* GetCommandQueue() const { return m_commandQueue.Get(); }
+        IDxcUtils* GetDxcUtils() const { return m_dxcUtils.Get(); }
+        IDxcCompiler3* GetDxcCompiler() const { return m_dxcCompiler.Get(); }
+        IDxcIncludeHandler* GetDxcIncludeHandler() const { return m_dxcIncludeHandler.Get(); }
 
+        void WaitForFence();
         void PresentSwapChain();
 
         ComPtr<ID3D12Resource> CreateCommittedResource(
@@ -50,6 +56,7 @@ namespace dt
 
     private:
         void CreateDebugLayer();
+        void CreateDxc();
         void CreateFactory();
         void CreateAdapter();
         void CreateOutput();
@@ -58,6 +65,7 @@ namespace dt
         void CreateCommandQueue();
         void CreateSwapChain();
         void CreateSwapChainTextures();
+        void CreateFence();
 
         ComPtr<ID3D12Debug> m_debugLayer;
         ComPtr<IDXGIFactory4> m_dxgiFactor4;
@@ -68,6 +76,9 @@ namespace dt
         DXGI_OUTPUT_DESC m_dxgiOutputDesc;
         vec<DXGI_MODE_DESC> m_dxgiOutputModes;
         DXGI_SWAP_CHAIN_DESC1 m_swapChainDesc1;
+        ComPtr<IDxcUtils> m_dxcUtils;
+        ComPtr<IDxcCompiler3> m_dxcCompiler;
+        ComPtr<IDxcIncludeHandler> m_dxcIncludeHandler;
 
         ComPtr<ID3D12Device> m_device;
         ComPtr<ID3D12CommandQueue> m_commandQueue;
@@ -81,8 +92,12 @@ namespace dt
 
         RecycleBin* m_recycleBin;
         DescriptorPool* m_descriptorPool;
-        RenderThreadMgr* m_renderThread;
+        RenderThread* m_renderThread;
         Gui* m_gui;
+        
+        ComPtr<ID3D12Fence> m_fence;
+        HANDLE m_fenceEvent;
+        uint64_t m_fenceValue = 0;
     };
 
     static DirectX* Dx() { return DirectX::Ins(); }

@@ -10,98 +10,153 @@
 
 namespace dt
 {
-    void DxResource::Upload(const void* data, const size_t sizeB)
+    void DxResource::CopyTo(crsp<DxResource> dstBuffer, const size_t dstOffset, const size_t sizeB)
     {
         assert(m_heapProperties.Type == D3D12_HEAP_TYPE_DEFAULT);
+        assert(m_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && dstBuffer->m_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER);
 
-        auto uploadBuffer = CreateUploadBuffer(data, sizeB);
-
-        RT()->AddCmd([self=shared_from_this(), uploadBuffer](ID3D12GraphicsCommandList* cmdList)
+        auto curBufferSizeB = m_desc.Width;
+        auto dstBufferSizeB = dstBuffer->m_desc.Width;
+        
+        assert(dstOffset < dstBufferSizeB && sizeB > 0);
+        
+        auto realSizeB = (std::min)(sizeB, dstBufferSizeB - dstOffset);
+        realSizeB = (std::min)(realSizeB, curBufferSizeB);
+        
+        RT()->AddCmd([self=shared_from_this(), dstBuffer, dstOffset, realSizeB](ID3D12GraphicsCommandList* cmdList)
         {
-            auto preState = self->m_state.load();
-            
-            if (preState != D3D12_RESOURCE_STATE_COPY_DEST)
+            auto preSrcState = self->m_state.load();
+            auto preDstState = dstBuffer->m_state.load();
+
+            if ((preSrcState & D3D12_RESOURCE_STATE_COPY_SOURCE) == 0)
             {
-                DxHelper::AddTransition(self, D3D12_RESOURCE_STATE_COPY_DEST);
-                DxHelper::ApplyTransitions(cmdList);
+                DxHelper::AddTransition(self, D3D12_RESOURCE_STATE_COPY_SOURCE);
+            }
+            
+            if (preDstState != D3D12_RESOURCE_STATE_COPY_DEST)
+            {
+                DxHelper::AddTransition(dstBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
+            }
+            
+            DxHelper::ApplyTransitions(cmdList);
+
+            cmdList->CopyBufferRegion(dstBuffer->GetResource(), dstOffset, self->GetResource(), 0, realSizeB);
+
+            if ((preSrcState & D3D12_RESOURCE_STATE_COPY_SOURCE) == 0)
+            {
+                DxHelper::AddTransition(self, preSrcState);
             }
 
-            cmdList->CopyResource(self->m_resource.Get(), uploadBuffer->GetResource());
-
-            if (preState != D3D12_RESOURCE_STATE_COPY_DEST)
+            if (preDstState != D3D12_RESOURCE_STATE_COPY_DEST)
             {
-                DxHelper::AddTransition(self, preState);
+                DxHelper::AddTransition(dstBuffer, preDstState);
             }
 
             DxHelper::ApplyTransitions(cmdList);
         });
     }
 
-    sp<DxResource> DxResource::Create(
-        cr<D3D12_HEAP_PROPERTIES> heapProperties,
-        cr<D3D12_RESOURCE_DESC> desc,
-        const D3D12_RESOURCE_STATES initialResourceState,
-        const D3D12_CLEAR_VALUE* pOptimizedClearValue,
-        const D3D12_HEAP_FLAGS heapFlags,
-        const wchar_t* name)
+    sp<DxResource> DxResource::Create(cr<DxResourceDesc> desc)
     {
-        auto resource = Dx()->CreateCommittedResource(
-            heapProperties,
-            desc,
-            initialResourceState,
-            pOptimizedClearValue,
-            heapFlags,
-            name);
-
-        auto result = make_recyclable<DxResource>();
-        result->m_resource = resource;
-        result->m_state = initialResourceState;
-        result->m_desc = desc;
-        result->m_heapProperties = heapProperties;
-
-        return result;
+        assert(Utils::IsMainThread());
+        
+        auto result = CreateRaw(desc);
+        return set_recyclable(result);
     }
 
-    sp<DxResource> DxResource::Create(
-        const ComPtr<ID3D12Resource>& resource,
-        const D3D12_RESOURCE_STATES curState,
-        const wchar_t* name)
+    sp<DxResource> DxResource::GetUploadBuffer(const void* data, const size_t sizeB)
     {
-        if (name)
+        assert(Utils::IsMainThread());
+        
+        DxResource* result = nullptr;
+        
+        auto it = std::find_if(m_uploadBufferPool.begin(), m_uploadBufferPool.end(), [sizeB](const DxResource* item)
         {
-            THROW_IF_FAILED(resource->SetName(name));
+            return item->m_desc.Width == sizeB;
+        });
+        if (it != m_uploadBufferPool.end())
+        {
+            result = *it;
+            m_uploadBufferPool.erase(it);
         }
 
-        D3D12_HEAP_FLAGS heapFlags;
-        D3D12_HEAP_PROPERTIES heapProperties;
-        THROW_IF_FAILED(resource->GetHeapProperties(&heapProperties, &heapFlags));
+        if (!result)
+        {
+            DxResourceDesc desc;
+            desc.heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+            desc.resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeB);
+            desc.initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+            desc.pOptimizedClearValue = nullptr;
+            desc.heapFlags = D3D12_HEAP_FLAG_NONE;
+            desc.name = L"Upload Buffer";
+            desc.unmanagedResource = nullptr;
 
-        auto result = make_recyclable<DxResource>();
-        result->m_resource = resource;
-        result->m_state = curState;
-        result->m_desc = resource->GetDesc();
-        result->m_heapProperties = heapProperties;
+            result = CreateRaw(desc);
+            THROW_IF_FAILED(result->GetResource()->Map(0, nullptr, &result->m_mappedPtr));
+        }
 
-        return result;
-    }
-    
-    sp<DxResource> DxResource::CreateUploadBuffer(const void* data, const size_t sizeB)
-    {
-        auto result = Create(
-            CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-            CD3DX12_RESOURCE_DESC::Buffer(sizeB),
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            D3D12_HEAP_FLAG_NONE,
-            L"Upload Buffer");
+        result->m_usedFrameCount = GR()->GetFrameCount();
 
         if (data)
         {
-            void* mappedData;
-            THROW_IF_FAILED(result->GetResource()->Map(0, nullptr, &mappedData));
-            memcpy(mappedData, data, sizeB);
-            result->GetResource()->Unmap(0, nullptr);
+            memcpy(result->m_mappedPtr, data, sizeB);
         }
+
+        return std::shared_ptr<DxResource>(result, [](DxResource* ptr)
+        {
+            m_uploadBufferPool.push_back(ptr);
+        });
+    }
+
+    void DxResource::ClearUploadBuffers() // TODO CALL
+    {
+        assert(Utils::IsMainThread());
+
+        vec<DxResource*> toDelete;
+        for (auto& item : m_uploadBufferPool)
+        {
+            if (GR()->GetFrameCount() - item->m_usedFrameCount > 10)
+            {
+                toDelete.push_back(item);
+            }
+        }
+
+        for (auto& item : toDelete)
+        {
+            item->m_resource->Unmap(0, nullptr);
+            delete item;
+
+            remove(m_uploadBufferPool, item);
+        }
+    }
+
+    DxResource* DxResource::CreateRaw(DxResourceDesc desc)
+    {
+        if (desc.unmanagedResource)
+        {
+            THROW_IF_FAILED(desc.unmanagedResource->GetHeapProperties(&desc.heapProperties, &desc.heapFlags));
+            desc.resourceDesc = desc.unmanagedResource->GetDesc();
+            if (desc.name)
+            {
+                THROW_IF_FAILED(desc.unmanagedResource->SetName(desc.name));
+            }
+        }
+        else
+        {
+            desc.unmanagedResource = Dx()->CreateCommittedResource(
+                desc.heapProperties,
+                desc.resourceDesc,
+                desc.initialResourceState,
+                desc.pOptimizedClearValue,
+                desc.heapFlags,
+                desc.name);
+        }
+
+        auto result = new DxResource();
+        result->m_resource = desc.unmanagedResource;
+        result->m_state = desc.initialResourceState;
+        result->m_desc = desc.resourceDesc;
+        result->m_heapProperties = desc.heapProperties;
 
         return result;
     }

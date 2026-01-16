@@ -9,14 +9,16 @@ namespace dt
     class Material;
     class RenderTexture;
 
-    class MainLightShadowPass : public IRenderPass
+    class MainLightShadowPass final : public IRenderPass
     {
     public:
         MainLightShadowPass();
         
         const char* GetName() override { return "Main Light Shadow Pass"; }
-        void Execute() override;
+        
         void PrepareContext(RenderResources* context) override;
+        void ExecuteMainThread() override;
+        func<void(ID3D12GraphicsCommandList*)> ExecuteRenderThread() override;
 
     private:
         sp<RenderTexture> m_shadowmapRt;

@@ -95,6 +95,7 @@ target_link_libraries(${PROJECT_NAME}
 		d3d12
 		dxgi
 		d3dcompiler
+		dxcompiler
 		windowscodecs
 		nlohmann_json::nlohmann_json
 		Microsoft::DirectX-Headers

@@ -31,7 +31,12 @@ namespace dt
         m_shadowViewCbuffer = msp<Cbuffer>(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER)->GetLayout());
     }
 
-    void MainLightShadowPass::Execute()
+    void MainLightShadowPass::PrepareContext(RenderResources* context)
+    {
+        context->shadowmapRt = m_shadowmapRt;
+    }
+
+    void MainLightShadowPass::ExecuteMainThread()
     {
         auto shadowVp = CameraComp::GetMainCamera()->CreateShadowVPMatrix(
             RenderRes()->mainLightDir,
@@ -40,11 +45,15 @@ namespace dt
             m_shadowmapRt->GetSize().x);
 
         shadowVp->WriteToCbuffer(m_shadowViewCbuffer.get());
-        
-        GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER)->Write(MAIN_LIGHT_SHADOW_VP, Transpose(shadowVp->vpMatrix));
-        GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER)->Write(MAIN_LIGHT_SHADOW_TEX, m_shadowmapRt->GetTextureIndex());
-        
-        RT()->AddCmd([this](ID3D12GraphicsCommandList* cmdList)
+
+        auto globalCbuffer = GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER);
+        globalCbuffer->Write(MAIN_LIGHT_SHADOW_VP, Transpose(shadowVp->vpMatrix));
+        globalCbuffer->Write(MAIN_LIGHT_SHADOW_TEX, m_shadowmapRt->GetTextureIndex());
+    }
+
+    func<void(ID3D12GraphicsCommandList*)> MainLightShadowPass::ExecuteRenderThread()
+    {
+        return [this](ID3D12GraphicsCommandList* cmdList)
         {
             ZoneScopedN("Render Scene Pass");
 
@@ -54,11 +63,6 @@ namespace dt
                 m_shadowViewCbuffer,
                 m_shadowmapRenderTarget,
                 m_drawShadowMtl);
-        });
-    }
-
-    void MainLightShadowPass::PrepareContext(RenderResources* context)
-    {
-        context->shadowmapRt = m_shadowmapRt;
+        };
     }
 }

@@ -51,6 +51,7 @@ namespace dt
         uint32_t height = 0;
         uint32_t channelCount = 0;
         uint32_t hasMipmap = false;
+        const wchar_t* name = nullptr;
 
         template <typename Archive>
         void serialize(Archive& ar, uint32_t const version);

@@ -26,6 +26,7 @@ namespace dt
         rtDesc.dxDesc.height = Window::Ins()->GetHeight();
         rtDesc.dxDesc.channelCount = 4;
         rtDesc.dxDesc.hasMipmap = false;
+        rtDesc.dxDesc.name = L"Lit Result RT";
         rtDesc.clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
         m_litResultRt = msp<RenderTexture>(rtDesc);
         m_litResultRenderTarget = RenderTarget::Create(m_litResultRt, nullptr);
@@ -39,12 +40,15 @@ namespace dt
         gBufferColorDesc.dxDesc.height = Window::Ins()->GetHeight();
         gBufferColorDesc.dxDesc.channelCount = 4;
         gBufferColorDesc.dxDesc.hasMipmap = false;
+        gBufferColorDesc.dxDesc.name = L"GBuffer Color0 RT";
         gBufferColorDesc.clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
         m_gBufferRt0 = msp<RenderTexture>(gBufferColorDesc);
+        gBufferColorDesc.dxDesc.name = L"GBuffer Color1 RT";
         gBufferColorDesc.dxDesc.format = TextureFormat::RGBA16;
         m_gBufferRt1 = msp<RenderTexture>(gBufferColorDesc);
         gBufferColorDesc.dxDesc.format = TextureFormat::R32;
         gBufferColorDesc.dxDesc.channelCount = 1;
+        gBufferColorDesc.dxDesc.name = L"GBuffer Color2 RT";
         gBufferColorDesc.clearColor = { 1.0f, 0.0f, 0.0f, 0.0f };
         m_gBufferRt2 = msp<RenderTexture>(gBufferColorDesc);
 
@@ -61,20 +65,11 @@ namespace dt
         gBufferDepthDesc.dxDesc.height = Window::Ins()->GetHeight();
         gBufferDepthDesc.dxDesc.channelCount = 1;
         gBufferDepthDesc.dxDesc.hasMipmap = false;
+        gBufferDepthDesc.dxDesc.name = L"GBuffer Depth RT";
         gBufferDepthDesc.clearColor = { 1.0f, 0.0f, 0.0f, 0.0f };
         m_gBufferRtDepth = msp<RenderTexture>(gBufferDepthDesc);
 
         m_gBufferRenderTarget = RenderTarget::Create({ m_gBufferRt0, m_gBufferRt1, m_gBufferRt2 }, m_gBufferRtDepth);
-    }
-
-    void DeferredLitPass::Execute()
-    {
-        RT()->AddCmd([this](ID3D12GraphicsCommandList* cmdList)
-        {
-            ZoneScopedN("Deferred Lit Pass");
-            
-            DxHelper::Blit(cmdList, m_litMaterial.get(), m_litResultRenderTarget);
-        });
     }
 
     void DeferredLitPass::PrepareContext(RenderResources* context)
@@ -82,5 +77,15 @@ namespace dt
         context->litResultRt = m_litResultRt;
         context->gBufferRt1 = m_gBufferRt1;
         context->gBufferRenderTarget = m_gBufferRenderTarget;
+    }
+
+    func<void(ID3D12GraphicsCommandList*)> DeferredLitPass::ExecuteRenderThread()
+    {
+        return [this](ID3D12GraphicsCommandList* cmdList)
+        {
+            ZoneScopedN("Deferred Lit Pass");
+
+            DxHelper::Blit(cmdList, m_litMaterial.get(), m_litResultRenderTarget);
+        };
     }
 }

@@ -13,8 +13,8 @@ namespace dt
     class RenderTree
     {
     public:
-        void Register(const RenderComp* renderComp);
-        void UnRegister(const RenderComp* renderComp);
+        void Register(crsp<RenderObject> renderObject);
+        void UnRegister(crsp<RenderObject> renderObject);
 
         crvecsp<RenderObject> GetRenderObjects() const { return m_renderObjects; }
 

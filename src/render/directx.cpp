@@ -29,7 +29,7 @@ namespace dt
         m_windowHwnd = Window::Ins()->GetHandle();
 
         CreateDebugLayer();
-
+        CreateDxc();
         CreateFactory();
         CreateAdapter();
         CreateOutput();
@@ -41,14 +41,19 @@ namespace dt
         
         m_recycleBin = new RecycleBin();
         m_descriptorPool = new DescriptorPool();
-        m_renderThread = new RenderThreadMgr();
+        m_renderThread = new RenderThread();
         m_gui = new Gui();
 
         CreateSwapChainTextures();
+        CreateFence();
     }
 
     DirectX::~DirectX()
     {
+        WaitForFence();
+        
+        CloseHandle(m_fenceEvent);
+        
         m_swapChainRenderTargets.clear();
         m_swapChainRenderTextures.clear();
 
@@ -65,6 +70,23 @@ namespace dt
         m_dxgiAdapter1.Reset();
         m_dxgiFactor4.Reset();
         m_debugLayer.Reset();
+    }
+    
+    void DirectX::WaitForFence()
+    {
+        m_fenceValue++;
+        THROW_IF_FAILED(Dx()->GetCommandQueue()->Signal(m_fence.Get(), m_fenceValue));
+        
+        if (m_fence->GetCompletedValue() < m_fenceValue)
+        {
+            THROW_IF_FAILED(m_fence->SetEventOnCompletion(m_fenceValue, m_fenceEvent));
+
+            {
+                ZoneScopedNC("Wait for fence", TRACY_IDLE_COLOR);
+                   
+                THROW_IF(WaitForSingleObject(m_fenceEvent, INFINITE) != WAIT_OBJECT_0, "Call wait for fence event failed.");
+            }
+        }
     }
 
     void DirectX::PresentSwapChain()
@@ -147,6 +169,13 @@ namespace dt
     {
         THROW_IF_FAILED(D3D12GetDebugInterface(IID_ID3D12Debug, &m_debugLayer));
         m_debugLayer->EnableDebugLayer();
+    }
+
+    void DirectX::CreateDxc()
+    {
+        THROW_IF_FAILED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&m_dxcUtils)));
+        THROW_IF_FAILED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&m_dxcCompiler)));
+        THROW_IF_FAILED(m_dxcUtils->CreateDefaultIncludeHandler(&m_dxcIncludeHandler));
     }
 
     void DirectX::CreateFactory()
@@ -270,7 +299,13 @@ namespace dt
             ComPtr<ID3D12Resource> buffer;
             THROW_IF_FAILED(m_dxgiSwapChain3->GetBuffer(i, IID_ID3D12Resource, &buffer));
 
-            auto dxResource = DxResource::Create(buffer, D3D12_RESOURCE_STATE_PRESENT, L"Swap Cain Buffer");
+            DxResourceDesc desc;
+            desc.unmanagedResource = buffer;
+            desc.initialResourceState = D3D12_RESOURCE_STATE_PRESENT;
+            desc.resourceDesc = buffer->GetDesc();
+            desc.name = L"Swap Cain Buffer";
+
+            auto dxResource = DxResource::Create(desc);
 
             RenderTextureDesc rtDesc;
             rtDesc.dxDesc.width = m_swapChainDesc1.Width;
@@ -285,5 +320,12 @@ namespace dt
 
             m_swapChainRenderTargets[i] = RenderTarget::Create({ m_swapChainRenderTextures[i] }, {});
         }
+    }
+
+    void DirectX::CreateFence()
+    {
+        THROW_IF_FAILED(Dx()->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_ID3D12Fence, &m_fence));
+        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        THROW_IF(m_fenceEvent == nullptr, "Failed to create fence event.");
     }
 }

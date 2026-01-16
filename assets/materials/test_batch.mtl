@@ -1,0 +1,4 @@
+{
+    "shader": "shaders/pbr_basic_batch.shader",
+    "depthWrite": true
+}

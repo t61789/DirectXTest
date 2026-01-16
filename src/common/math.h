@@ -32,6 +32,65 @@ namespace dt
             extents = XMLoadFloat3(&extentsFloat3);
         }
     };
+    
+    struct SimdVec4
+    {
+        XMVECTOR x;
+        XMVECTOR y;
+        XMVECTOR z;
+        XMVECTOR w;
+
+        SimdVec4() = default;
+        
+        explicit SimdVec4(FXMVECTOR v)
+        {
+            x = _mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, 0));
+            y = _mm_shuffle_ps(v, v, _MM_SHUFFLE(1, 1, 1, 1));
+            z = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 2, 2, 2));
+            w = _mm_shuffle_ps(v, v, _MM_SHUFFLE(3, 3, 3, 3));
+        }
+        
+        SimdVec4(cr<__m128> x, cr<__m128> y, cr<__m128> z, cr<__m128> w)
+        {
+            this->x = x;
+            this->y = y;
+            this->z = z;
+            this->w = w;
+        }
+    };
+
+    inline SimdVec4 Mul(cr<SimdVec4> a, cr<SimdVec4> b)
+    {
+        return SimdVec4(
+            XMVectorMultiply(a.x, b.x),
+            XMVectorMultiply(a.y, b.y),
+            XMVectorMultiply(a.z, b.z),
+            XMVectorMultiply(a.w, b.w));
+    }
+
+    inline SimdVec4 Add(cr<SimdVec4> a, cr<SimdVec4> b)
+    {
+        return SimdVec4(
+            XMVectorAdd(a.x, b.x),
+            XMVectorAdd(a.y, b.y),
+            XMVectorAdd(a.z, b.z),
+            XMVectorAdd(a.w, b.w));
+    }
+
+    inline SimdVec4 Sub(cr<SimdVec4> a, cr<SimdVec4> b)
+    {
+        return SimdVec4(
+            XMVectorSubtract(a.x, b.x),
+            XMVectorSubtract(a.y, b.y),
+            XMVectorSubtract(a.z, b.z),
+            XMVectorSubtract(a.w, b.w));
+    }
+
+    inline XMVECTOR Dot(cr<SimdVec4> a, cr<SimdVec4> b)
+    {
+        auto mul = Mul(a, b);
+        return XMVectorAdd(XMVectorAdd(XMVectorAdd(mul.x, mul.y), mul.z), mul.w);
+    }
 
     inline XMVECTOR QuaternionToEuler(cr<XMVECTOR> q)
     {
@@ -137,6 +196,17 @@ namespace dt
     inline float Length3(cr<XMVECTOR> a)
     {
         return XMVectorGetX(XMVector3Length(a));
+    }
+
+    inline XMVECTOR Sign4(cr<FXMVECTOR> v)
+    {
+        auto positiveMask = XMVectorGreater(v, g_XMZero);
+        auto negativeMask = XMVectorLess(v, g_XMZero);
+    
+        auto pos = XMVectorAndInt(positiveMask, g_XMOne);
+        auto neg = XMVectorAndInt(negativeMask, g_XMOne);
+
+        return XMVectorSubtract(pos, neg);
     }
 
     inline void GramSchmidtOrtho(

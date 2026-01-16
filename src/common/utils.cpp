@@ -6,6 +6,7 @@
 #include <comdef.h>
 #include <filesystem>
 #include <fstream>
+#include <random>
 #include <boost/beast/core/detail/base64.hpp>
 
 namespace dt
@@ -319,5 +320,27 @@ namespace dt
             31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
         };
         return MultiplyDeBruijnBitPosition[(uint32_t)(v * 0x077CB531U) >> 27U];
+    }
+    
+    size_t Utils::GetRandomSizeT()
+    {
+        static std::random_device rd;
+        static std::mt19937_64 gen(rd()); // 使用64位引擎，因为size_t可能是64位
+        static std::uniform_int_distribution<size_t> dis;
+
+        return dis(gen);
+    }
+    
+    uint32_t Utils::Reserve(const uint32_t originSize, const uint32_t targetSize, bool& changed)
+    {
+        auto curSize = originSize;
+        while (curSize < targetSize)
+        {
+            curSize <<= 1;
+        }
+
+        changed = curSize != originSize;
+
+        return curSize;
     }
 }

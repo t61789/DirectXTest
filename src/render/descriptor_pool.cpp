@@ -83,7 +83,7 @@ namespace dt
         m_dsvDescSizeB = Dx()->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
     }
 
-    sp<ShaderResource> DescriptorPool::AllocSrv(const DxTexture* dxTexture)
+    sp<ShaderResource> DescriptorPool::AllocTextureSrv(const DxTexture* dxTexture)
     {
         auto srvHandle = AllocEmptySrvHandle();
 
@@ -134,6 +134,32 @@ namespace dt
         descHandle->m_pool = this;
         descHandle->m_srvPoolHandle = srvHandle;
         descHandle->m_samplerPoolHandle = samplerHandle;
+
+        return descHandle;
+    }
+
+    sp<ShaderResource> DescriptorPool::AllocBufferSrv(const DxResource* dxResource, uint32_t sizeB)
+    {
+        auto srvHandle = AllocEmptySrvHandle();
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+        srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Buffer.FirstElement = 0;
+        srvDesc.Buffer.NumElements = sizeB / 4;
+        srvDesc.Buffer.StructureByteStride = 0;
+        srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+
+        Dx()->GetDevice()->CreateShaderResourceView(
+            dxResource->GetResource(),
+            &srvDesc,
+            srvHandle->data.cpuHandle);
+
+        auto descHandle = msp<ShaderResource>();
+        descHandle->m_pool = this;
+        descHandle->m_srvPoolHandle = srvHandle;
+        descHandle->m_samplerPoolHandle = nullptr;
 
         return descHandle;
     }

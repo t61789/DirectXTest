@@ -4,6 +4,8 @@
 #include <directx/d3dx12_core.h>
 
 #include "directx.h"
+#include "dx_buffer.h"
+#include "dx_resource.h"
 #include "common/utils.h"
 #include "game/game_resource.h"
 
@@ -42,15 +44,19 @@ namespace dt
     Cbuffer::Cbuffer(sp<CbufferLayout> layout):
         m_layout(std::move(layout))
     {
-        CreateDxResource();
+        m_dxBuffer = DxBuffer::Create(m_layout->desc.Size, L"Cbuffer");
     }
 
     Cbuffer::~Cbuffer()
     {
-        m_dxResource->Unmap(0, nullptr);
-        m_dxResource.Reset();
+        m_dxBuffer.reset();
     }
-    
+
+    ID3D12Resource* Cbuffer::GetDxResource() const
+    {
+        return m_dxBuffer->GetDxResource()->GetResource();
+    }
+
     bool Cbuffer::HasField(const string_hash nameId, const ParamType type, const uint32_t repeatCount) const
     {
         return find_if(m_layout->fields, [this, nameId, type, repeatCount](cr<std::pair<string_hash, CbufferLayout::Field>> pair)
@@ -62,79 +68,17 @@ namespace dt
 
     bool Cbuffer::Write(const string_hash name, const void* data, const uint32_t sizeB)
     {
+        assert(Utils::IsMainThread());
+        
         auto field = find(m_layout->fields, name);
         if (!field)
         {
             return false;
         }
         auto dataSizeB = (std::min)(field->logicSizeB, sizeB);
+
+        m_dxBuffer->Write(field->offsetB, dataSizeB, data);
         
-        if (Utils::IsMainThread())
-        {
-            if (auto modify = find(m_modifies, field->name))
-            {
-                memcpy(modify->data(), data, dataSizeB);
-            }
-            else
-            {
-                vec<uint8_t> modifyData(dataSizeB);
-                memcpy(modifyData.data(), data, dataSizeB);
-
-                m_modifies.emplace_back(field->name, std::move(modifyData));
-            }
-
-            s_dirtyCbuffers.insert(shared_from_this());
-        }
-        else
-        {
-            memcpy(static_cast<uint8_t*>(m_gpuWriteDest) + field->offsetB, data, dataSizeB);
-        }
-
         return true;
-    }
-
-    void Cbuffer::ApplyModifies()
-    {
-        assert(Utils::IsMainThread());
-
-        for (auto& [fieldName, data] : m_modifies)
-        {
-            auto field = find(m_layout->fields, fieldName);
-            assert(field);
-
-            memcpy(static_cast<uint8_t*>(m_gpuWriteDest) + field->offsetB, data.data(), data.size());
-        }
-
-        m_modifies.clear();
-    }
-
-    void Cbuffer::UpdateDirtyCbuffers()
-    {
-        assert(Utils::IsMainThread());
-
-        for (auto& cb : s_dirtyCbuffers)
-        {
-            cb->ApplyModifies();
-        }
-
-        s_dirtyCbuffers.clear();
-    }
-
-    void Cbuffer::CreateDxResource()
-    {
-        CD3DX12_HEAP_PROPERTIES cbHeapProps(D3D12_HEAP_TYPE_UPLOAD); // TODO 修改了才用Upload
-        CD3DX12_RESOURCE_DESC cbHeapDesc = CD3DX12_RESOURCE_DESC::Buffer(m_layout->desc.Size);
-        m_dxResource = Dx()->CreateCommittedResource(
-            cbHeapProps,
-            cbHeapDesc,
-            D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-            nullptr,
-            D3D12_HEAP_FLAG_NONE,
-            L"Cbuffer");
-        CD3DX12_RANGE range(0, 0);
-        THROW_IF_FAILED(m_dxResource->Map(0, &range, &m_gpuWriteDest));
-
-        vec<uint8_t> emptyData(m_layout->desc.Size);
-        memcpy(m_gpuWriteDest, emptyData.data(), emptyData.size());
     }
 }

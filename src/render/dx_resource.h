@@ -8,6 +8,17 @@
 namespace dt
 {
     using namespace Microsoft::WRL;
+
+    struct DxResourceDesc
+    {
+        D3D12_HEAP_PROPERTIES heapProperties = {};
+        D3D12_RESOURCE_DESC resourceDesc = {};
+        D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_COMMON;
+        D3D12_CLEAR_VALUE* pOptimizedClearValue = nullptr;
+        D3D12_HEAP_FLAGS heapFlags = D3D12_HEAP_FLAG_NONE;
+        const wchar_t* name = nullptr;
+        ComPtr<ID3D12Resource> unmanagedResource = nullptr;
+    };
     
     class DxResource : public std::enable_shared_from_this<DxResource>, public IRecyclable
     {
@@ -23,28 +34,25 @@ namespace dt
         ID3D12Resource* GetResource() const { return m_resource.Get(); }
         D3D12_RESOURCE_STATES GetState() const { return m_state; }
         
-        void Upload(const void* data, size_t sizeB);
+        void CopyTo(crsp<DxResource> dstBuffer, size_t dstOffset, size_t sizeB);
         
-        static sp<DxResource> Create(
-            cr<D3D12_HEAP_PROPERTIES> heapProperties,
-            cr<D3D12_RESOURCE_DESC> desc,
-            D3D12_RESOURCE_STATES initialResourceState,
-            const D3D12_CLEAR_VALUE* pOptimizedClearValue,
-            D3D12_HEAP_FLAGS heapFlags,
-            const wchar_t* name);
-
-        static sp<DxResource> Create(
-            const ComPtr<ID3D12Resource>& resource,
-            D3D12_RESOURCE_STATES curState,
-            const wchar_t* name);
-
-        static sp<DxResource> CreateUploadBuffer(const void* data, size_t sizeB);
+        static sp<DxResource> Create(cr<DxResourceDesc> desc);
+        static sp<DxResource> GetUploadBuffer(const void* data, size_t sizeB);
+        static void ClearUploadBuffers();
 
     private:
+        static DxResource* CreateRaw(DxResourceDesc desc);
+            
         ComPtr<ID3D12Resource> m_resource;
         std::atomic<D3D12_RESOURCE_STATES> m_state;
         D3D12_RESOURCE_DESC m_desc;
         D3D12_HEAP_PROPERTIES m_heapProperties;
+
+        // for upload buffer only
+        uint32_t m_usedFrameCount = 0;
+        void* m_mappedPtr = nullptr;
+
+        inline static vec<DxResource*> m_uploadBufferPool;
 
         friend class DxHelper;
     };

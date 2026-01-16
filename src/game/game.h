@@ -3,6 +3,7 @@
 
 namespace dt
 {
+    class BatchRenderer;
     class Scene;
     class RenderPipeline;
     class GameResource;
@@ -28,6 +29,7 @@ namespace dt
         sp<RenderPipeline> m_renderPipeline;
         sp<Scene> m_scene;
         sp<DirectX> m_directx;
+        sp<BatchRenderer> m_batchRenderer;
 
         uint64_t m_frameCount = 0;
         LARGE_INTEGER m_timeCount;

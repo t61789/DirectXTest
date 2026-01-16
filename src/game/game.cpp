@@ -7,6 +7,7 @@
 #include "game_resource.h"
 #include "objects/scene.h"
 #include "render/render_pipeline.h"
+#include "render/batch_rendering/batch_renderer.h"
 
 namespace dt
 {
@@ -17,6 +18,7 @@ namespace dt
         m_gameStartTimeCount = m_timeCount;
 
         m_directx = msp<DirectX>();
+        m_batchRenderer = msp<BatchRenderer>();
 
         m_gameResource = msp<GameResource>();
         m_gameResource->m_screenWidth = screenWidth;
@@ -33,6 +35,7 @@ namespace dt
         m_renderPipeline.reset();
         m_gameResource.reset();
 
+        m_batchRenderer.reset();
         m_directx.reset();
     }
 

@@ -1,6 +1,7 @@
 ﻿#include "final_pass.h"
 
 #include <imgui_impl_dx12.h>
+#include <directx/d3d12.h>
 
 #include "common/render_texture.h"
 #include "game/game_resource.h"
@@ -20,16 +21,20 @@ namespace dt
         m_blitMaterial = Material::CreateFromShader("shaders/blit.shader");
     }
 
-    void FinalPass::Execute()
+    void FinalPass::ExecuteMainThread()
     {
-        RT()->AddCmd([this, imguiDrawData=ImGui::GetDrawData()](ID3D12GraphicsCommandList* cmdList)
+        m_blitMaterial->GetCbuffer()->Write(MAIN_TEX, RenderRes()->litResultRt->GetTextureIndex());
+    }
+
+    func<void(ID3D12GraphicsCommandList*)> FinalPass::ExecuteRenderThread()
+    {
+        return [this](ID3D12GraphicsCommandList* cmdList)
         {
             ZoneScopedN("Final Pass");
             
-            m_blitMaterial->GetCbuffer()->Write(MAIN_TEX, RenderRes()->litResultRt->GetTextureIndex());
             DxHelper::Blit(cmdList, m_blitMaterial.get(), Dx()->GetBackBufferRenderTarget());
 
-            ImGui_ImplDX12_RenderDrawData(imguiDrawData, cmdList);
+            ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdList);
             
             for (auto& rt : Dx()->GetBackBufferRenderTarget()->GetColorAttachments())
             {
@@ -37,8 +42,17 @@ namespace dt
             }
 
             DxHelper::ApplyTransitions(cmdList);
-        });
+            
+            THROW_IF_FAILED(cmdList->Close());
+            
+            vec<ID3D12CommandList*> cmdLists;
+            cmdLists.push_back(cmdList);
+            Dx()->GetCommandQueue()->ExecuteCommandLists(static_cast<UINT>(cmdLists.size()), cmdLists.data());
 
-        RenderThreadMgr::Ins()->ExecuteAllThreads();
+            Dx()->WaitForFence();
+            Dx()->PresentSwapChain();
+
+            RT()->ResetCmdList();
+        };
     }
 }

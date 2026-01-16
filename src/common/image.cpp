@@ -54,7 +54,7 @@ namespace dt
         }
 
         auto result = AssetCache::GetFromCache<Image, ImageCache>(path);
-        result->m_shaderResource = DescriptorPool::Ins()->AllocSrv(result->m_dxTexture.get());
+        result->m_shaderResource = DescriptorPool::Ins()->AllocTextureSrv(result->m_dxTexture.get());
         
         GR()->RegisterResource(path, result);
         result->m_path = path;
@@ -223,7 +223,7 @@ namespace dt
         auto mipmapCount = cache.desc.GetMipmapCount();
         auto subResourcesCount = cache.mipmaps.size();
         const UINT64 uploadBufferSize = GetRequiredIntermediateSize(dxTexture->GetDxResource()->GetResource(), 0, subResourcesCount);
-        auto uploadBuffer = DxResource::CreateUploadBuffer(nullptr, uploadBufferSize);
+        auto uploadBuffer = DxResource::GetUploadBuffer(nullptr, uploadBufferSize);
 
         RT()->AddCmd([dxTexture, cache=std::move(cache), subResourcesCount, mipmapCount, uploadBuffer](ID3D12GraphicsCommandList* cmdList)
         {

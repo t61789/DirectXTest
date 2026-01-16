@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#include <d3d12.h>
+
+#include "common/const.h"
+
 namespace dt
 {
     struct RenderResources;
@@ -15,8 +19,8 @@ namespace dt
         IRenderPass& operator=(IRenderPass&& other) noexcept = delete;
         
         virtual const char* GetName() = 0;
-        virtual void Execute() = 0;
-        
         virtual void PrepareContext(RenderResources* context) {}
+        virtual void ExecuteMainThread() {}
+        virtual func<void(ID3D12GraphicsCommandList*)> ExecuteRenderThread() { return nullptr; }
     };
 }

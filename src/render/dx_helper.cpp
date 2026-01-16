@@ -72,8 +72,8 @@ namespace dt
         // bind 2d textures
         auto bindResource = find_if(shader->GetBindResources(), [](cr<Shader::BindResource> x)
         {
-            static auto textureRegisterType = GetRegisterType(D3D_SIT_TEXTURE);
-            return x.resourceName == BINDLESS_2D_TEXTURES && x.registerType == textureRegisterType;
+            static auto registerType = GetRegisterType(D3D_SIT_TEXTURE);
+            return x.resourceName == BINDLESS_2D_TEXTURES && x.registerType == registerType;
         });
 
         if (bindResource)
@@ -86,8 +86,22 @@ namespace dt
         // bind cube textures
         bindResource = find_if(shader->GetBindResources(), [](cr<Shader::BindResource> x)
         {
-            static auto textureRegisterType = GetRegisterType(D3D_SIT_TEXTURE);
-            return x.resourceName == BINDLESS_CUBE_TEXTURES && x.registerType == textureRegisterType;
+            static auto registerType = GetRegisterType(D3D_SIT_TEXTURE);
+            return x.resourceName == BINDLESS_CUBE_TEXTURES && x.registerType == registerType;
+        });
+
+        if (bindResource)
+        {
+            cmdList->SetGraphicsRootDescriptorTable(
+                bindResource->rootParameterIndex,
+                DescriptorPool::Ins()->GetSrvDescHeap()->GetGPUDescriptorHandleForHeapStart());
+        }
+        
+        // bind byte buffers
+        bindResource = find_if(shader->GetBindResources(), [](cr<Shader::BindResource> x)
+        {
+            static auto registerType = GetRegisterType(D3D_SIT_BYTEADDRESS);
+            return x.resourceName == BINDLESS_BYTE_BUFFERS && x.registerType == registerType;
         });
 
         if (bindResource)
@@ -100,8 +114,8 @@ namespace dt
         // bind samplers
         bindResource = find_if(shader->GetBindResources(), [](cr<Shader::BindResource> x)
         {
-            static auto textureRegisterType = GetRegisterType(D3D_SIT_SAMPLER);
-            return x.resourceName == BINDLESS_SAMPLERS && x.registerType == textureRegisterType;
+            static auto registerType = GetRegisterType(D3D_SIT_SAMPLER);
+            return x.resourceName == BINDLESS_SAMPLERS && x.registerType == registerType;
         });
 
         if (bindResource)
@@ -170,14 +184,15 @@ namespace dt
     {
         switch (resourceType)
         {
-            case D3D_SIT_CBUFFER:
-                return 0;
-            case D3D_SIT_TEXTURE:
-                return 1;
-            case D3D_SIT_SAMPLER:
-                return 2;
-            default:
-                THROW_ERROR("Invalid resource type");
+        case D3D_SIT_CBUFFER:
+            return 0;
+        case D3D_SIT_TEXTURE:
+        case D3D_SIT_BYTEADDRESS:
+            return 1;
+        case D3D_SIT_SAMPLER:
+            return 2;
+        default:
+            THROW_ERROR("Invalid resource type");
         }
     }
 
@@ -297,6 +312,11 @@ namespace dt
         crsp<RenderTarget> renderTarget,
         crsp<Material> replaceMaterial)
     {
+        if (renderObjects.empty())
+        {
+            return;
+        }
+        
         SetRenderTarget(cmdList, renderTarget, true);
         
         Shader* shader = nullptr;

@@ -10,6 +10,7 @@
 
 namespace dt
 {
+    class DxResource;
     class DxTexture;
     enum class TextureFilterMode : uint8_t;
     enum class TextureWrapMode : uint8_t;
@@ -57,7 +58,8 @@ namespace dt
         ID3D12DescriptorHeap* GetSrvDescHeap() const { return m_srvDescHeap.Get(); }
         ID3D12DescriptorHeap* GetSamplerDescHeap() const { return m_samplerDescHeap.Get(); }
 
-        sp<ShaderResource> AllocSrv(const DxTexture* dxTexture);
+        sp<ShaderResource> AllocTextureSrv(const DxTexture* dxTexture);
+        sp<ShaderResource> AllocBufferSrv(const DxResource* dxResource, uint32_t sizeB);
         sp<SrvPool::Handle> AllocEmptySrvHandle();
         void AllocRtv(
             crvec<DxTexture*> colorAttachments,

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "common/event.h"
 #include "common/string_handle.h"
 #include "common/utils.h"
 

@@ -26,11 +26,24 @@ namespace dt
         m_mainCameraViewCbuffer = msp<Cbuffer>(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER)->GetLayout());
     }
 
-    void PreparePass::Execute()
+    void PreparePass::PrepareContext(RenderResources* context)
+    {
+        RenderRes()->screenSize = { Window::Ins()->GetWidth(), Window::Ins()->GetHeight() };
+        auto aspect = static_cast<float>(RenderRes()->screenSize.x) / static_cast<float>(RenderRes()->screenSize.y);
+        RenderRes()->mainCameraVp = CameraComp::GetMainCamera()->CreateVPMatrix(aspect);
+        RenderRes()->mainCameraViewCbuffer = m_mainCameraViewCbuffer;
+        RenderRes()->mainCameraVp->WriteToCbuffer(RenderRes()->mainCameraViewCbuffer.get());
+        RenderRes()->mainCameraVp->WriteToCbuffer(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
+        RenderRes()->renderObjects = GR()->mainScene->GetRenderTree()->GetRenderObjects();
+        GetGlobalCbuffer()->Write(SKYBOX_TEX, GR()->skyboxTex->GetTextureIndex());
+
+        PrepareLights();
+    }
+
+    void PreparePass::ExecuteMainThread()
     {
         TransformComp::UpdateAllDirtyComps();
-        RenderThreadMgr::Ins()->WaitForDone();
-        
+
         RecycleBin::Ins()->Flush();
         
         ImGui_ImplWin32_NewFrame();
@@ -43,34 +56,18 @@ namespace dt
         ImGui::End();
         
         ImGui::Render();
+    }
 
-        *RenderRes() = RenderResources();
-        RenderRes()->screenSize = { Window::Ins()->GetWidth(), Window::Ins()->GetHeight() };
-        auto aspect = static_cast<float>(RenderRes()->screenSize.x) / static_cast<float>(RenderRes()->screenSize.y);
-        RenderRes()->mainCameraVp = CameraComp::GetMainCamera()->CreateVPMatrix(aspect);
-        RenderRes()->mainCameraViewCbuffer = m_mainCameraViewCbuffer;
-        RenderRes()->mainCameraVp->WriteToCbuffer(RenderRes()->mainCameraViewCbuffer.get());
-        RenderRes()->mainCameraVp->WriteToCbuffer(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
-        RenderRes()->renderObjects = GR()->mainScene->GetRenderTree()->GetRenderObjects();
-        GetGlobalCbuffer()->Write(SKYBOX_TEX, GR()->skyboxTex->GetTextureIndex());
-
-        PrepareLights();
-
-        for (auto& pass : RenderPipeline::Ins()->GetPasses())
-        {
-            pass->PrepareContext(RenderRes());
-        }
-        
-        Cbuffer::UpdateDirtyCbuffers();
-        
-        RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
+    func<void(ID3D12GraphicsCommandList*)> PreparePass::ExecuteRenderThread()
+    {
+        return [](ID3D12GraphicsCommandList* cmdList)
         {
             ZoneScopedN("Prepare Pass");
 
             ImGui::SetCurrentContext(Gui::Ins()->GetMainThreadContext());
 
             DxHelper::PrepareCmdList(cmdList);
-        });
+        };
     }
 
     void PreparePass::PrepareLights()

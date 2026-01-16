@@ -7,12 +7,11 @@
 
 namespace dt
 {
-    void RenderTree::Register(const RenderComp* renderComp)
+    void RenderTree::Register(crsp<RenderObject> renderObject)
     {
-        auto ro = renderComp->GetRenderObject();
-        assert(!ExistsRenderObject(ro));
+        assert(!ExistsRenderObject(renderObject));
         
-        m_renderObjects.push_back(ro);
+        m_renderObjects.push_back(renderObject);
 
         std::sort(m_renderObjects.begin(), m_renderObjects.end(), [](crsp<RenderObject> a, crsp<RenderObject> b)
         {
@@ -32,12 +31,11 @@ namespace dt
         });
     }
 
-    void RenderTree::UnRegister(const RenderComp* renderComp)
+    void RenderTree::UnRegister(crsp<RenderObject> renderObject)
     {
-        auto ro = renderComp->GetRenderObject();
-        assert(ExistsRenderObject(ro));
+        assert(ExistsRenderObject(renderObject));
 
-        remove(m_renderObjects, ro);
+        remove(m_renderObjects, renderObject);
     }
 
     bool RenderTree::ExistsRenderObject(crsp<RenderObject> renderObject)

@@ -17,7 +17,7 @@ namespace dt
     {
         ASSERT_THROW(desc.width > 0 && desc.height > 0);
 
-        auto dxResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+        auto resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
             GetDxgiFormat(desc.format),
             desc.width,
             desc.height,
@@ -27,13 +27,16 @@ namespace dt
             0,
             D3D12_RESOURCE_FLAG_NONE);
 
-        auto dxResource = DxResource::Create(
-            CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            dxResourceDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr,
-            D3D12_HEAP_FLAG_NONE,
-            L"Image");
+        DxResourceDesc dxResourceDesc;
+        dxResourceDesc.heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+        dxResourceDesc.resourceDesc = resourceDesc;
+        dxResourceDesc.initialResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+        dxResourceDesc.pOptimizedClearValue = nullptr;
+        dxResourceDesc.heapFlags = D3D12_HEAP_FLAG_NONE;
+        dxResourceDesc.name = L"Image";
+        dxResourceDesc.unmanagedResource = nullptr;
+
+        auto dxResource = DxResource::Create(dxResourceDesc);
 
         auto result = msp<DxTexture>();
         result->m_desc = desc;
@@ -46,16 +49,6 @@ namespace dt
     {
         assert(desc.type == TextureType::TEXTURE_2D);
         
-        auto dxResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-            GetDxgiFormat(desc.format),
-            desc.width,
-            desc.height,
-            1,
-            1,
-            1,
-            0,
-            GetRenderTargetResourceFlag(desc.format));
-
         D3D12_CLEAR_VALUE clearValue;
         clearValue.Format = GetClearFormat(desc.format);
         clearValue.Color[0] = clearColor.x;
@@ -72,13 +65,26 @@ namespace dt
         }
         else
         {
-            resultDxResource = DxResource::Create(
-                CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-                dxResourceDesc,
-                GetInitState(desc.format),
-                &clearValue,
-                D3D12_HEAP_FLAG_NONE,
-                L"Image");
+            auto resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+                GetDxgiFormat(desc.format),
+                desc.width,
+                desc.height,
+                1,
+                1,
+                1,
+                0,
+                GetRenderTargetResourceFlag(desc.format));
+
+            DxResourceDesc dxResourceDesc;
+            dxResourceDesc.heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+            dxResourceDesc.resourceDesc = resourceDesc;
+            dxResourceDesc.initialResourceState = GetInitState(desc.format);
+            dxResourceDesc.pOptimizedClearValue = &clearValue;
+            dxResourceDesc.heapFlags = D3D12_HEAP_FLAG_NONE;
+            dxResourceDesc.name = desc.name ? desc.name : L"RenderTexture";
+            dxResourceDesc.unmanagedResource = nullptr;
+            
+            resultDxResource = DxResource::Create(dxResourceDesc);
         }
 
         auto result = msp<DxTexture>();

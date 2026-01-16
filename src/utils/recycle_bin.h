@@ -63,6 +63,18 @@ namespace dt
             m_garbage.erase(it);
         }
     }
+    
+    template<typename T>
+    static std::shared_ptr<T> set_recyclable(T* rawPtr)
+    {
+        assert(Utils::IsMainThread());
+        
+        auto curFrame = GR() ? GR()->GetFrameCount() : 0;
+        return std::shared_ptr<T>(rawPtr, [curFrame](T* ptr)
+        {
+            RecycleBin::Ins()->Add(static_cast<IRecyclable*>(ptr), curFrame);
+        });
+    }
 
     template<typename T, typename... Args>
     static std::shared_ptr<T> make_recyclable(Args&&... args)
@@ -71,10 +83,6 @@ namespace dt
         
         T* rawPtr = new T(std::forward<Args>(args)...);
 
-        auto curFrame = GR() ? GR()->GetFrameCount() : 0;
-        return std::shared_ptr<T>(rawPtr, [curFrame](T* ptr)
-        {
-            RecycleBin::Ins()->Add(static_cast<IRecyclable*>(ptr), curFrame);
-        });
+        return set_recyclable(rawPtr);
     }
 }

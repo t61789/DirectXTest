@@ -13,8 +13,9 @@ namespace dt
         FinalPass();
         
         const char* GetName() override { return "Prepare Pass"; }
-        
-        void Execute() override;
+
+        void ExecuteMainThread() override;
+        func<void(ID3D12GraphicsCommandList*)> ExecuteRenderThread() override;
 
     private:
         sp<Material> m_blitMaterial;

@@ -12,6 +12,7 @@
 
 namespace dt
 {
+    class DxBuffer;
     using namespace Microsoft::WRL;
     
     class Mesh final : public IResource
@@ -25,15 +26,15 @@ namespace dt
         
         cr<StringHandle> GetPath() override { return m_path; }
         Bounds GetBounds() const { return m_bounds; }
-        uint32_t GetVertexDataStrideB() const { return m_vertexDataStrideB; }
+        uint32_t GetVertexDataStrideF() const { return m_vertexDataStrideF; }
         crvec<float> GetVertexData() const { return m_vertexData; }
         crvec<uint32_t> GetIndexData() const { return m_indexData; }
         crumap<VertexAttr, VertexAttrInfo> GetVertexAttribInfo() const { return m_vertexAttribInfo; }
         crvec<D3D12_INPUT_ELEMENT_DESC> GetInputLayout() const { return m_inputLayout; }
-        cr<D3D12_VERTEX_BUFFER_VIEW> GetVertexBufferView() const { return m_vertexBufferView; }
-        cr<D3D12_INDEX_BUFFER_VIEW> GetIndexBufferView() const { return m_indexBufferView; }
+        cr<D3D12_VERTEX_BUFFER_VIEW> GetVertexBufferView() const;
+        cr<D3D12_INDEX_BUFFER_VIEW> GetIndexBufferView() const;
         
-        uint32_t GetVertexCount() const { return static_cast<uint32_t>(GetVertexData().size() * sizeof(float) / GetVertexDataStrideB()); }
+        uint32_t GetVertexCount() const { return static_cast<uint32_t>(GetVertexData().size() / GetVertexDataStrideF()); }
         uint32_t GetIndicesCount() const { return static_cast<uint32_t>(GetIndexData().size()); }
 
         static sp<Mesh> LoadFromFile(crstr modelPath);
@@ -75,7 +76,7 @@ namespace dt
         
         Bounds m_bounds;
         StringHandle m_path;
-        uint32_t m_vertexDataStrideB;
+        uint32_t m_vertexDataStrideF;
         uint32_t m_vertexCount;
         umap<VertexAttr, VertexAttrInfo> m_vertexAttribInfo;
         vec<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
@@ -83,11 +84,8 @@ namespace dt
         vec<float> m_vertexData;
         vec<uint32_t> m_indexData;
 
-        sp<DxResource> m_vertexBuffer;
-        sp<DxResource> m_indexBuffer;
-
-        D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-        D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+        sp<DxBuffer> m_vertexBuffer;
+        sp<DxBuffer> m_indexBuffer;
         
         friend class MeshCacheMgr;
     };

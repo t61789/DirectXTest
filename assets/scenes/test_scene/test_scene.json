@@ -104,17 +104,7 @@
             "comps": [
                 {
                     "name": "TransformComp",
-                    "scale": [
-                        1,
-                        1,
-                        1
-                    ],
                     "position": [
-                        0,
-                        0,
-                        0
-                    ],
-                    "rotation": [
                         0,
                         0,
                         0
@@ -123,7 +113,8 @@
                 {
                     "name": "RenderComp",
                     "mesh": "meshes/beast.obj",
-                    "material": "materials/test.mtl"
+                    "material": "materials/test_batch.mtl",
+                    "enable_batch": true
                 }
             ],
             "children": [
@@ -141,7 +132,8 @@
                         {
                             "name": "RenderComp",
                             "mesh": "meshes/smooth_cube.obj",
-                            "material": "materials/test.mtl"
+                            "material": "materials/test_batch.mtl",
+                            "enable_batch": true
                         }
                     ]
                 }
@@ -171,7 +163,8 @@
                 {
                     "name": "RenderComp",
                     "mesh": "built_in/meshes/quad.obj",
-                    "material": "materials/test.mtl"
+                    "material": "materials/test_batch.mtl",
+                    "enable_batch": true
                 }
             ]
         }

@@ -10,6 +10,7 @@
 
 namespace dt
 {
+    class DxBuffer;
     using namespace Microsoft::WRL;
 
     struct CbufferLayout
@@ -44,7 +45,7 @@ namespace dt
         Cbuffer& operator=(Cbuffer&& other) noexcept = delete;
 
         sp<CbufferLayout> GetLayout() const { return m_layout; }
-        cr<ComPtr<ID3D12Resource>> GetDxResource() const { return m_dxResource; }
+        ID3D12Resource* GetDxResource() const;
         
         bool HasField(string_hash nameId, ParamType type, uint32_t repeatCount) const;
 
@@ -55,17 +56,13 @@ namespace dt
         static void UpdateDirtyCbuffers();
 
     private:
-        void CreateDxResource();
         void ApplyModifies();
 
         StringHandle m_name;
         
-        void* m_gpuWriteDest;
-        ComPtr<ID3D12Resource> m_dxResource;
+        sp<DxBuffer> m_dxBuffer;
 
         sp<CbufferLayout> m_layout;
-
-        vecpair<string_hash, vec<uint8_t>> m_modifies; // <fieldName, data>
 
         inline static std::set<sp<Cbuffer>> s_dirtyCbuffers;
     };

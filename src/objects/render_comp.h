@@ -16,7 +16,6 @@ namespace dt
     class RenderComp final : public Comp
     {
     public:
-        void Awake() override;
         void Start() override;
         void OnEnable() override;
         void OnDisable() override;
@@ -32,10 +31,14 @@ namespace dt
         void LoadFromJson(const nlohmann::json& objJson) override;
 
     private:
+        void CreateRenderObject();
+        void ClearRenderObject();
+        
         sp<Mesh> m_mesh = nullptr;
         sp<Material> m_material = nullptr;
         sp<RenderObject> m_renderObject = nullptr;
-    
+
+        bool m_enableBatch = false;
         bool m_transformDirty = true;
         Bounds m_worldBounds;
         EventHandler m_onTransformDirtyHandler = 0;

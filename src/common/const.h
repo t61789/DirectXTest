@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 #include "string_handle.h"
+#include "utils/simple_list.h"
 
 namespace dt
 {
@@ -30,12 +31,13 @@ namespace dt
     #define THROW_IF_FAILED(cond) if (auto hr = (cond); FAILED(hr)) throw std::runtime_error("The execution of d3d command failed: " + Utils::ToString(hr))
     #define ASSERT_THROW(cond) if (!(cond)) throw std::runtime_error("Assertion failed: " + std::string(#cond))
     #define ASSERT_THROWM(cond, msg) if (!(cond)) throw std::runtime_error(msg)
-    
+
     #define STRING_HANDLE(KEY, VALUE) static auto KEY = StringHandle(#VALUE);
 
     STRING_HANDLE(GLOBAL_CBUFFER, GlobalCBuffer)
     STRING_HANDLE(PER_VIEW_CBUFFER, PerViewCBuffer)
     STRING_HANDLE(PER_OBJECT_CBUFFER, PerObjectCBuffer)
+    STRING_HANDLE(ROOT_CONSTANTS_CBUFFER, RootConstantsCBuffer)
     STRING_HANDLE(PER_MATERIAL_CBUFFER, PerMaterialCBuffer)
 
     STRING_HANDLE(V, _V)
@@ -49,6 +51,7 @@ namespace dt
     STRING_HANDLE(CAMERA_POSITION_WS, _CameraPositionWS)
     STRING_HANDLE(BINDLESS_2D_TEXTURES, _Bindless2dTextures)
     STRING_HANDLE(BINDLESS_CUBE_TEXTURES, _BindlessCubeTextures)
+    STRING_HANDLE(BINDLESS_BYTE_BUFFERS, _BindlessByteBuffers)
     STRING_HANDLE(BINDLESS_SAMPLERS, _BindlessSamplers)
     STRING_HANDLE(GBUFFER_0_TEX, _GBuffer0Tex)
     STRING_HANDLE(GBUFFER_1_TEX, _GBuffer1Tex)
@@ -62,8 +65,15 @@ namespace dt
     STRING_HANDLE(SHC, _Shc)
     STRING_HANDLE(MAIN_LIGHT_SHADOW_TEX, _MainLightShadowTex)
     STRING_HANDLE(MAIN_LIGHT_SHADOW_VP, _MainLightShadowVP)
+    STRING_HANDLE(BATCH_MATRICES, _BatchMatrices)
+    STRING_HANDLE(BATCH_INDICES, _BatchIndices)
+    STRING_HANDLE(BASE_INSTANCE_ID, _BaseInstanceId)
 
     static constexpr uint32_t MAX_REGISTER_COUNT = 16;
+    static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_REGISTER_INDEX = 3;
+    static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_REGISTER_SPACE = 1;
+    static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_32_BIT_COUNT = 1;
+    static constexpr uint32_t ROOT_CONSTANTS_BASE_INSTANCE_ID_32_BIT_OFFSET = 0;
     static const auto UNNAMED_OBJECT = StringHandle("Unnamed Object");
     
     template <typename T>
@@ -127,6 +137,10 @@ namespace dt
     using string_hash = size_t;
     template <typename Sig>
     using func = std::function<Sig>;
+    using task = std::function<void()>;
+    template <typename T>
+    using sl = SimpleList<T>;
+    using vectask = vec<func<void()>>;
     
     template <typename T, typename... Args>
     std::unique_ptr<T> mup(Args&&... args)
@@ -190,6 +204,7 @@ namespace dt
     inline vec<string_hash> PREDEFINED_CBUFFER = {
         GLOBAL_CBUFFER.Hash(),
         PER_VIEW_CBUFFER.Hash(),
-        PER_OBJECT_CBUFFER.Hash()
+        PER_OBJECT_CBUFFER.Hash(),
+        ROOT_CONSTANTS_CBUFFER.Hash()
     };
 }

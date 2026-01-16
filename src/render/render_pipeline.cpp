@@ -1,9 +1,11 @@
 ﻿#include "render_pipeline.h"
 
 #include <d3d12.h>
+#include <pix.h>
 
 #include "cbuffer.h"
 #include "directx.h"
+#include "dx_buffer.h"
 #include "dx_helper.h"
 #include "render_context.h"
 #include "render_thread.h"
@@ -19,6 +21,7 @@
 #include "render_pass/main_light_shadow_pass.h"
 #include "render_pass/prepare_pass.h"
 #include "render_pass/render_scene_pass.h"
+#include "render/render_thread.h"
 
 namespace dt
 {
@@ -44,12 +47,58 @@ namespace dt
     {
         ZoneScopedN("Render");
 
-        for (auto& pass : m_passes)
+        RenderThread::Ins()->Wait();
+        RenderThread::Ins()->ReleaseCmdResources();
+
+        DxResource::ClearUploadBuffers();
+        
+        *RenderRes() = RenderResources();
+
+        {
+            ZoneScopedN("Prepare Context");
+            for (auto& pass : m_passes)
+            {
+                ZoneScopedN("Pass");
+                ZoneText(pass->GetName(), strlen(pass->GetName()));
+                
+                pass->PrepareContext(RenderRes());
+            }
+        }
+
         {
             ZoneScopedN("Execute Pass");
-            ZoneText(pass->GetName(), strlen(pass->GetName()));
-            
-            pass->Execute();
+            for (auto& pass : m_passes)
+            {
+                ZoneText(pass->GetName(), strlen(pass->GetName()));
+                
+                pass->ExecuteMainThread();
+            }
+        }
+
+        {
+            ZoneScopedN("Submit Dirty Data");
+            DxBuffer::SubmitDirtyData();
+        }
+
+        {
+            ZoneScopedN("Record Cmds");
+            for (auto& pass : m_passes)
+            {
+                ZoneScopedN("Pass");
+                ZoneText(pass->GetName(), strlen(pass->GetName()));
+                
+                RT()->AddCmd([name=pass->GetName(), cmd=pass->ExecuteRenderThread()](ID3D12GraphicsCommandList* cmdList)
+                {
+                    PIXBeginEvent(cmdList, PIX_COLOR_DEFAULT, name);
+                    cmd(cmdList);
+                    PIXEndEvent(cmdList);
+                });
+            }
+        }
+
+        {
+            ZoneScopedN("Dispatch Cmds");
+            RenderThread::Ins()->ExecuteCmds();
         }
     }
 }

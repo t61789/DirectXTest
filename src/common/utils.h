@@ -66,6 +66,10 @@ namespace dt
         static bool IsMainThread();
 
         static uint32_t Log2(uint32_t v);
+
+        static size_t GetRandomSizeT();
+
+        static uint32_t Reserve(uint32_t originSize, uint32_t targetSize, bool& changed);
     };
     
     template <typename... Args>

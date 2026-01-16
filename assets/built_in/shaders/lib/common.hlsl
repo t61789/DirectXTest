@@ -38,7 +38,7 @@
         float color2 : SV_TARGET2;
     };
 
-    cbuffer GlobalCBuffer : register(b0)
+    cbuffer GlobalCBuffer : register(b0, space1)
     {
         uint _GBuffer0Tex;
         uint _GBuffer1Tex;
@@ -56,9 +56,12 @@
 
         uint _MainLightShadowTex;
         float4x4 _MainLightShadowVP;
+
+        uint _BatchMatrices;
+        uint _BatchIndices;
     };
 
-    cbuffer PerViewCBuffer : register(b1)
+    cbuffer PerViewCBuffer : register(b1, space1)
     {
         float4x4 _V;
         float4x4 _P;
@@ -67,24 +70,51 @@
         float4 _CameraPositionWS;
     };
 
-    cbuffer PerObjectCBuffer : register(b2)
+    cbuffer PerObjectCBuffer : register(b2, space1)
     {
         float4x4 _M;
         float4x4 _IM;
     };
 
+    cbuffer RootConstantsCBuffer : register(b3, space1)
+    {
+        uint _BaseInstanceId;
+    };
+
     Texture2D _Bindless2dTextures[DESC_HANDLE_POOL_SIZE] : register(t0, space1);
     TextureCube _BindlessCubeTextures[DESC_HANDLE_POOL_SIZE] : register(t0, space2);
+    ByteAddressBuffer _BindlessByteBuffers[DESC_HANDLE_POOL_SIZE] : register(t0, space3);
     SamplerState _BindlessSamplers[SAMPLER_DESC_POOL_SIZE] : register(s0, space1);
+
+    #define LoadUintFromByteBuffer(buffer, index) asuint(_BindlessByteBuffers[buffer].Load((index) * 4))
+    #define LoadMatrixFromByteBuffer(buffer, index) \
+        float4x4( \
+            asfloat(_BindlessByteBuffers[buffer].Load4((index) * 64 + 0)), \
+            asfloat(_BindlessByteBuffers[buffer].Load4((index) * 64 + 16)), \
+            asfloat(_BindlessByteBuffers[buffer].Load4((index) * 64 + 32)), \
+            asfloat(_BindlessByteBuffers[buffer].Load4((index) * 64 + 48)) \
+        )
 
     float4x4 GetLocalToWorld()
     {
         return _M;
     }
 
+    float4x4 GetLocalToWorld(uint instanceId)
+    {
+        uint realInstanceId = LoadUintFromByteBuffer(_BatchIndices, instanceId + _BaseInstanceId);
+        return LoadMatrixFromByteBuffer(_BatchMatrices, realInstanceId * 2);
+    }
+
     float4x4 GetWorldToLocal()
     {
         return _IM;
+    }
+
+    float4x4 GetWorldToLocal(uint instanceId)
+    {
+        uint realInstanceId = LoadUintFromByteBuffer(_BatchIndices, instanceId + _BaseInstanceId);
+        return LoadMatrixFromByteBuffer(_BatchMatrices, realInstanceId * 2 + 1);
     }
 
     float3 TransformObjectToWorld(float3 positionOS, float4x4 localToWorld)

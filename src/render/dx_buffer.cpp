@@ -1,95 +1,156 @@
-﻿// #include "dx_buffer.h"
-//
-// #include <directx/d3dx12_core.h>
-//
-// #include "directx.h"
-//
-// namespace dt
-// {
-//     void DxBuffer::UploadData(const uint32_t destOffsetB, const uint32_t sizeB, const void* data)
-//     {
-//         assert((m_writeDest && destOffsetB + sizeB <= m_sizeB) || (!m_writeDest && destOffsetB == 0 && m_sizeB == sizeB));
-//
-//         if (m_writeDest)
-//         {
-//             memcpy(m_writeDest + destOffsetB, data, sizeB);
-//         }
-//         else
-//         {
-//             auto uploadBuffer = CreateUploadBuffer();
-//             void* writeDest = nullptr;
-//             THROW_IF_FAILED(uploadBuffer->Map(0, nullptr, &writeDest));
-//             memcpy(writeDest, data, sizeB);
-//             uploadBuffer->Unmap(0, nullptr);
-//
-//             Dx()->AddCommand([uploadBuffer, self=shared_from_this()](ID3D12GraphicsCommandList* cmdList)
-//             {
-//                 if (self->m_resourceStates != D3D12_RESOURCE_STATE_COPY_DEST)
-//                 {
-//                     Dx()->AddTransition(self->m_buffer.Get(), self->m_resourceStates, D3D12_RESOURCE_STATE_COPY_DEST);
-//                     Dx()->ApplyTransitions(cmdList);
-//                 }
-//                 
-//                 cmdList->CopyResource(self->m_buffer.Get(), uploadBuffer.Get());
-//
-//                 if (self->m_resourceStates != D3D12_RESOURCE_STATE_COPY_DEST)
-//                 {
-//                     Dx()->AddTransition(self->m_buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, self->m_resourceStates);
-//                 }
-//             });
-//         }
-//     }
-//
-//     sp<DxBuffer> DxBuffer::CreateStatic(const D3D12_RESOURCE_STATES state, const uint32_t sizeB, const void* initData)
-//     {
-//         auto result = msp<DxBuffer>();
-//
-//         result->m_sizeB = sizeB;
-//         result->m_resourceStates = state;
-//         result->m_buffer = Dx()->CreateCommittedResource(
-//             CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-//             CD3DX12_RESOURCE_DESC::Buffer(sizeB),
-//             state,
-//             nullptr,
-//             D3D12_HEAP_FLAG_NONE,
-//             L"Buffer");
-//
-//         if (initData)
-//         {
-//             result->UploadData(0, sizeB, initData);
-//         }
-//
-//         return result;
-//     }
-//
-//     sp<DxBuffer> DxBuffer::CreateDynamic(const uint32_t sizeB)
-//     {
-//         auto result = msp<DxBuffer>();
-//
-//         result->m_sizeB = sizeB;
-//         result->m_buffer = Dx()->CreateCommittedResource(
-//             CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-//             CD3DX12_RESOURCE_DESC::Buffer(result->m_sizeB),
-//             D3D12_RESOURCE_STATE_GENERIC_READ,
-//             nullptr,
-//             D3D12_HEAP_FLAG_NONE,
-//             "Upload Buffer");
-//
-//         void* writeDest;
-//         THROW_IF_FAILED(result->m_buffer->Map(0, nullptr, &writeDest));
-//         result->m_writeDest = static_cast<uint8_t*>(writeDest);
-//
-//         return result;
-//     }
-//
-//     ComPtr<ID3D12Resource> DxBuffer::CreateUploadBuffer()
-//     {
-//         return Dx()->CreateCommittedResource(
-//             CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-//             CD3DX12_RESOURCE_DESC::Buffer(m_sizeB),
-//             D3D12_RESOURCE_STATE_GENERIC_READ,
-//             nullptr,
-//             D3D12_HEAP_FLAG_NONE,
-//             "Upload Buffer");
-//     }
-// }
+﻿#include "dx_buffer.h"
+
+#include <directx/d3dx12_core.h>
+
+#include "directx.h"
+#include "dx_helper.h"
+#include "dx_resource.h"
+
+namespace dt
+{
+    sp<DxBuffer> DxBuffer::Create(const size_t capacityB, const wchar_t* name)
+    {
+        assert(capacityB > 0);
+        
+        auto result = msp<DxBuffer>();
+        result->m_name = name;
+        
+        result->SetCapacity(capacityB);
+
+        return result;
+    }
+
+    sp<DxBuffer> DxBuffer::CreateVertexBuffer(const size_t capacityB, uint32_t strideB, const wchar_t* name)
+    {
+        auto result = Create(capacityB, name);
+
+        result->m_vertexDataStrideB = strideB;
+
+        return result;
+    }
+
+    void DxBuffer::SubmitDirtyData()
+    {
+        for (auto& buffer : m_dirtyBuffers)
+        {
+            buffer->Submit();
+        }
+
+        m_dirtyBuffers.clear();
+    }
+
+    sp<ShaderResource> DxBuffer::GetShaderResource()
+    {
+        if (!m_shaderResource)
+        {
+            m_shaderResource = DescriptorPool::Ins()->AllocBufferSrv(m_dxResource.get(), m_capacityB);
+        }
+        return m_shaderResource;
+    }
+
+    cr<D3D12_VERTEX_BUFFER_VIEW> DxBuffer::GetVertexBufferView()
+    {
+        assert(m_vertexDataStrideB.has_value());
+        
+        if (!m_vertexBufferView.has_value())
+        {
+            D3D12_VERTEX_BUFFER_VIEW vbView = {};
+            vbView.SizeInBytes = m_capacityB;
+            vbView.StrideInBytes = m_vertexDataStrideB.value();
+            vbView.BufferLocation = m_dxResource->GetResource()->GetGPUVirtualAddress();
+            m_vertexBufferView = vbView;
+        }
+
+        return m_vertexBufferView.value();
+    }
+
+    cr<D3D12_INDEX_BUFFER_VIEW> DxBuffer::GetIndexBufferView()
+    {
+        if (!m_indexBufferView.has_value())
+        {
+            D3D12_INDEX_BUFFER_VIEW ibView = {};
+            ibView.Format = DXGI_FORMAT_R32_UINT;
+            ibView.SizeInBytes = m_capacityB;
+            ibView.BufferLocation = m_dxResource->GetResource()->GetGPUVirtualAddress();
+            m_indexBufferView = ibView;
+        }
+
+        return m_indexBufferView.value();
+    }
+
+    void DxBuffer::Write(const size_t offsetB, const size_t sizeB, const void* data)
+    {
+        m_dirtyBuffers.insert(shared_from_this());
+        memcpy(m_cpuBuffer.data() + offsetB, data, sizeB);
+    }
+
+    void DxBuffer::Read(const size_t offsetB, const size_t sizeB, void* data)
+    {
+        memcpy(data, m_cpuBuffer.data() + offsetB, sizeB);
+    }
+
+    size_t DxBuffer::GetCapacity() const
+    {
+        return m_capacityB;
+    }
+
+    void DxBuffer::SetCapacity(const size_t capacityB)
+    {
+        if (m_capacityB == capacityB)
+        {
+            return;
+        }
+
+        DxResourceDesc desc;
+        desc.heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+        desc.resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(capacityB);
+        desc.initialResourceState = D3D12_RESOURCE_STATE_COMMON;
+        desc.pOptimizedClearValue = nullptr;
+        desc.heapFlags = D3D12_HEAP_FLAG_NONE;
+        desc.name = m_name ? m_name : L"Dx Buffer";
+        desc.unmanagedResource = nullptr;
+
+        auto dxResource = DxResource::Create(desc);
+
+        vec<uint8_t> cpuBuffer(capacityB);
+
+        if (m_dxResource)
+        {
+            memcpy(cpuBuffer.data(), m_cpuBuffer.data(), (std::min)(cpuBuffer.size(), m_cpuBuffer.size()));
+        }
+
+        m_dxResource = dxResource;
+        m_cpuBuffer = std::move(cpuBuffer);
+        m_capacityB = capacityB;
+        m_shaderResource = nullptr;
+        m_vertexBufferView = std::nullopt;
+        m_indexBufferView = std::nullopt;
+        
+        m_dirtyBuffers.insert(shared_from_this());
+    }
+
+    void DxBuffer::Submit()
+    {
+        auto uploadBuffer = DxResource::GetUploadBuffer(m_cpuBuffer.data(), m_cpuBuffer.size());
+        
+        RT()->AddCmd([self=shared_from_this(), uploadBuffer](ID3D12GraphicsCommandList* cmdList)
+        {
+            auto preState = self->m_dxResource->GetState();
+            
+            if (preState != D3D12_RESOURCE_STATE_COPY_DEST)
+            {
+                DxHelper::AddTransition(self->m_dxResource, D3D12_RESOURCE_STATE_COPY_DEST);
+                DxHelper::ApplyTransitions(cmdList);
+            }
+
+            cmdList->CopyBufferRegion(self->m_dxResource->GetResource(), 0, uploadBuffer->GetResource(), 0, self->m_capacityB);
+
+            if (preState != D3D12_RESOURCE_STATE_COPY_DEST)
+            {
+                DxHelper::AddTransition(self->m_dxResource, preState);
+            }
+
+            DxHelper::ApplyTransitions(cmdList);
+        });
+    }
+}
