@@ -5,14 +5,14 @@ cbuffer PerMaterialCBuffer : register(b3)
     uint _MainTex;
 };
 
-PSInput VS_Main(VSInput input, uint instanceId : SV_InstanceID)
+PSInput VS_Main(VSInput input)
 {
     PSInput output = (PSInput)0;
 
-    output.positionWS = TransformObjectToWorld(input.positionOS.xyz, GetLocalToWorld(instanceId));
+    output.positionWS = TransformObjectToWorld(input.positionOS.xyz, GetLocalToWorld(input.instanceId));
     output.positionCS = TransformWorldToHClip(output.positionWS);
     output.positionSS = output.positionCS;
-    output.normalWS = TransformObjectToWorldNormal(input.normalOS.xyz, GetWorldToLocal(instanceId));
+    output.normalWS = TransformObjectToWorldNormal(input.normalOS.xyz, GetWorldToLocal(input.instanceId));
     output.uv0 = input.uv0;
 
     return output;

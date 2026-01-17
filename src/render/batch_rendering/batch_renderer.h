@@ -5,61 +5,126 @@
 #include "common/const.h"
 #include "common/utils.h"
 #include "common/math.h"
+#include "render/cbuffer.h"
+#include "render/render_target.h"
 
 namespace dt
 {
+    using namespace Microsoft::WRL;
+    
+    class Shader;
+    class Material;
+    class Mesh;
     class DxBuffer;
     class ManagedMemoryBlock;
     class ByteBuffer;
     struct RenderObject;
     class BatchMesh;
-    class BatchMatrix;
+    
+    struct BatchMatrix
+    {
+        XMFLOAT4X4 localToWorld;
+        XMFLOAT4X4 worldToLocal;
+    };
+    
+    struct IndirectArg
+    {
+        uint32_t batchIndicesBuffer;
+        D3D12_DRAW_INDEXED_ARGUMENTS drawArg;
+    };
+
+    struct BatchRenderObject
+    {
+        uint32_t matrixIndex;
+        sp<RenderObject> ro;
+    };
+
+    struct BatchRenderSubCmd
+    {
+        sp<Mesh> mesh;
+        vec<BatchRenderObject> ros;
+
+        IndirectArg indirectArg;
+        vec<uint32_t> batchIndices;
+        sp<DxBuffer> batchIndicesBuffer = nullptr;
+    };
+
+    struct BatchRenderCmd
+    {
+        sp<Material> material;
+        ComPtr<ID3D12CommandSignature> cmdSignature;
+
+        vec<IndirectArg> indirectArgs;
+        sp<DxBuffer> indirectArgsBuffer = nullptr;
+
+        vec<BatchRenderSubCmd> subCmds;
+    };
+
+    struct CmdSigPool
+    {
+        ComPtr<ID3D12CommandSignature> GetCmdSig(crsp<Shader> shader);
+        void ClearCmdSig();
+        
+    private:
+        vecpair<wp<Shader>, ComPtr<ID3D12CommandSignature>> m_commandSignature;
+    };
+
+    class BatchRenderGroup : public std::enable_shared_from_this<BatchRenderGroup>
+    {
+    public:
+        explicit BatchRenderGroup(
+            crsp<Material> replaceMaterial,
+            crsp<BatchMesh> batchMesh,
+            crsp<DxBuffer> batchMatrix);
+
+        void Register(crsp<RenderObject> ro, size_t matrixKey, crsp<CmdSigPool> cmdSigPool);
+        void Unregister(crsp<RenderObject> ro);
+        
+        void EncodeCmd();
+        func<void(ID3D12GraphicsCommandList*)> CreateCmd(crsp<Cbuffer> viewCbuffer, crsp<RenderTarget> renderTarget);
+
+    private:
+        sp<BatchMesh> m_batchMesh;
+        sp<DxBuffer> m_batchMatrix;
+        sp<Material> m_replaceMaterial;
+        vec<BatchRenderCmd> m_batchRenderCmds;
+    };
 
     class BatchRenderer : public Singleton<BatchRenderer>, public std::enable_shared_from_this<BatchRenderer>
     {
     public:
-        struct BatchMatrix
-        {
-            XMFLOAT4X4 localToWorld;
-            XMFLOAT4X4 worldToLocal;
-        };
-        
         BatchRenderer();
+
+        BatchRenderGroup* GetCommonRenderGroup() const { return m_commonGroup.get(); }
+        BatchRenderGroup* GetShadowRenderGroup() const { return m_shadowGroup.get(); }
 
         void Register(crsp<RenderObject> renderObject);
         void Unregister(crsp<RenderObject> renderObject);
-
-        void EncodeCmd();
-        func<void(ID3D12GraphicsCommandList*)> GetCmd();
-        void UpdateMatrix(crsp<RenderObject> ro, cr<BatchMatrix> matrix);
-
-    private:
         void RegisterActually();
 
-        struct IndirectArg
+        void UpdateMatrix(crsp<RenderObject> ro, cr<BatchMatrix> matrix);
+        void UpdateMatrixActually();
+
+    private:
+        struct RenderObjectInfo
         {
-            uint32_t baseInstanceId;
-            D3D12_DRAW_INDEXED_ARGUMENTS drawArg;
-        };
-        
-        struct BatchRenderObject
-        {
+            sp<RenderObject> ro;
             size_t matrixKey;
-            uint32_t matrixIndex;
-            sp<RenderObject> renderObject;
         };
 
         vecsp<RenderObject> m_pendingRegisterRenderObjects;
         vecsp<RenderObject> m_pendingUnregisterRenderObjects;
         vecpair<sp<RenderObject>, BatchMatrix> m_dirtyRoMatrix;
         
-        vec<BatchRenderObject> m_renderObjects;
+        vec<RenderObjectInfo> m_renderObjects;
         sp<BatchMesh> m_batchMesh;
         sp<DxBuffer> m_batchMatrix;
-        sp<DxBuffer> m_gpuCmdBuffer = nullptr;
-        sp<DxBuffer> m_batchIndices = nullptr;
-        vec<IndirectArg> m_cpuCmdBuffer;
 
-        umap<uint32_t, Microsoft::WRL::ComPtr<ID3D12CommandSignature>> m_commandSignature;
+        sp<CmdSigPool> m_cmdSigPool;
+
+        sp<Material> m_shadowMaterial;
+        
+        sp<BatchRenderGroup> m_commonGroup;
+        sp<BatchRenderGroup> m_shadowGroup;
     };
 }

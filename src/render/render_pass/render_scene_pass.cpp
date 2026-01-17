@@ -12,7 +12,7 @@ namespace dt
 {
     void RenderScenePass::ExecuteMainThread()
     {
-        BatchRenderer::Ins()->EncodeCmd();
+        BatchRenderer::Ins()->GetCommonRenderGroup()->EncodeCmd();
         
         // RT()->AddCmd([](ID3D12GraphicsCommandList* cmdList)
         // {
@@ -29,6 +29,6 @@ namespace dt
 
     func<void(ID3D12GraphicsCommandList*)> RenderScenePass::ExecuteRenderThread()
     {
-        return BatchRenderer::Ins()->GetCmd();
+        return BatchRenderer::Ins()->GetCommonRenderGroup()->CreateCmd(RenderRes()->mainCameraViewCbuffer, RenderRes()->gBufferRenderTarget);
     }
 }

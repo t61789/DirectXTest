@@ -18,11 +18,12 @@ namespace dt
         m_gameStartTimeCount = m_timeCount;
 
         m_directx = msp<DirectX>();
-        m_batchRenderer = msp<BatchRenderer>();
 
         m_gameResource = msp<GameResource>();
         m_gameResource->m_screenWidth = screenWidth;
         m_gameResource->m_screenHeight = screenHeight;
+        
+        m_batchRenderer = msp<BatchRenderer>();
 
         m_renderPipeline = msp<RenderPipeline>();
 
@@ -33,9 +34,9 @@ namespace dt
     {
         m_scene.reset();
         m_renderPipeline.reset();
+        m_batchRenderer.reset();
         m_gameResource.reset();
 
-        m_batchRenderer.reset();
         m_directx.reset();
     }
 

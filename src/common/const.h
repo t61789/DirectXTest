@@ -32,6 +32,9 @@ namespace dt
     #define ASSERT_THROW(cond) if (!(cond)) throw std::runtime_error("Assertion failed: " + std::string(#cond))
     #define ASSERT_THROWM(cond, msg) if (!(cond)) throw std::runtime_error(msg)
 
+    #define ELEM_TYPE(v) decltype(v)::value_type
+    #define CR_ELEM_TYPE(v) cr<decltype(v)::value_type>
+
     #define STRING_HANDLE(KEY, VALUE) static auto KEY = StringHandle(#VALUE);
 
     STRING_HANDLE(GLOBAL_CBUFFER, GlobalCBuffer)
@@ -72,8 +75,10 @@ namespace dt
     static constexpr uint32_t MAX_REGISTER_COUNT = 16;
     static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_REGISTER_INDEX = 3;
     static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_REGISTER_SPACE = 1;
-    static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_32_BIT_COUNT = 1;
-    static constexpr uint32_t ROOT_CONSTANTS_BASE_INSTANCE_ID_32_BIT_OFFSET = 0;
+    
+    static constexpr uint32_t ROOT_CONSTANTS_BATCH_INDICES_OFFSET_DWORD = 0;
+    static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_SIZE_DWORD = 1;
+    
     static const auto UNNAMED_OBJECT = StringHandle("Unnamed Object");
     
     template <typename T>

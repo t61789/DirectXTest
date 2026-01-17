@@ -18,6 +18,7 @@
 #include "render/render_pipeline.h"
 #include "render/render_resources.h"
 #include "render/render_thread.h"
+#include "render/batch_rendering/batch_renderer.h"
 
 namespace dt
 {
@@ -56,6 +57,9 @@ namespace dt
         ImGui::End();
         
         ImGui::Render();
+        
+        BatchRenderer::Ins()->RegisterActually();
+        BatchRenderer::Ins()->UpdateMatrixActually();
     }
 
     func<void(ID3D12GraphicsCommandList*)> PreparePass::ExecuteRenderThread()

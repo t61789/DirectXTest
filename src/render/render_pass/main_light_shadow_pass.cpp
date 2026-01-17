@@ -8,6 +8,7 @@
 #include "render/render_pipeline.h"
 #include "render/render_resources.h"
 #include "render/render_thread.h"
+#include "render/batch_rendering/batch_renderer.h"
 
 namespace dt
 {
@@ -49,20 +50,23 @@ namespace dt
         auto globalCbuffer = GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER);
         globalCbuffer->Write(MAIN_LIGHT_SHADOW_VP, Transpose(shadowVp->vpMatrix));
         globalCbuffer->Write(MAIN_LIGHT_SHADOW_TEX, m_shadowmapRt->GetTextureIndex());
+        
+        BatchRenderer::Ins()->GetShadowRenderGroup()->EncodeCmd();
     }
 
     func<void(ID3D12GraphicsCommandList*)> MainLightShadowPass::ExecuteRenderThread()
     {
-        return [this](ID3D12GraphicsCommandList* cmdList)
-        {
-            ZoneScopedN("Render Scene Pass");
-
-            DxHelper::RenderScene(
-                cmdList,
-                RenderRes()->renderObjects,
-                m_shadowViewCbuffer,
-                m_shadowmapRenderTarget,
-                m_drawShadowMtl);
-        };
+        return BatchRenderer::Ins()->GetCommonRenderGroup()->CreateCmd(m_shadowViewCbuffer, m_shadowmapRenderTarget);
+        // return [this](ID3D12GraphicsCommandList* cmdList)
+        // {
+        //     ZoneScopedN("Render Scene Pass");
+        //
+        //     DxHelper::RenderScene(
+        //         cmdList,
+        //         RenderRes()->renderObjects,
+        //         m_shadowViewCbuffer,
+        //         m_shadowmapRenderTarget,
+        //         m_drawShadowMtl);
+        // };
     }
 }

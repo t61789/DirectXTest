@@ -13,7 +13,8 @@ namespace dt
         m_skyboxObject = Object::Create(StringHandle("Skybox"));
         m_skyboxObject->AddComp("RenderComp", {
             { "mesh", GR()->sphereMesh->GetPath().CStr() },
-            { "material", "built_in/materials/skybox.mtl" }
+            { "material", "built_in/materials/skybox_batch.mtl" },
+            { "enable_batch", true }
         });
     }
 

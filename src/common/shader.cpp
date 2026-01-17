@@ -147,7 +147,7 @@ namespace dt
                 {
                     if (bindResource.registerIndex == ROOT_CONSTANTS_CBUFFER_REGISTER_INDEX && bindResource.registerSpace == ROOT_CONSTANTS_CBUFFER_REGISTER_SPACE)
                     {
-                        rootParams.back().InitAsConstants(ROOT_CONSTANTS_CBUFFER_32_BIT_COUNT, bindResource.registerIndex, bindResource.registerSpace);
+                        rootParams.back().InitAsConstants(ROOT_CONSTANTS_CBUFFER_SIZE_DWORD, bindResource.registerIndex, bindResource.registerSpace);
                         m_rootConstantCbufferRootParamIndex = rootParams.size() - 1;
                     }
                     else
