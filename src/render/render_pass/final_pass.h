@@ -12,7 +12,7 @@ namespace dt
     public:
         FinalPass();
         
-        const char* GetName() override { return "Prepare Pass"; }
+        const char* GetName() override { return "Final Pass"; }
 
         void ExecuteMainThread() override;
         func<void(ID3D12GraphicsCommandList*)> ExecuteRenderThread() override;

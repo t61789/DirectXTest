@@ -56,7 +56,7 @@ namespace dt
 
     func<void(ID3D12GraphicsCommandList*)> MainLightShadowPass::ExecuteRenderThread()
     {
-        return BatchRenderer::Ins()->GetCommonRenderGroup()->CreateCmd(m_shadowViewCbuffer, m_shadowmapRenderTarget);
+        return BatchRenderer::Ins()->GetShadowRenderGroup()->CreateCmd(m_shadowViewCbuffer, m_shadowmapRenderTarget);
         // return [this](ID3D12GraphicsCommandList* cmdList)
         // {
         //     ZoneScopedN("Render Scene Pass");

@@ -17,5 +17,5 @@ GBufferPSOutput PS_Main(PSInput input)
 
     float3 albedo = texColor.xyz;
 
-    return CreateOutput(albedo, input.normalWS, PIXEL_TYPE_SKYBOX, 1.0f);
+    return CreateOutput(albedo, input.normalWS, 0.0f, 1.0f, PIXEL_TYPE_SKYBOX, 1.0f);
 }

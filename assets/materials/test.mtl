@@ -1,4 +1,5 @@
 {
     "shader": "shaders/pbr_basic.shader",
-    "depthWrite": true
+    "depthWrite": true,
+    "_RoughnessFactor": 0.3
 }

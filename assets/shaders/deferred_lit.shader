@@ -16,10 +16,10 @@ float4 PS_Main(PSInput input) : SV_TARGET
     float2 screenUv = (input.positionSS.xy / input.positionSS.w) * 0.5f + 0.5f;
 
     float3 albedo, normalWS;
-    float pixelType, depth;
+    float metallic, roughness, pixelType, depth;
 
     ReadGBuffer0(screenUv, albedo, pixelType);
-    ReadGBuffer1(screenUv, normalWS);
+    ReadGBuffer1(screenUv, normalWS, metallic, roughness);
     ReadGBuffer2(screenUv, depth);
 
     float3 positionWS = RebuildWorldPosition(screenUv, depth);
@@ -29,7 +29,10 @@ float4 PS_Main(PSInput input) : SV_TARGET
     if (PixelTypeEquals(pixelType, PIXEL_TYPE_LIT))
     {
         // litColor = SimpleLit(normalWS);
-        litColor = Lit(albedo, positionWS, normalWS, viewDirWS, 0.3f, 0.0f);
+        litColor = Lit(albedo, positionWS, normalWS, viewDirWS, metallic, roughness);
+        // litColor = float3(metallic, metallic, metallic);
+        // litColor = float3(roughness, roughness, roughness);
+        // litColor = normalWS * 0.5f + 0.5f;
     }
 
     float4 finalColor = float4(litColor, 1.0f);

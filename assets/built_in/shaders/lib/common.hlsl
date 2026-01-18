@@ -1,6 +1,8 @@
 #if !defined(__COMMON_HLSL_INCLUDED__)
     #define __COMMON_HLSL_INCLUDED__
 
+    #include "built_in/shaders/lib/math.hlsl"
+
     #define DESC_HANDLE_POOL_SIZE 0xFFFF
     #define SAMPLER_DESC_POOL_SIZE 0xFF
 
@@ -187,10 +189,14 @@
         pixelType = color.w;
     }
 
-    void ReadGBuffer1(float2 screenUV, out float3 normalWS)
+    void ReadGBuffer1(float2 screenUV, out float3 normalWS, out float metallic, out float roughness)
     {
         float4 color = SampleTexture(_GBuffer1Tex, screenUV);
-        normalWS = color.xyz * 2.0f - 1.0f;
+        normalWS = DecompressNormal(color.xy);
+
+        float2 metallicRoughness = UnpackTwoFloats(color.z);
+        metallic = metallicRoughness.x;
+        roughness = metallicRoughness.y;
     }
 
     void ReadGBuffer2(float2 screenUV, out float depth)
@@ -199,11 +205,11 @@
         depth = color.r;
     }
 
-    GBufferPSOutput CreateOutput(float3 albedo, float3 normalWS, float pixelType, float depth)
+    GBufferPSOutput CreateOutput(float3 albedo, float3 normalWS, float metallic, float roughness, float pixelType, float depth)
     {
         GBufferPSOutput output;
         output.color0 = float4(albedo, pixelType);
-        output.color1 = float4(normalWS * 0.5f + 0.5f, 0.0f);
+        output.color1 = float4(CompressNormal(normalWS), PackTwoFloats(metallic, roughness), 0.0f);
         output.color2 = depth;
         return output;
     }
