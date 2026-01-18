@@ -11,6 +11,18 @@ namespace dt
     class Object;
     class GameFramework;
 
+    class ICompGui
+    {
+    public:
+        virtual ~ICompGui() = default;
+        ICompGui(const ICompGui& other) = delete;
+        ICompGui(ICompGui&& other) noexcept = delete;
+        ICompGui& operator=(const ICompGui& other) = delete;
+        ICompGui& operator=(ICompGui&& other) noexcept = delete;
+
+        virtual void OnGui() {}
+    };
+
     class Comp
     {
         friend class Object;

@@ -1,15 +1,15 @@
 ﻿#include "scene.h"
 
 #include <filesystem>
+#include <imgui.h>
 #include <tracy/Tracy.hpp>
 
-#include "common/math.h"
 #include "object.h"
-#include "skybox_comp.h"
 #include "game/game_resource.h"
+#include "gui/gui.h"
+#include "gui/scene_hierarchy_panel.h"
 #include "nlohmann/json.hpp"
 #include "objects/comp.h"
-#include "objects/transform_comp.h"
 
 namespace dt
 {
@@ -28,8 +28,17 @@ namespace dt
         }
     }
 
+    Scene::Scene()
+    {
+        m_drawGuiEventHandler = Gui::Ins()->drawGuiEvent.Add([this]{ DrawSceneGui(); });
+        m_hierarchyPanel = msp<SceneHierarchyPanel>(this);
+    }
+
     Scene::~Scene()
     {
+        m_hierarchyPanel.reset();
+        Gui::Ins()->drawGuiEvent.Remove(m_drawGuiEventHandler);
+        
         m_sceneRoot->Destroy();
     }
 
@@ -98,5 +107,10 @@ namespace dt
         try_get_val(configJson, "fog_intensity", fogIntensity);
 
         try_get_val(configJson, "fog_color", fogColor);
+    }
+
+    void Scene::DrawSceneGui()
+    {
+        m_hierarchyPanel->DrawSceneGui();
     }
 }

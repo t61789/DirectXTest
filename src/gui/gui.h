@@ -1,0 +1,42 @@
+﻿#pragma once
+#include <DirectXMath.h>
+#include <imgui.h>
+
+#include "common/math.h"
+#include "common/event.h"
+#include "render/descriptor_pool.h"
+
+struct ImGuiContext;
+
+namespace dt
+{
+    class IGui
+    {
+    public:
+        virtual ~IGui() = default;
+        virtual void OnGui() = 0;
+    };
+    
+    class Gui : public Singleton<Gui>
+    {
+    public:
+        Gui();
+        ~Gui();
+
+        ImGuiContext* GetMainThreadContext() { return m_mainThreadContext; }
+
+        void Render();
+        
+        static bool SliderFloat3(crstr label, XMFLOAT3& val, float vMin, float vMax, crstr format = "%.2f");
+        static bool InputFloat3(crstr label, XMFLOAT3& val, crstr format = "%.2f");
+        static bool DragFloat3(crstr label, XMFLOAT3& val, float speed = 1.0f, crstr format = "%.2f");
+        
+        static void ImGuiDrawLine(cr<XMVECTOR> worldStart, cr<XMVECTOR> worldEnd, ImU32 color, float thickness);
+
+        Event<> drawGuiEvent;
+
+    private:
+        sp<SrvPool::Handle> m_imguiSrvHandle;
+        ImGuiContext* m_mainThreadContext;
+    };
+}

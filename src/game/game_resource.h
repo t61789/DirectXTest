@@ -1,11 +1,15 @@
 ﻿#pragma once
 
+#include <DirectXMath.h>
+
 #include "common/event.h"
 #include "common/string_handle.h"
 #include "common/utils.h"
 
 namespace dt
 {
+    using namespace DirectX;
+    
     class Mesh;
     class Material;
     class Image;
@@ -27,6 +31,7 @@ namespace dt
         double GetTime() const { return m_time; }
         double GetDeltaTime() const { return m_deltaTime; }
         void GetScreenSize(uint32_t& width, uint32_t& height) const { width = m_screenWidth; height = m_screenHeight; }
+        XMVECTOR GetScreenSize() const { return XMVectorSet(m_screenWidth, m_screenHeight, 0, 0); }
         sp<Cbuffer> GetPredefinedCbuffer(cr<StringHandle> name) const;
         
         void RegisterResource(cr<StringHandle> path, crsp<IResource> resource);

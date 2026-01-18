@@ -63,12 +63,12 @@ namespace dt
 
     void SceneRegistry::UnregisterComp(crsp<Comp> comp)
     {
-        m_compStorage.RemoveComp(comp);
-        
         if (auto renderComp = std::dynamic_pointer_cast<RenderComp>(comp))
         {
             UnRegisterRenderComp(renderComp);
         }
+        
+        m_compStorage.RemoveComp(comp);
     }
 
     bool SceneRegistry::ObjectExists(crsp<Object> obj)

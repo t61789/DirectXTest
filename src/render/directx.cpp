@@ -20,7 +20,7 @@
 #include "common/utils.h"
 #include "common/math.h"
 #include "common/render_texture.h"
-#include "game/gui.h"
+#include "gui/gui.h"
 
 namespace dt
 {

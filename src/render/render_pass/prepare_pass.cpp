@@ -6,7 +6,7 @@
 
 #include "window.h"
 #include "game/game_resource.h"
-#include "game/gui.h"
+#include "gui/gui.h"
 #include "objects/camera_comp.h"
 #include "objects/light_comp.h"
 #include "objects/scene.h"
@@ -46,17 +46,8 @@ namespace dt
         TransformComp::UpdateAllDirtyComps();
 
         RecycleBin::Ins()->Flush();
-        
-        ImGui_ImplWin32_NewFrame();
-        ImGui_ImplDX12_NewFrame();
-        ImGui::NewFrame();
 
-        // todo call gui events
-        ImGui::Begin("Shit");
-        ImGui::Text("FPS: %f", 1.0f / GR()->GetDeltaTime());
-        ImGui::End();
-        
-        ImGui::Render();
+        Gui::Ins()->Render();
         
         BatchRenderer::Ins()->RegisterActually();
         BatchRenderer::Ins()->UpdateMatrixActually();

@@ -5,10 +5,12 @@
 
 #include "common/i_resource.h"
 #include "scene_registry.h"
+#include "common/event.h"
 #include "render/render_tree.h"
 
 namespace dt
 {
+    class SceneHierarchyPanel;
     class CameraComp;
     class Object;
 
@@ -22,7 +24,7 @@ namespace dt
         float fogIntensity = 0.01f;
         XMFLOAT3 fogColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
-        Scene() = default;
+        Scene();
         ~Scene() override;
         Scene(const Scene& other) = delete;
         Scene(Scene&& other) noexcept = delete;
@@ -37,14 +39,19 @@ namespace dt
         static sp<Scene> LoadScene(cr<StringHandle> sceneJsonPath);
 
     private:
+        void LoadSceneConfig(cr<nlohmann::json> configJson);
+
+        void DrawSceneGui();
+
+        static void LoadChildren(crsp<Object> parent, cr<nlohmann::json> children);
+        
         StringHandle m_path;
         
         sp<Object> m_sceneRoot = nullptr;
         up<SceneRegistry> m_registry;
         up<RenderTree> m_renderTree;
-        
-        void LoadSceneConfig(cr<nlohmann::json> configJson);
-        
-        static void LoadChildren(crsp<Object> parent, cr<nlohmann::json> children);
+
+        EventHandler m_drawGuiEventHandler;
+        sp<SceneHierarchyPanel> m_hierarchyPanel;
     };
 }

@@ -83,6 +83,9 @@ namespace dt
         
         if (!RegisterClass(&wc))
             return false;
+
+        RECT wr = { 0, 0, m_width, m_height };
+        AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
         
         m_hwnd = CreateWindowEx(
             0,
@@ -90,7 +93,7 @@ namespace dt
             m_title.c_str(),
             WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT, CW_USEDEFAULT,
-            m_width, m_height,
+            wr.right - wr.left, wr.bottom - wr.top,
             nullptr, nullptr, m_hInstance, this
         );
 

@@ -126,6 +126,13 @@ namespace dt
         return m.r[3];
     }
 
+    inline XMFLOAT2 Store2(cr<XMVECTOR> f2)
+    {
+        XMFLOAT2 result;
+        XMStoreFloat2(&result, f2);
+        return result;
+    }
+
     inline XMFLOAT3 Store3(cr<XMVECTOR> f3)
     {
         XMFLOAT3 result;
@@ -251,7 +258,99 @@ namespace dt
         corners[6] = farCenter + cameraRight * farWidth + cameraUp * farHeight; // frt
         corners[7] = farCenter + cameraRight * farWidth - cameraUp * farHeight; // frb
     }
+    
+    static XMVECTOR WorldToScreen01(FXMVECTOR worldPos, CXMMATRIX vp)
+    {
+        XMVECTOR clipPos = XMVector3TransformCoord(worldPos, vp);
 
+        static auto scale = XMVectorSet(0.5f, -0.5f, 1.0f, 0.0f);
+        static auto offset = XMVectorSet(0.5f, 0.5f, 0.0f, 0.0f); // 只偏移 X 和 Y
+
+        XMVECTOR screenPos = XMVectorMultiplyAdd(clipPos, scale, offset);
+    
+        float y01 = 1.0f - XMVectorGetY(screenPos);
+        screenPos = XMVectorSetY(screenPos, y01);
+
+        return screenPos;
+    }
+
+    static XMVECTOR WorldToScreenCoord(FXMVECTOR worldPos, CXMMATRIX vp, CXMVECTOR screenSize)
+    {
+        return WorldToScreen01(worldPos, vp) * screenSize;
+    }
+
+    static int ComputeOutCode(const float x, const float y, const float xMin, const float yMin, const float xMax, const float yMax)
+    {
+        int code = 0;
+
+        if (x < xMin)           code |= 0b0001;
+        else if (x > xMax)      code |= 0b0010;
+        
+        if (y < yMin)           code |= 0b0100;
+        else if (y > yMax)      code |= 0b1000;
+
+        return code;
+    }
+
+    static bool CohenSutherlandClip(XMFLOAT2 p0, XMFLOAT2 p1, const XMFLOAT2 rectMin, const XMFLOAT2 rectMax)
+    {
+        auto code0 = ComputeOutCode(p0.x, p0.y, rectMin.x, rectMin.y, rectMax.x, rectMax.y);
+        auto code1 = ComputeOutCode(p1.x, p1.y, rectMin.x, rectMin.y, rectMax.x, rectMax.y);
+        bool accept = false;
+
+        while (true)
+        {
+            if (!(code0 | code1))
+            {
+                accept = true;
+                break;
+            }
+            
+            if (code0 & code1)
+            {
+                break;
+            }
+            
+            float x = 0, y = 0;
+            auto codeOut = code0 ? code0 : code1;
+
+            if (codeOut & 0b1000)
+            {
+                x = p0.x + (p1.x - p0.x) * (rectMax.y - p0.y) / (p1.y - p0.y);
+                y = rectMax.y;
+            }
+            else if (codeOut & 0b0100)
+            {
+                x = p0.x + (p1.x - p0.x) * (rectMin.y - p0.y) / (p1.y - p0.y);
+                y = rectMin.y;
+            }
+            else if (codeOut & 0b0010)
+            {
+                y = p0.y + (p1.y - p0.y) * (rectMax.x - p0.x) / (p1.x - p0.x);
+                x = rectMax.x;
+            }
+            else if (codeOut & 0b0001)
+            {
+                y = p0.y + (p1.y - p0.y) * (rectMin.x - p0.x) / (p1.x - p0.x);
+                x = rectMin.x;
+            }
+
+            // 更新裁剪后的点坐标，并重新计算 code
+            if (codeOut == code0)
+            {
+                p0.x = x; p0.y = y;
+                code0 = ComputeOutCode(p0.x, p0.y, rectMin.x, rectMin.y, rectMax.x, rectMax.y);
+            }
+            else
+            {
+                p1.x = x; p1.y = y;
+                code1 = ComputeOutCode(p1.x, p1.y, rectMin.x, rectMin.y, rectMax.x, rectMax.y);
+            }
+        }
+        
+        return accept;
+    }
+    
     inline bool operator==(const XMINT2& lhs, const XMINT2& rhs)
     {
         return lhs.x == rhs.x && lhs.y == rhs.y;
