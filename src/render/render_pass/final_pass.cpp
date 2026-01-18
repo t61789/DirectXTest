@@ -18,7 +18,7 @@ namespace dt
 {
     FinalPass::FinalPass()
     {
-        m_blitMaterial = Material::CreateFromShader("shaders/blit.shader");
+        m_blitMaterial = Material::CreateFromShader("shaders/blit.shader", {});
     }
 
     void FinalPass::ExecuteMainThread()

@@ -41,9 +41,14 @@ namespace dt
         cmdList->SetGraphicsRootSignature(shader->GetRootSignature().Get());
     }
 
-    void DxHelper::BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material)
+    void DxHelper::BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material, Shader* shader)
     {
-        auto pso = material->GetShader()->GetPso();
+        if (!shader)
+        {
+            shader = material->GetShader().get();
+        }
+        
+        auto pso = shader->GetPso();
 
         pso->SetDepthMode(material->m_depthMode);
         pso->SetDepthWrite(material->m_depthWrite && RenderRes()->curRenderTarget->GetDepthAttachment() != nullptr);
@@ -289,7 +294,7 @@ namespace dt
         auto shader = blitMat->GetShader().get();
 
         BindRootSignature(cmdList, shader);
-        BindPso(cmdList, blitMat);
+        BindPso(cmdList, blitMat, shader);
         BindBindlessTextures(cmdList, shader);
         
         BindCbuffer(cmdList, shader, GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER).get());
@@ -348,7 +353,7 @@ namespace dt
         
             if (rebindPso)
             {
-                BindPso(cmdList, material);
+                BindPso(cmdList, material, shader);
             }
 
             if (rebindTextures)

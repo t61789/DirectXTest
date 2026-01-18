@@ -113,7 +113,7 @@
                 {
                     "name": "RenderComp",
                     "mesh": "meshes/beast.obj",
-                    "material": "materials/test_batch.mtl",
+                    "material": "materials/test.mtl",
                     "enable_batch": true
                 }
             ],
@@ -132,7 +132,7 @@
                         {
                             "name": "RenderComp",
                             "mesh": "meshes/smooth_cube.obj",
-                            "material": "materials/test_batch.mtl",
+                            "material": "materials/test.mtl",
                             "enable_batch": true
                         }
                     ]
@@ -163,7 +163,7 @@
                 {
                     "name": "RenderComp",
                     "mesh": "built_in/meshes/quad.obj",
-                    "material": "materials/test_batch.mtl",
+                    "material": "materials/test.mtl",
                     "enable_batch": true
                 }
             ]

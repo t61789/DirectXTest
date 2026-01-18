@@ -5,15 +5,25 @@
 
 #include "image.h"
 #include "shader.h"
+#include "shader_variants.h"
+#include "variant_keyword.h"
 #include "game/game_resource.h"
+#include "utils/data_table.h"
 
 namespace dt
 {
-    sp<Material> Material::CreateFromShader(cr<StringHandle> shaderPath)
+    sp<Material> Material::CreateFromShader(cr<StringHandle> shaderPath, cr<VariantKeyword> keywords)
     {
-        auto shader = Shader::LoadFromFile(shaderPath);
+        auto shaderVariants = ShaderVariants::LoadFromFile(shaderPath);
+        auto shader = shaderVariants->GetShader(keywords);
+        
         auto result = msp<Material>();
-        result->BindShader(shader);
+        result->m_shaderVariants = shaderVariants;
+        result->m_shader = shader;
+        result->m_shaderKeywords = keywords;
+        result->m_dataTable = msp<DataTable>();
+        
+        result->RebindShader();
 
         return result;
     }
@@ -29,8 +39,22 @@ namespace dt
 
         auto matJson = Utils::LoadJson(path);
 
-        auto result = CreateFromShader(matJson.at("shader").get<str>());
+        vec<str> keywordsStr;
+        try_get_val(matJson, "keywords", keywordsStr);
+        auto shaderPath = matJson.at("shader").get<str>();
+        
+        auto shaderVariants = ShaderVariants::LoadFromFile(shaderPath);
+        auto shaderKeywords = VariantKeyword(keywordsStr);
+        auto shader = shaderVariants->GetShader(shaderKeywords);
+
+        auto result = msp<Material>();
+        result->m_shaderVariants = shaderVariants;
+        result->m_shaderKeywords = std::move(shaderKeywords);
+        result->m_shader = shader;
+        result->m_dataTable = msp<DataTable>();
+        
         result->LoadParams(matJson);
+        result->RebindShader();
 
         GR()->RegisterResource(path, result);
         result->m_path = path;
@@ -40,10 +64,18 @@ namespace dt
         return result;
     }
 
-    void Material::BindShader(crsp<Shader> shader)
+    void Material::RebindShader()
     {
-        m_shader = shader;
-        m_cbuffer = shader->CreateCbuffer();
+        m_cbuffer = m_shader->CreateCbuffer();
+        if (m_cbuffer)
+        {
+            m_dataTable->ForeachParam([this](cr<DataParamInfo> paramInfo)
+            {
+                m_cbuffer->Write(paramInfo.key, paramInfo.data.data(), paramInfo.data.size());
+            });
+        }
+
+        rebindShaderEvent.Invoke();
     }
 
     void Material::LoadParams(cr<nlohmann::json> matJson)
@@ -85,6 +117,16 @@ namespace dt
                 m_blendMode = RenderState::GetBlendMode(elemValue.get<str>());
                 continue;
             }
+
+            if (elemKey.Str() == "keywords")
+            {
+                continue;
+            }
+
+            if (elemKey.Str() == "shader")
+            {
+                continue;
+            }
             
             if (elemKey.Str().empty() ||
                 elemKey.Str()[0] != '_' ||
@@ -93,62 +135,38 @@ namespace dt
                 continue;
             }
 
-            auto param = LoadParamInfo(finalMatJson, elemKey);
-            SetParamImp(param.nameId, param.data.data(), param.sizeB, param.texture);
+            m_dataTable->AddParam(elemKey, elemValue);
         }
     }
 
-    Material::Param* Material::AddParam(const string_hash nameId, const uint32_t sizeB)
-    {
-        Param param;
-        param.nameId = nameId;
-        param.texture = nullptr;
-
-        const CbufferLayout::Field* cbufferField = nullptr;
-        
-        if (m_cbuffer)
-        {
-            cbufferField = m_cbuffer->GetLayout()->GetField(nameId);
-        }
-
-        if (cbufferField)
-        {
-            param.isCbuffer = true;
-            param.sizeB = cbufferField->logicSizeB;
-        }
-        else
-        {
-            param.isCbuffer = false;
-            param.sizeB = sizeB;
-        }
-        
-        param.data.resize(param.sizeB);
-
-        m_params.emplace_back(param.nameId, std::move(param));
-        return &m_params.back().second;
-    }
-
-    void Material::SetParamImp(const string_hash nameId, const void* val, const uint32_t sizeB, crsp<ITexture> texture)
+    void Material::SetParamImp(crstrh name, const void* val, const uint32_t sizeB)
     {
         assert(Utils::IsMainThread());
-        
-        auto param = find(m_params, nameId);
-        if (!param)
-        {
-            param = AddParam(nameId, sizeB);
-        }
 
-        auto clampedSizeB = (std::min)(sizeB, param->sizeB);
-        memcpy(param->data.data(), val, clampedSizeB);
-
-        if (param->isCbuffer)
+        m_dataTable->Set(name, val, sizeB);
+        if (m_cbuffer)
         {
-            m_cbuffer->Write(param->nameId, param->data.data(), param->sizeB);
+            m_cbuffer->Write(name, val, sizeB);
         }
-        
-        param->texture = texture;
     }
-    
+
+    void Material::SetParamImp(crstrh name, sp<ITexture> texture)
+    {
+        assert(Utils::IsMainThread());
+
+        if (!texture)
+        {
+            texture = GR()->errorTex;
+        }
+        
+        auto val = texture->GetTextureIndex();
+        m_dataTable->Set(name, texture);
+        if (m_cbuffer)
+        {
+            m_cbuffer->Write(name, &val, sizeof(val));
+        }
+    }
+
     bool Material::GetParamImp(const string_hash nameId, void* val, const uint32_t sizeB)
     {
         assert(Utils::IsMainThread());
@@ -163,61 +181,5 @@ namespace dt
         memcpy(val, param->data.data(), clampedSizeB);
 
         return true;
-    }
-
-    Material::Param Material::LoadParamInfo(cr<nlohmann::json> matJson, cr<StringHandle> paramName)
-    {
-        const auto& elemValue = matJson.at(paramName.Str());
-
-        Param param;
-        param.nameId = paramName;
-        
-        if (elemValue.is_number_integer())
-        {
-            param.sizeB = sizeof(int);
-            
-            auto val = elemValue.get<int>();
-            param.data.resize(param.sizeB);
-            memcpy(param.data.data(), &val, param.sizeB);
-        }
-        else if (elemValue.is_number_float())
-        {
-            param.sizeB = sizeof(float);
-            
-            auto val = elemValue.get<float>();
-            param.data.resize(param.sizeB);
-            memcpy(param.data.data(), &val, param.sizeB);
-        }
-        else if (Utils::IsVec4(elemValue))
-        {
-            param.sizeB = sizeof(XMFLOAT4);
-            
-            auto val = XMFLOAT4(elemValue[0], elemValue[1], elemValue[2], elemValue[3]);
-            param.data.resize(param.sizeB);
-            memcpy(param.data.data(), &val, param.sizeB);
-        }
-        else if (IsTextureParam(paramName))
-        {
-            ASSERT_THROW(elemValue.is_string());
-            
-            auto image = Image::LoadFromFile(elemValue.get<str>());
-            param.texture = image;
-            param.sizeB = sizeof(uint32_t);
-            
-            auto textureIndex = image->GetTextureIndex();
-            param.data.resize(param.sizeB);
-            memcpy(param.data.data(), &textureIndex, param.sizeB);
-        }
-        else
-        {
-            throw std::runtime_error("Unknown material param type");
-        }
-
-        return param;
-    }
-
-    bool Material::IsTextureParam(cr<StringHandle> name)
-    {
-        return Utils::EndsWith(name.Str(), "Tex");
     }
 }

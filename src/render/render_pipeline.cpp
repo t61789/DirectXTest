@@ -69,6 +69,7 @@ namespace dt
             ZoneScopedN("Execute Pass");
             for (auto& pass : m_passes)
             {
+                ZoneScopedN("Pass");
                 ZoneText(pass->GetName(), strlen(pass->GetName()));
                 
                 pass->ExecuteMainThread();

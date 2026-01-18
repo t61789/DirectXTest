@@ -4,15 +4,20 @@
 #include <wrl/client.h>
 
 #include "data_set.h"
+#include "event.h"
 #include "image.h"
 #include "i_resource.h"
 #include "render/render_state.h"
 #include "math.h"
+#include "variant_keyword.h"
 #include "render/param_types.h"
 #include "render/pso.h"
 
 namespace dt
 {
+    class ShaderVariants;
+    class DataTable;
+    struct VariantKeyword;
     class Cbuffer;
     class Shader;
 
@@ -24,7 +29,6 @@ namespace dt
         struct Param
         {
             string_hash nameId;
-            bool isCbuffer = false;
             uint32_t sizeB = 0;
             sp<ITexture> texture = nullptr;
             vec<uint8_t> data;
@@ -44,71 +48,76 @@ namespace dt
         BlendMode GetBlendMode() const { return m_blendMode; }
         CullMode GetCullMode() const { return m_cullMode; }
         bool GetDepthWrite() const { return m_depthWrite; }
+        VariantKeyword GetShaderKeywords() const { return m_shaderKeywords; }
+        sp<ShaderVariants> GetShaderVariants() const { return m_shaderVariants; }
         
         template <typename T>
-        void SetParam(string_hash name, T val);
-        void SetParam(string_hash nameId, const float* val, uint32_t count);
-        void SetParam(string_hash nameId, crsp<ITexture> texture);
+        void SetParam(crstrh name, T val);
+        void SetParam(crstrh name, const float* val, uint32_t count);
+        void SetParam(crstrh name, crsp<ITexture> texture);
         template <typename T>
-        T GetParam(string_hash name);
+        T GetParam(string_hash nameId);
         
-        static sp<Material> CreateFromShader(cr<StringHandle> shaderPath);
+        static sp<Material> CreateFromShader(cr<StringHandle> shaderPath, cr<VariantKeyword> keywords);
         static sp<Material> LoadFromFile(cr<StringHandle> path);
 
+        Event<> rebindShaderEvent;
+
     private:
-        void BindShader(crsp<Shader> shader);
+        void RebindShader();
         void LoadParams(cr<nlohmann::json> matJson);
-        Param* AddParam(string_hash nameId, uint32_t sizeB);
-        void SetParamImp(string_hash nameId, const void* val, uint32_t sizeB, crsp<ITexture> texture = nullptr);
+        void SetParamImp(crstrh name, const void* val, uint32_t sizeB);
+        void SetParamImp(crstrh name, sp<ITexture> texture);
         bool GetParamImp(string_hash nameId, void* val, uint32_t sizeB);
 
         template <typename T>
         static void TypeCheck();
-        static bool IsTextureParam(cr<StringHandle> name);
-        static Param LoadParamInfo(cr<nlohmann::json> matJson, cr<StringHandle> paramName);
 
         DepthMode m_depthMode = DepthMode::LESS;
         bool m_depthWrite = true;
         BlendMode m_blendMode = BlendMode::NONE;
         CullMode m_cullMode = CullMode::BACK;
-        
+
+        sp<ShaderVariants> m_shaderVariants = nullptr;
         sp<Shader> m_shader = nullptr;
+        VariantKeyword m_shaderKeywords;
         sp<Cbuffer> m_cbuffer = nullptr;
 
         vecpair<string_hash, Param> m_params;
 
         StringHandle m_path;
 
+        sp<DataTable> m_dataTable;
+
         friend class DxHelper;
         friend class GlobalMaterialParams;
     };
 
     template <typename T>
-    void Material::SetParam(const string_hash name, T val)
+    void Material::SetParam(crstrh name, T val)
     {
         TypeCheck<T>();
         
-        SetParamImp(name, &val, sizeof(T), nullptr);
+        SetParamImp(name, &val, sizeof(T));
     }
 
-    inline void Material::SetParam(const string_hash nameId, const float* val, const uint32_t count)
+    inline void Material::SetParam(crstrh name, const float* val, const uint32_t count)
     {
-        SetParamImp(nameId, val, sizeof(float) * count, nullptr);
+        SetParamImp(name, val, sizeof(float) * count);
     }
 
-    inline void Material::SetParam(const string_hash nameId, crsp<ITexture> texture)
+    inline void Material::SetParam(crstrh name, crsp<ITexture> texture)
     {
-        auto val = texture->GetTextureIndex();
-        SetParamImp(nameId, &val, sizeof(uint32_t), texture);
+        SetParamImp(name, texture);
     }
 
     template <typename T>
-    T Material::GetParam(const string_hash name)
+    T Material::GetParam(const string_hash nameId)
     {
         TypeCheck<T>();
         
         T val;
-        GetParamImp(name, &val, sizeof(T));
+        GetParamImp(nameId, &val, sizeof(T));
         return val;
     }
 

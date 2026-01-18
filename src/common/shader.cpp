@@ -60,38 +60,30 @@ namespace dt
         return msp<Cbuffer>(m_localCbufferLayout);
     }
 
-    sp<Shader> Shader::LoadFromFile(cr<StringHandle> path)
+    sp<Shader> Shader::Create(cr<StringHandle> path, VariantKeyword keywords)
     {
-        {
-            if (auto mesh = GR()->GetResource<Shader>(path))
-            {
-                return mesh;
-            }
-        }
-
         auto shader = msp<Shader>();
         shader->m_path = path;
+        shader->m_keywords = std::move(keywords);
         
-        shader->DoLoad(path);
-
-        GR()->RegisterResource(path, shader);
+        shader->DoLoad();
 
         return shader;
     }
 
-    void Shader::DoLoad(cr<StringHandle> path)
+    void Shader::DoLoad()
     {
-        log_info("Load shader: %s", path.CStr());
+        log_info("Load shader: %s, variants %s", m_path.CStr(), m_keywords.GetStr().c_str());
 
-        m_vsDxcResult = CompileShader(path.CStr(), L"VS_Main", L"vs_6_0");
-        m_psDxcResult = CompileShader(path.CStr(), L"PS_Main", L"ps_6_0");
+        m_vsDxcResult = CompileShader(m_path.CStr(), L"VS_Main", L"vs_6_0", m_keywords);
+        m_psDxcResult = CompileShader(m_path.CStr(), L"PS_Main", L"ps_6_0", m_keywords);
 
         THROW_IF_FAILED(m_psDxcResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&m_ps), nullptr));
         THROW_IF_FAILED(m_vsDxcResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&m_vs), nullptr));
 
         LoadShaderInfo();
 
-        m_defaultParams = Utils::GetResourceMeta(path);
+        m_defaultParams = Utils::GetResourceMeta(m_path);
     }
 
     void Shader::LoadShaderInfo()
@@ -374,17 +366,23 @@ namespace dt
         }
     }
 
-    ComPtr<IDxcResult> Shader::CompileShader(crstr filePath, const wchar_t* entryPoint, const wchar_t* target)
+    ComPtr<IDxcResult> Shader::CompileShader(crstr filePath, const wchar_t* entryPoint, const wchar_t* target, cr<VariantKeyword> keywords)
     {
         ASSERT_THROW(Utils::AssetExists(filePath));
 
-        LPCWSTR pszArgs[] = {
+        vec<const wchar_t*> pszArgs = {
             L"shader.hlsl",
             L"-E", entryPoint,
             L"-T", target,
             L"-Zi", // 启用调试
             L"-flegacy-resource-reservation"
         };
+
+        for (auto& keyword : keywords.GetKeywordsWStr())
+        {
+            pszArgs.push_back(L"-D");
+            pszArgs.push_back(keyword.c_str());
+        }
 
         ComPtr<IDxcBlobEncoding> pSourceBlob;
         THROW_IF_FAILED(Dx()->GetDxcUtils()->LoadFile(Utils::StringToWString(Utils::ToAbsPath(filePath)).c_str(), nullptr, &pSourceBlob));
@@ -395,7 +393,7 @@ namespace dt
         sourceBuffer.Encoding = DXC_CP_ACP;
 
         ComPtr<IDxcResult> result;
-        THROW_IF_FAILED(Dx()->GetDxcCompiler()->Compile(&sourceBuffer, pszArgs, _countof(pszArgs), Dx()->GetDxcIncludeHandler(), IID_PPV_ARGS(&result)));
+        THROW_IF_FAILED(Dx()->GetDxcCompiler()->Compile(&sourceBuffer, pszArgs.data(), pszArgs.size(), Dx()->GetDxcIncludeHandler(), IID_PPV_ARGS(&result)));
 
         ComPtr<IDxcBlobUtf8> pErrors;
         THROW_IF_FAILED(result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr));

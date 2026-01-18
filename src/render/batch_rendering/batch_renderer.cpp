@@ -2,11 +2,11 @@
 
 #include "batch_mesh.h"
 #include "common/shader.h"
+#include "common/shader_variants.h"
 #include "render/directx.h"
 #include "render/dx_buffer.h"
 #include "render/dx_helper.h"
 #include "render/dx_resource.h"
-#include "render/render_pipeline.h"
 #include "render/render_resources.h"
 #include "render/render_thread.h"
 
@@ -23,6 +23,10 @@ namespace dt
     {
         // Get or create cmd
         auto material = m_replaceMaterial ? m_replaceMaterial : ro->material;
+        auto keyword = material->GetShaderKeywords();
+        keyword.EnableKeyword(ENABLE_INSTANCING);
+        auto shader = material->GetShaderVariants()->GetShader(keyword);
+        
         auto batchRenderCmd = find_if(m_batchRenderCmds, [material](cr<BatchRenderCmd> a)
         {
             return a.material == material;
@@ -31,7 +35,8 @@ namespace dt
         {
             BatchRenderCmd b;
             b.material = material;
-            b.cmdSignature = cmdSigPool->GetCmdSig(material->GetShader());
+            b.shader = shader;
+            b.cmdSignature = cmdSigPool->GetCmdSig(shader);
             b.indirectArgsBuffer = DxBuffer::Create(32 * sizeof(IndirectArg), L"Batch Indirect Arg Buffer");
             
             m_batchRenderCmds.push_back(b);
@@ -111,6 +116,8 @@ namespace dt
     
     void BatchRenderGroup::EncodeCmd()
     {
+        ZoneScoped;
+        
         for (auto& batchRenderCmd : m_batchRenderCmds)
         {
             batchRenderCmd.indirectArgs.clear();
@@ -151,6 +158,8 @@ namespace dt
     {
         return [self=shared_from_this(), renderTarget, viewCbuffer](ID3D12GraphicsCommandList* cmdList)
         {
+            ZoneScopedN("Batch Rendering");
+            
             DxHelper::SetRenderTarget(cmdList, renderTarget);
 
             for (auto& batchRenderCmd : self->m_batchRenderCmds)
@@ -160,12 +169,12 @@ namespace dt
                     continue;
                 }
                 
-                auto shader = batchRenderCmd.material->GetShader().get();
+                auto shader = batchRenderCmd.shader.get();
                 auto material = batchRenderCmd.material.get();
                 auto cmdSig = batchRenderCmd.cmdSignature.Get();
                 
                 DxHelper::BindRootSignature(cmdList, shader);
-                DxHelper::BindPso(cmdList, material);
+                DxHelper::BindPso(cmdList, material, shader);
                 DxHelper::BindBindlessTextures(cmdList, shader);
                 
                 self->m_batchMesh->BindMesh(cmdList);
@@ -234,7 +243,7 @@ namespace dt
         m_batchMatrix = DxBuffer::Create(200 * sizeof(BatchMatrix), L"Batch Matrix Buffer");
         m_cmdSigPool = msp<CmdSigPool>();
 
-        m_shadowMaterial = Material::CreateFromShader("shaders/draw_shadow_batch.shader");
+        m_shadowMaterial = Material::CreateFromShader("shaders/draw_shadow.shader", {});
 
         m_commonGroup = msp<BatchRenderGroup>(nullptr, m_batchMesh, m_batchMatrix);
         m_shadowGroup = msp<BatchRenderGroup>(m_shadowMaterial, m_batchMesh, m_batchMatrix);

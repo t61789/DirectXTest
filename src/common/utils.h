@@ -40,6 +40,7 @@ namespace dt
 
         static size_t GetFileHash(const std::string& path);
         static size_t CombineHash(size_t hash1, size_t hash2);
+        static void CombineHashNoOrder(size_t& base, size_t newHash);
         static size_t GetMemoryHash(const void* data, size_t sizeB);
 
         static bool IsDir(crstr path);

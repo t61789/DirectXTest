@@ -169,6 +169,12 @@ namespace dt
     {
         return hash1 ^ (hash2 + 0x9e3779b9 + (hash1 << 6) + (hash2 >> 2));
     }
+    
+    void Utils::CombineHashNoOrder(size_t& base, const size_t newHash)
+    {
+        base ^= newHash * 0x9e3779b9;
+        assert(base != 0);
+    }
 
     size_t Utils::GetMemoryHash(const void* data, const size_t sizeB)
     {

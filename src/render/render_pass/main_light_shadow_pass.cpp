@@ -27,7 +27,7 @@ namespace dt
         m_shadowmapRt = msp<RenderTexture>(desc);
         m_shadowmapRenderTarget = RenderTarget::Create(nullptr, m_shadowmapRt);
 
-        m_drawShadowMtl = Material::CreateFromShader("shaders/draw_shadow.shader");
+        m_drawShadowMtl = Material::CreateFromShader("shaders/draw_shadow.shader", {});
 
         m_shadowViewCbuffer = msp<Cbuffer>(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER)->GetLayout());
     }

@@ -9,16 +9,19 @@
 
 #include "i_resource.h"
 #include "const.h"
+#include "variant_keyword.h"
 #include "render/cbuffer.h"
 #include "render/pso.h"
 #include "render/batch_rendering/batch_renderer.h"
 
 namespace dt
 {
+    class ShaderVariants;
+    struct VariantKeyword;
     class Cbuffer;
     using namespace Microsoft::WRL;
     
-    class Shader final : public IResource
+    class Shader final
     {
         struct ReflectionPack;
         
@@ -41,7 +44,7 @@ namespace dt
         size_t GetPSSize() const { return m_ps->GetBufferSize(); }
         cr<ComPtr<ID3D12RootSignature>> GetRootSignature() const { return m_rootSignature; }
         crvec<D3D12_INPUT_ELEMENT_DESC> GetVertexLayout() const { return m_vertexLayout; }
-        cr<StringHandle> GetPath() override { return m_path; }
+        cr<StringHandle> GetPath() { return m_path; }
         Pso* GetPso() const { return m_pso.get(); }
         crvec<BindResource> GetBindResources() const { return m_bindResources; }
         uint32_t GetOutputCount() const { return m_outputCount; }
@@ -50,10 +53,10 @@ namespace dt
         
         sp<Cbuffer> CreateCbuffer();
         
-        static sp<Shader> LoadFromFile(cr<StringHandle> path);
+        static sp<Shader> Create(cr<StringHandle> path, VariantKeyword keywords);
 
     private:
-        void DoLoad(cr<StringHandle> path);
+        void DoLoad();
         void LoadShaderInfo();
         void LoadVertexLayout(const ReflectionPack& reflectionPack);
         void LoadCbuffers(const ReflectionPack& reflectionPack);
@@ -62,7 +65,7 @@ namespace dt
         
         static void LoadShaderStage(cr<ComPtr<IDxcResult>> dxcResult, ReflectionPack& reflectionPack);
         static void LoadInputResources(ReflectionPack& reflectionPack);
-        static ComPtr<IDxcResult> CompileShader(crstr filePath, const wchar_t* entryPoint, const wchar_t* target);
+        static ComPtr<IDxcResult> CompileShader(crstr filePath, const wchar_t* entryPoint, const wchar_t* target, cr<VariantKeyword> keywords);
 
         ComPtr<IDxcResult> m_vsDxcResult;
         ComPtr<IDxcResult> m_psDxcResult;
@@ -70,6 +73,7 @@ namespace dt
         ComPtr<ID3DBlob> m_ps;
 
         StringHandle m_path;
+        VariantKeyword m_keywords;
 
         vec<D3D12_INPUT_ELEMENT_DESC> m_vertexLayout;
         ComPtr<ID3D12RootSignature> m_rootSignature;

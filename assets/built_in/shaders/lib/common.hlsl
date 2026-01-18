@@ -122,24 +122,14 @@
         return mul(float4(positionOS, 1.0f), localToWorld).xyz;
     }
 
-    float3 TransformObjectToWorld(float3 positionOS)
+    float3 TransformObjectToView(float3 positionOS, float4x4 localToWorld)
     {
-        return mul(float4(positionOS, 1.0f), GetLocalToWorld()).xyz;
-    }
-
-    float3 TransformObjectToView(float3 positionOS)
-    {
-        return mul(mul(float4(positionOS, 1.0f), GetLocalToWorld()), _V).xyz;
+        return mul(mul(float4(positionOS, 1.0f), localToWorld), _V).xyz;
     }
 
     float4 TransformObjectToHClip(float3 positionOS, float4x4 localToWorld)
     {
         return mul(mul(float4(positionOS, 1.0f), localToWorld), _VP);
-    }
-
-    float4 TransformObjectToHClip(float3 positionOS)
-    {
-        return TransformObjectToHClip(positionOS, GetLocalToWorld());
     }
 
     float4 TransformWorldToHClip(float3 positionWS)
@@ -152,10 +142,15 @@
         return mul(float4(normalOS, 0.0f), transpose(worldToLocal)).xyz;
     }
 
-    float3 TransformObjectToWorldNormal(float3 normalOS)
-    {
-        return TransformObjectToWorldNormal(normalOS, GetWorldToLocal());
-    }
+    #if defined(ENABLE_INSTANCING)
+        #define TransformObjectToWorld(positionOS) TransformObjectToWorld(positionOS, GetLocalToWorld(input.instanceId))
+        #define TransformObjectToHClip(positionOS) TransformObjectToHClip(positionOS, GetLocalToWorld(input.instanceId))
+        #define TransformObjectToWorldNormal(normalOS) TransformObjectToWorldNormal(normalOS, GetWorldToLocal(input.instanceId))
+    #else
+        #define TransformObjectToWorld(positionOS) TransformObjectToWorld(positionOS, GetLocalToWorld())
+        #define TransformObjectToHClip(positionOS) TransformObjectToHClip(positionOS, GetLocalToWorld())
+        #define TransformObjectToWorldNormal(normalOS) TransformObjectToWorldNormal(normalOS, GetWorldToLocal())
+    #endif
 
     float4 SampleTexture(uint textureIndex, float2 uv)
     {

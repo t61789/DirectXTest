@@ -51,6 +51,7 @@ namespace dt
 
     struct BatchRenderCmd
     {
+        sp<Shader> shader;
         sp<Material> material;
         ComPtr<ID3D12CommandSignature> cmdSignature;
 
