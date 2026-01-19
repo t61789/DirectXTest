@@ -31,6 +31,7 @@ namespace dt
 
     void DxBuffer::SubmitDirtyData()
     {
+        auto& b = m_dirtyBuffers;
         for (auto& buffer : m_dirtyBuffers)
         {
             buffer->Submit();

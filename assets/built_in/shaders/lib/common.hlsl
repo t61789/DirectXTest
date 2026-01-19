@@ -61,6 +61,7 @@
         float4x4 _MainLightShadowVP;
 
         uint _BatchMatrices;
+        uint _BatchIndices;
     };
 
     cbuffer PerViewCBuffer : register(b1, space1)
@@ -80,7 +81,7 @@
 
     cbuffer RootConstantsCBuffer : register(b3, space1)
     {
-        uint _BatchIndicesBuffer;
+        uint _BatchIndicesBufferOffsetU;
     };
 
     Texture2D _Bindless2dTextures[DESC_HANDLE_POOL_SIZE] : register(t0, space1);
@@ -104,7 +105,7 @@
 
     float4x4 GetLocalToWorld(uint instanceId)
     {
-        uint realInstanceId = LoadUintFromByteBuffer(_BatchIndicesBuffer, instanceId);
+        uint realInstanceId = LoadUintFromByteBuffer(_BatchIndices, instanceId + _BatchIndicesBufferOffsetU);
         return LoadMatrixFromByteBuffer(_BatchMatrices, realInstanceId * 2);
     }
 
@@ -115,7 +116,7 @@
 
     float4x4 GetWorldToLocal(uint instanceId)
     {
-        uint realInstanceId = LoadUintFromByteBuffer(_BatchIndicesBuffer, instanceId);
+        uint realInstanceId = LoadUintFromByteBuffer(_BatchIndices, instanceId + _BatchIndicesBufferOffsetU);
         return LoadMatrixFromByteBuffer(_BatchMatrices, realInstanceId * 2 + 1);
     }
 

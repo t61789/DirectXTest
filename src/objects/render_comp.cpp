@@ -9,6 +9,7 @@
 #include "transform_comp.h"
 #include "render/render_resources.h"
 #include "render/batch_rendering/batch_renderer.h"
+#include "render/batch_rendering/batch_matrix_buffer.h"
 
 namespace dt
 {

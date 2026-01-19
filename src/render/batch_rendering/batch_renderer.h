@@ -7,9 +7,12 @@
 #include "common/math.h"
 #include "render/cbuffer.h"
 #include "render/render_target.h"
+#include "batch_matrix_buffer.h"
 
 namespace dt
 {
+    struct BatchMatrix;
+    class BatchMatrixBuffer;
     using namespace Microsoft::WRL;
     
     class Shader;
@@ -21,21 +24,15 @@ namespace dt
     struct RenderObject;
     class BatchMesh;
     
-    struct BatchMatrix
-    {
-        XMFLOAT4X4 localToWorld;
-        XMFLOAT4X4 worldToLocal;
-    };
-    
     struct IndirectArg
     {
-        uint32_t batchIndicesBuffer;
+        uint32_t batchIndicesBufferOffsetU;
         D3D12_DRAW_INDEXED_ARGUMENTS drawArg;
     };
 
     struct BatchRenderObject
     {
-        uint32_t matrixIndex;
+        size_t matrixKey;
         sp<RenderObject> ro;
     };
 
@@ -46,7 +43,6 @@ namespace dt
 
         IndirectArg indirectArg;
         vec<uint32_t> batchIndices;
-        sp<DxBuffer> batchIndicesBuffer = nullptr;
     };
 
     struct BatchRenderCmd
@@ -76,7 +72,8 @@ namespace dt
         explicit BatchRenderGroup(
             crsp<Material> replaceMaterial,
             crsp<BatchMesh> batchMesh,
-            crsp<DxBuffer> batchMatrix);
+            crsp<BatchMatrixBuffer> batchMatrix,
+            crsp<DxBuffer> batchIndices);
 
         void Register(crsp<RenderObject> ro, size_t matrixKey, crsp<CmdSigPool> cmdSigPool);
         void Unregister(crsp<RenderObject> ro);
@@ -86,7 +83,8 @@ namespace dt
 
     private:
         sp<BatchMesh> m_batchMesh;
-        sp<DxBuffer> m_batchMatrix;
+        sp<BatchMatrixBuffer> m_batchMatrix;
+        sp<DxBuffer> m_batchIndices;
         sp<Material> m_replaceMaterial;
         vec<BatchRenderCmd> m_batchRenderCmds;
     };
@@ -119,7 +117,8 @@ namespace dt
         
         vec<RenderObjectInfo> m_renderObjects;
         sp<BatchMesh> m_batchMesh;
-        sp<DxBuffer> m_batchMatrix;
+        sp<BatchMatrixBuffer> m_batchMatrix;
+        sp<DxBuffer> m_batchIndices;
 
         sp<CmdSigPool> m_cmdSigPool;
 

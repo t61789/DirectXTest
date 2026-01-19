@@ -40,6 +40,11 @@ namespace dt
 
     str VariantKeyword::GetStr() const
     {
+        if (m_keywords.empty())
+        {
+            return "NONE";
+        }
+        
         vec<str> keywords;
         for (auto& k : m_keywords)
         {

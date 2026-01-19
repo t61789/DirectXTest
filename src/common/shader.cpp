@@ -73,7 +73,7 @@ namespace dt
 
     void Shader::DoLoad()
     {
-        log_info("Load shader: %s, variants %s", m_path.CStr(), m_keywords.GetStr().c_str());
+        log_info("Load shader: %s, keywords: %s", m_path.CStr(), m_keywords.GetStr().c_str());
 
         m_vsDxcResult = CompileShader(m_path.CStr(), L"VS_Main", L"vs_6_0", m_keywords);
         m_psDxcResult = CompileShader(m_path.CStr(), L"PS_Main", L"ps_6_0", m_keywords);

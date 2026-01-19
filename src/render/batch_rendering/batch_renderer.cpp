@@ -1,5 +1,6 @@
 ﻿#include "batch_renderer.h"
 
+#include "batch_matrix_buffer.h"
 #include "batch_mesh.h"
 #include "common/shader.h"
 #include "common/shader_variants.h"
@@ -12,10 +13,15 @@
 
 namespace dt
 {
-    BatchRenderGroup::BatchRenderGroup(crsp<Material> replaceMaterial, crsp<BatchMesh> batchMesh, crsp<DxBuffer> batchMatrix)
+    BatchRenderGroup::BatchRenderGroup(
+        crsp<Material> replaceMaterial,
+        crsp<BatchMesh> batchMesh,
+        crsp<BatchMatrixBuffer> batchMatrix,
+        crsp<DxBuffer> batchIndices)
     {
         m_batchMesh = batchMesh;
         m_batchMatrix = batchMatrix;
+        m_batchIndices = batchIndices;
         m_replaceMaterial = replaceMaterial;
     }
 
@@ -60,7 +66,6 @@ namespace dt
             b.indirectArg.drawArg.StartIndexLocation = indexOffsetB / sizeof(uint32_t);
             b.indirectArg.drawArg.BaseVertexLocation = vertexOffsetB / (MAX_VERTEX_ATTR_STRIDE_F * sizeof(float));
             b.indirectArg.drawArg.StartInstanceLocation = 0;
-            b.batchIndicesBuffer = DxBuffer::Create(32 * sizeof(uint32_t), L"Batch Indices Buffer");
             
             batchRenderCmd->subCmds.push_back(b);
             batchRenderSubCmd = &batchRenderCmd->subCmds.back();
@@ -73,12 +78,8 @@ namespace dt
         });
         if (!roExists)
         {
-            size_t offsetB, sizeB;
-            m_batchMatrix->GetBlock(matrixKey, offsetB, sizeB);
-            uint32_t matrixIndex = offsetB / sizeof(BatchMatrix);
-            
             batchRenderSubCmd->ros.push_back({
-                matrixIndex,
+                matrixKey,
                 ro
             });
         }
@@ -117,30 +118,35 @@ namespace dt
     void BatchRenderGroup::EncodeCmd()
     {
         ZoneScoped;
-        
+
+        auto sumInstanceCount = 0;
         for (auto& batchRenderCmd : m_batchRenderCmds)
         {
             batchRenderCmd.indirectArgs.clear();
-            auto sumInstanceCount = 0;
             
             for (auto& batchRenderSubCmd : batchRenderCmd.subCmds)
             {
                 batchRenderSubCmd.batchIndices.clear();
-                
                 for (auto& ro : batchRenderSubCmd.ros)
                 {
-                    batchRenderSubCmd.batchIndices.push_back(ro.matrixIndex);
+                    batchRenderSubCmd.batchIndices.push_back(m_batchMatrix->GetMatrixIndex(ro.matrixKey));
                 }
-                auto indicesBufferSizeB = batchRenderSubCmd.batchIndices.size() * sizeof(uint32_t);
-                batchRenderSubCmd.batchIndicesBuffer->Reserve(indicesBufferSizeB);
-                batchRenderSubCmd.batchIndicesBuffer->Write(0, indicesBufferSizeB, batchRenderSubCmd.batchIndices.data());
-                
-                batchRenderSubCmd.indirectArg.batchIndicesBuffer = batchRenderSubCmd.batchIndicesBuffer->GetShaderResource()->GetSrvIndex();
-                batchRenderSubCmd.indirectArg.drawArg.InstanceCount = batchRenderSubCmd.batchIndices.size();
-                sumInstanceCount += batchRenderSubCmd.indirectArg.drawArg.InstanceCount;
 
-                if (batchRenderSubCmd.indirectArg.drawArg.InstanceCount > 0)
+                auto subCmdInstanceCount = batchRenderSubCmd.batchIndices.size();
+                if (subCmdInstanceCount > 0)
                 {
+                    auto subCmdIndicesBufferOffsetU = sumInstanceCount * sizeof(uint32_t);
+                    auto subCmdIndicesBufferOffsetB = subCmdIndicesBufferOffsetU * sizeof(uint32_t);
+                    auto subCmdIndicesBufferSizeB = subCmdInstanceCount * sizeof(uint32_t);
+                    sumInstanceCount += subCmdInstanceCount;
+                    auto indicesBufferSizeB = sumInstanceCount * sizeof(uint32_t);
+
+                    m_batchIndices->Reserve(indicesBufferSizeB);
+                    m_batchIndices->Write(subCmdIndicesBufferOffsetB, subCmdIndicesBufferSizeB, batchRenderSubCmd.batchIndices.data());
+                    
+                    batchRenderSubCmd.indirectArg.batchIndicesBufferOffsetU = subCmdIndicesBufferOffsetU;
+                    batchRenderSubCmd.indirectArg.drawArg.InstanceCount = subCmdInstanceCount;
+                    
                     batchRenderCmd.indirectArgs.push_back(batchRenderSubCmd.indirectArg);
                 }
             }
@@ -152,6 +158,8 @@ namespace dt
                 batchRenderCmd.indirectArgsBuffer->Write(0, indirectArgsBufferSizeB, batchRenderCmd.indirectArgs.data());
             }
         }
+
+        GetGlobalCbuffer()->Write(BATCH_INDICES, m_batchIndices->GetShaderResource()->GetSrvIndex());
     }
 
     func<void(ID3D12GraphicsCommandList*)> BatchRenderGroup::CreateCmd(crsp<Cbuffer> viewCbuffer, crsp<RenderTarget> renderTarget)
@@ -240,13 +248,14 @@ namespace dt
     {
         m_batchMesh = msp<BatchMesh>(500000, 100000);
         
-        m_batchMatrix = DxBuffer::Create(200 * sizeof(BatchMatrix), L"Batch Matrix Buffer");
+        m_batchMatrix = msp<BatchMatrixBuffer>();
+        m_batchIndices = DxBuffer::Create(128 * sizeof(uint32_t), L"Batch Indices Buffer");
         m_cmdSigPool = msp<CmdSigPool>();
 
         m_shadowMaterial = Material::CreateFromShader("shaders/draw_shadow.shader", {});
 
-        m_commonGroup = msp<BatchRenderGroup>(nullptr, m_batchMesh, m_batchMatrix);
-        m_shadowGroup = msp<BatchRenderGroup>(m_shadowMaterial, m_batchMesh, m_batchMatrix);
+        m_commonGroup = msp<BatchRenderGroup>(nullptr, m_batchMesh, m_batchMatrix, m_batchIndices);
+        m_shadowGroup = msp<BatchRenderGroup>(m_shadowMaterial, m_batchMesh, m_batchMatrix, m_batchIndices);
     }
 
     void BatchRenderer::Register(crsp<RenderObject> renderObject)
@@ -283,7 +292,7 @@ namespace dt
             }
 
             m_batchMesh->RegisterMesh(ro->mesh);
-            auto matrixKey = m_batchMatrix->Alloc(sizeof(BatchMatrix));
+            auto matrixKey = m_batchMatrix->Alloc();
 
             m_commonGroup->Register(ro, matrixKey, m_cmdSigPool);
             m_shadowGroup->Register(ro, matrixKey, m_cmdSigPool);
@@ -325,10 +334,13 @@ namespace dt
             BatchMatrix transposedMatrix;
             transposedMatrix.localToWorld = Transpose(matrix.localToWorld);
             transposedMatrix.worldToLocal = Transpose(matrix.worldToLocal);
-            m_batchMatrix->Write(roInfo->matrixKey, &transposedMatrix);
+            m_batchMatrix->Set(roInfo->matrixKey, transposedMatrix);
         }
         m_dirtyRoMatrix.clear();
+
+        m_batchMatrix->RecreateGpuBuffer();
+        m_batchMatrix->Upload();
         
-        GetGlobalCbuffer()->Write(BATCH_MATRICES, m_batchMatrix->GetShaderResource()->GetSrvIndex());
+        GetGlobalCbuffer()->Write(BATCH_MATRICES, m_batchMatrix->GetBufferIndex());
     }
 }
