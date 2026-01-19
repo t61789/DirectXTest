@@ -135,7 +135,7 @@ namespace dt
                 auto subCmdInstanceCount = batchRenderSubCmd.batchIndices.size();
                 if (subCmdInstanceCount > 0)
                 {
-                    auto subCmdIndicesBufferOffsetU = sumInstanceCount * sizeof(uint32_t);
+                    auto subCmdIndicesBufferOffsetU = sumInstanceCount;
                     auto subCmdIndicesBufferOffsetB = subCmdIndicesBufferOffsetU * sizeof(uint32_t);
                     auto subCmdIndicesBufferSizeB = subCmdInstanceCount * sizeof(uint32_t);
                     sumInstanceCount += subCmdInstanceCount;

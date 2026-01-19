@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/NAT_CobbleRocks1_A_c87d55f5d0087906.png",
+  "shader": "shaders/pbr_basic.shader"
+}

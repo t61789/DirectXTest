@@ -86,10 +86,10 @@ namespace dt
         }
 
         uint32_t pointLightCount = 0;
-        vec<XMFLOAT4> pointLightInfos(MAX_POINT_LIGHT_COUNT);
+        vec<XMFLOAT4> pointLightInfos;
         for (auto& compWp : lightComps)
         {
-            if (!compWp.lock() || compWp.lock()->lightType != 1)
+            if (pointLightCount >= MAX_POINT_LIGHT_COUNT || !compWp.lock() || compWp.lock()->lightType != 1)
             {
                 continue;
             }
@@ -100,9 +100,8 @@ namespace dt
             auto radius = pointLightComp->radius;
             auto color = pointLightComp->GetColor();
 
-            constexpr uint32_t pointLightStrideVec4 = 2;
-            pointLightInfos[pointLightCount * pointLightStrideVec4 + 0] = { positionWS.x, positionWS.y, positionWS.z, radius };
-            pointLightInfos[pointLightCount * pointLightStrideVec4 + 1] = { color.x, color.y, color.z, 0.0f };
+            pointLightInfos.push_back({ positionWS.x, positionWS.y, positionWS.z, radius });
+            pointLightInfos.push_back({ color.x, color.y, color.z, 0.0f });
 
             pointLightCount++;
         }

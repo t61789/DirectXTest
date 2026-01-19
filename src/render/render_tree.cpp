@@ -21,7 +21,7 @@ namespace dt
                 {
                     if (a->mesh == b->mesh)
                     {
-                        return true;
+                        return false;
                     }
                     return a->mesh < b->mesh;
                 }

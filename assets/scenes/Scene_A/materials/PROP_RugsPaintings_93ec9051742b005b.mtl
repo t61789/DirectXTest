@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/PROP_RugsPaintigs1_A_c21d5145344fc53f.png",
+  "shader": "shaders/pbr_basic.shader"
+}

@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    0.7861892,
+    0.791,
+    0.625698447,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/BGR_Ocean_D_ee70110ec683d155.png",
+  "shader": "shaders/pbr_basic.shader"
+}

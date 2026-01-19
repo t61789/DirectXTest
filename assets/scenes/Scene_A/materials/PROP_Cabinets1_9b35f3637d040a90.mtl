@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/PROP_Cabinets1_A_a440415d45e9e5a4.png",
+  "shader": "shaders/pbr_basic.shader"
+}

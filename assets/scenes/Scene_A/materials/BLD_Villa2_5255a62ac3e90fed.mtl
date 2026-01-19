@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/BLD_Villa2_A_e096702e064a3d1c.png",
+  "shader": "shaders/pbr_basic.shader"
+}

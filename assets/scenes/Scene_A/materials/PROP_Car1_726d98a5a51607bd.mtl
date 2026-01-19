@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/PROP_Car1_A_a0f94488daa8f480.png",
+  "shader": "shaders/pbr_basic.shader"
+}

@@ -508,4 +508,10 @@ namespace dt
     {
         m_obj = obj;
     }
+
+    struct Segment
+    {
+        uint32_t offset;
+        uint32_t size;
+    };
 }

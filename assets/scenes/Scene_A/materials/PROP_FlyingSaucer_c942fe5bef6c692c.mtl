@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/PROP_FlyingSaucer1_A_832a92e72de83fa5.png",
+  "shader": "shaders/pbr_basic.shader"
+}

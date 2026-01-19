@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "built_in/textures/error.png",
+  "shader": "shaders/pbr_basic.shader"
+}

@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/PROP_Boat1_A_0bc4a83a8426fea8.png",
+  "shader": "shaders/pbr_basic.shader"
+}

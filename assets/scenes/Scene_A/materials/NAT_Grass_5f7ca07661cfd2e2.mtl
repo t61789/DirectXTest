@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/NAT_Grass1_AS_dbb4e533febbcf26.png",
+  "shader": "shaders/pbr_basic.shader"
+}

@@ -113,9 +113,9 @@ namespace dt
         
         try_get_val(objJson, "fov", fov);
 
-        try_get_val(objJson, "nearClip", nearClip);
+        try_get_val(objJson, "near", nearClip);
 
-        try_get_val(objJson, "farClip", farClip);
+        try_get_val(objJson, "far", farClip);
     }
 
     CameraComp* CameraComp::GetMainCamera()

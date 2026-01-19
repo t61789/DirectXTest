@@ -113,15 +113,8 @@ namespace dt
 
         auto dxResource = DxResource::Create(desc);
 
-        vec<uint8_t> cpuBuffer(capacityB);
-
-        if (m_dxResource)
-        {
-            memcpy(cpuBuffer.data(), m_cpuBuffer.data(), (std::min)(cpuBuffer.size(), m_cpuBuffer.size()));
-        }
-
         m_dxResource = dxResource;
-        m_cpuBuffer = std::move(cpuBuffer);
+        m_cpuBuffer.resize(capacityB);
         m_capacityB = capacityB;
         m_shaderResource = nullptr;
         m_vertexBufferView = std::nullopt;

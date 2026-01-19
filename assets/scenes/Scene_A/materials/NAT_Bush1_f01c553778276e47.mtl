@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/NAT_Hedge1_A_87794c30b8bbbd06.png",
+  "shader": "shaders/pbr_basic.shader"
+}

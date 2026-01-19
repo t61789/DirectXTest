@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "_MainTex": "scenes/Scene_A/textures/BLD_Church1_A_b972b45ed16a692a.png",
+  "shader": "shaders/pbr_basic.shader"
+}

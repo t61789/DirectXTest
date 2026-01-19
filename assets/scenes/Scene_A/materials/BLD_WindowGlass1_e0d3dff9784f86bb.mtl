@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    0.392156869
+  ],
+  "_MainTex": "scenes/Scene_A/textures/BLD_WindowGlass1_A_31bc81e31f21deaa.png",
+  "shader": "shaders/pbr_basic.shader"
+}

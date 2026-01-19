@@ -1,0 +1,11 @@
+{
+  "blendMode": "None",
+  "_Albedo": [
+    1.0,
+    1.0,
+    1.0,
+    0.778
+  ],
+  "_MainTex": "scenes/Scene_A/textures/MISC_GridBlocker_d047981b288a6940.png",
+  "shader": "shaders/pbr_basic.shader"
+}
