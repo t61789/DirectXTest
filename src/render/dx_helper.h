@@ -24,7 +24,7 @@ namespace dt
         static void SetViewport(ID3D12GraphicsCommandList* cmdList, uint32_t width, uint32_t height);
         
         static void BindRootSignature(ID3D12GraphicsCommandList* cmdList, const Shader* shader);
-        static void BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material, Shader* shader = nullptr);
+        static void BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material, const Shader* shader = nullptr, bool hasOddNegativeScale = false);
         static void BindCbuffer(ID3D12GraphicsCommandList* cmdList, const Shader* shader, Cbuffer* cbuffer);
         static void BindBindlessTextures(ID3D12GraphicsCommandList* cmdList, const Shader* shader);
         static void BindMesh(ID3D12GraphicsCommandList* cmdList, const Mesh* mesh);

@@ -41,7 +41,7 @@ namespace dt
         cmdList->SetGraphicsRootSignature(shader->GetRootSignature().Get());
     }
 
-    void DxHelper::BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material, Shader* shader)
+    void DxHelper::BindPso(ID3D12GraphicsCommandList* cmdList, const Material* material, const Shader* shader, const bool hasOddNegativeScale)
     {
         if (!shader)
         {
@@ -50,9 +50,19 @@ namespace dt
         
         auto pso = shader->GetPso();
 
+        auto cullMode = material->m_cullMode;
+        if (cullMode == CullMode::FRONT && hasOddNegativeScale)
+        {
+            cullMode = CullMode::BACK;
+        }
+        else if (cullMode == CullMode::BACK && hasOddNegativeScale)
+        {
+            cullMode = CullMode::FRONT;
+        }
+
         pso->SetDepthMode(material->m_depthMode);
         pso->SetDepthWrite(material->m_depthWrite && RenderRes()->curRenderTarget->GetDepthAttachment() != nullptr);
-        pso->SetCullMode(material->m_cullMode);
+        pso->SetCullMode(cullMode);
         pso->SetRenderTarget(RenderRes()->curRenderTarget.get());
 
         cmdList->SetPipelineState(pso->CurPso());

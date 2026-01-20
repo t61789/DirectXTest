@@ -33,7 +33,20 @@ namespace dt
     struct BatchRenderObject
     {
         size_t matrixKey;
+        bool hasOddNegativeScale;
         sp<RenderObject> ro;
+
+        friend bool operator==(const BatchRenderObject& lhs, const BatchRenderObject& rhs)
+        {
+            return lhs.matrixKey == rhs.matrixKey
+                && lhs.hasOddNegativeScale == rhs.hasOddNegativeScale
+                && lhs.ro == rhs.ro;
+        }
+
+        friend bool operator!=(const BatchRenderObject& lhs, const BatchRenderObject& rhs)
+        {
+            return !(lhs == rhs);
+        }
     };
 
     struct BatchRenderSubCmd
@@ -49,6 +62,7 @@ namespace dt
     {
         sp<Shader> shader;
         sp<Material> material;
+        bool hasOddNegativeScale;
         ComPtr<ID3D12CommandSignature> cmdSignature;
 
         vec<IndirectArg> indirectArgs;
@@ -75,8 +89,8 @@ namespace dt
             crsp<BatchMatrixBuffer> batchMatrix,
             crsp<DxBuffer> batchIndices);
 
-        void Register(crsp<RenderObject> ro, size_t matrixKey, crsp<CmdSigPool> cmdSigPool);
-        void Unregister(crsp<RenderObject> ro);
+        void Register(cr<BatchRenderObject> batchRo, crsp<CmdSigPool> cmdSigPool);
+        void Unregister(cr<BatchRenderObject> batchRo);
         
         void EncodeCmd();
         func<void(ID3D12GraphicsCommandList*)> CreateCmd(crsp<Cbuffer> viewCbuffer, crsp<RenderTarget> renderTarget);
@@ -99,23 +113,19 @@ namespace dt
 
         void Register(crsp<RenderObject> renderObject);
         void Unregister(crsp<RenderObject> renderObject);
+        void ReRegister(cr<BatchRenderObject> batchRo);
         void RegisterActually();
 
-        void UpdateMatrix(crsp<RenderObject> ro, cr<BatchMatrix> matrix);
+        void UpdateMatrix(crsp<RenderObject> ro);
         void UpdateMatrixActually();
 
     private:
-        struct RenderObjectInfo
-        {
-            sp<RenderObject> ro;
-            size_t matrixKey;
-        };
 
         vecsp<RenderObject> m_pendingRegisterRenderObjects;
         vecsp<RenderObject> m_pendingUnregisterRenderObjects;
-        vecpair<sp<RenderObject>, BatchMatrix> m_dirtyRoMatrix;
+        vecsp<RenderObject> m_dirtyRoMatrix;
         
-        vec<RenderObjectInfo> m_renderObjects;
+        vec<BatchRenderObject> m_renderObjects;
         sp<BatchMesh> m_batchMesh;
         sp<BatchMatrixBuffer> m_batchMatrix;
         sp<DxBuffer> m_batchIndices;

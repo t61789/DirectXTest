@@ -25,22 +25,24 @@ namespace dt
         m_replaceMaterial = replaceMaterial;
     }
 
-    void BatchRenderGroup::Register(crsp<RenderObject> ro, const size_t matrixKey, crsp<CmdSigPool> cmdSigPool)
+    void BatchRenderGroup::Register(cr<BatchRenderObject> batchRo, crsp<CmdSigPool> cmdSigPool)
     {
         // Get or create cmd
-        auto material = m_replaceMaterial ? m_replaceMaterial : ro->material;
+        auto material = m_replaceMaterial ? m_replaceMaterial : batchRo.ro->material;
+        auto hasOddNegativeScale = batchRo.hasOddNegativeScale;
         auto keyword = material->GetShaderKeywords();
         keyword.EnableKeyword(ENABLE_INSTANCING);
         auto shader = material->GetShaderVariants()->GetShader(keyword);
         
-        auto batchRenderCmd = find_if(m_batchRenderCmds, [material](cr<BatchRenderCmd> a)
+        auto batchRenderCmd = find_if(m_batchRenderCmds, [material, hasOddNegativeScale](cr<BatchRenderCmd> a)
         {
-            return a.material == material;
+            return a.material == material && a.hasOddNegativeScale == hasOddNegativeScale;
         });
         if (!batchRenderCmd)
         {
             BatchRenderCmd b;
             b.material = material;
+            b.hasOddNegativeScale = hasOddNegativeScale;
             b.shader = shader;
             b.cmdSignature = cmdSigPool->GetCmdSig(shader);
             b.indirectArgsBuffer = DxBuffer::Create(32 * sizeof(IndirectArg), L"Batch Indirect Arg Buffer");
@@ -50,7 +52,7 @@ namespace dt
         }
 
         // Get or create subCmd
-        auto mesh = ro->mesh;
+        auto mesh = batchRo.ro->mesh;
         auto batchRenderSubCmd = find_if(batchRenderCmd->subCmds, [mesh](cr<BatchRenderSubCmd> a)
         {
             return a.mesh == mesh;
@@ -72,20 +74,13 @@ namespace dt
         }
 
         // Try add ro
-        auto roExists = exists_if(batchRenderSubCmd->ros, [ro](cr<BatchRenderObject> a)
+        if (!exists(batchRenderSubCmd->ros, batchRo))
         {
-            return a.ro == ro;
-        });
-        if (!roExists)
-        {
-            batchRenderSubCmd->ros.push_back({
-                matrixKey,
-                ro
-            });
+            batchRenderSubCmd->ros.push_back(batchRo);
         }
     }
 
-    void BatchRenderGroup::Unregister(crsp<RenderObject> ro)
+    void BatchRenderGroup::Unregister(cr<BatchRenderObject> batchRo)
     {
         for (auto batchRenderCmdIt = m_batchRenderCmds.begin(); batchRenderCmdIt != m_batchRenderCmds.end(); ++batchRenderCmdIt)
         {
@@ -93,7 +88,7 @@ namespace dt
             {
                 for (auto roIt = batchRenderSubCmdIt->ros.begin(); roIt != batchRenderSubCmdIt->ros.end(); ++roIt)
                 {
-                    if (roIt->ro == ro)
+                    if (roIt->ro == batchRo.ro)
                     {
                         batchRenderSubCmdIt->ros.erase(roIt);
                         break;
@@ -182,7 +177,7 @@ namespace dt
                 auto cmdSig = batchRenderCmd.cmdSignature.Get();
                 
                 DxHelper::BindRootSignature(cmdList, shader);
-                DxHelper::BindPso(cmdList, material, shader);
+                DxHelper::BindPso(cmdList, material, shader, batchRenderCmd.hasOddNegativeScale);
                 DxHelper::BindBindlessTextures(cmdList, shader);
                 
                 self->m_batchMesh->BindMesh(cmdList);
@@ -260,21 +255,29 @@ namespace dt
 
     void BatchRenderer::Register(crsp<RenderObject> renderObject)
     {
-        remove(m_pendingUnregisterRenderObjects, renderObject);
-        
         m_pendingRegisterRenderObjects.push_back(renderObject);
     }
 
     void BatchRenderer::Unregister(crsp<RenderObject> renderObject)
     {
-        remove(m_pendingRegisterRenderObjects, renderObject);
-        
         m_pendingUnregisterRenderObjects.push_back(renderObject);
     }
-
-    void BatchRenderer::UpdateMatrix(crsp<RenderObject> ro, cr<BatchMatrix> matrix)
+    
+    void BatchRenderer::ReRegister(cr<BatchRenderObject> batchRo)
     {
-        m_dirtyRoMatrix.emplace_back(ro, matrix);
+        m_commonGroup->Unregister(batchRo);
+        m_shadowGroup->Unregister(batchRo);
+
+        m_commonGroup->Register(batchRo, m_cmdSigPool);
+        m_shadowGroup->Register(batchRo, m_cmdSigPool);
+    }
+
+    void BatchRenderer::UpdateMatrix(crsp<RenderObject> ro)
+    {
+        if (!exists(m_dirtyRoMatrix, ro))
+        {
+            m_dirtyRoMatrix.push_back(ro);
+        }
     }
 
     void BatchRenderer::RegisterActually()
@@ -286,7 +289,7 @@ namespace dt
         
         for (auto& ro : m_pendingRegisterRenderObjects)
         {
-            if (find(m_renderObjects, &RenderObjectInfo::ro, ro))
+            if (find(m_renderObjects, &BatchRenderObject::ro, ro))
             {
                 return;
             }
@@ -294,30 +297,32 @@ namespace dt
             m_batchMesh->RegisterMesh(ro->mesh);
             auto matrixKey = m_batchMatrix->Alloc();
 
-            m_commonGroup->Register(ro, matrixKey, m_cmdSigPool);
-            m_shadowGroup->Register(ro, matrixKey, m_cmdSigPool);
+            BatchRenderObject batchRo = {
+                matrixKey,
+                ro->hasOddNegativeScale,
+                ro
+            };
 
-            m_renderObjects.push_back({
-                ro,
-                matrixKey
-            });
+            m_commonGroup->Register(batchRo, m_cmdSigPool);
+            m_shadowGroup->Register(batchRo, m_cmdSigPool);
+
+            m_renderObjects.push_back(batchRo);
         }
 
         for (auto& ro : m_pendingUnregisterRenderObjects)
         {
-            if (!find(m_renderObjects, &RenderObjectInfo::ro, ro))
+            auto batchRo = find(m_renderObjects, &BatchRenderObject::ro, ro);
+            if (!batchRo)
             {
                 return;
             }
             
-            m_commonGroup->Unregister(ro);
-            m_shadowGroup->Unregister(ro);
+            m_commonGroup->Unregister(*batchRo);
+            m_shadowGroup->Unregister(*batchRo);
 
-            remove_if(m_renderObjects, [ro](CR_ELEM_TYPE(m_renderObjects) a){
-                return a.ro == ro;
-            });
+            remove(m_renderObjects, *batchRo);
         }
-
+        
         m_pendingRegisterRenderObjects.clear();
         m_pendingUnregisterRenderObjects.clear();
 
@@ -326,15 +331,21 @@ namespace dt
 
     void BatchRenderer::UpdateMatrixActually()
     {
-        for (auto& [ro, matrix] : m_dirtyRoMatrix)
+        for (auto& ro : m_dirtyRoMatrix)
         {
-            auto roInfo = find(m_renderObjects, &RenderObjectInfo::ro, ro);
-            assert(roInfo);
+            auto batchRo = find(m_renderObjects, &BatchRenderObject::ro, ro);
+            assert(batchRo);
 
             BatchMatrix transposedMatrix;
-            transposedMatrix.localToWorld = Transpose(matrix.localToWorld);
-            transposedMatrix.worldToLocal = Transpose(matrix.worldToLocal);
-            m_batchMatrix->Set(roInfo->matrixKey, transposedMatrix);
+            transposedMatrix.localToWorld = ro->localToWorld;
+            transposedMatrix.worldToLocal = ro->worldToLocal;
+            m_batchMatrix->Set(batchRo->matrixKey, transposedMatrix);
+
+            if (batchRo->hasOddNegativeScale != ro->hasOddNegativeScale)
+            {
+                batchRo->hasOddNegativeScale = ro->hasOddNegativeScale;
+                ReRegister(*batchRo);
+            }
         }
         m_dirtyRoMatrix.clear();
 

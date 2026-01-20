@@ -200,7 +200,15 @@ namespace dt
         XMVECTOR determinant;
         m_matrix.worldVal = XMMatrixInverse(&determinant, m_matrix.localVal);
         auto det = XMVectorGetX(determinant);
-        ASSERT_THROW(std::abs(det) > EPSILON);
+        if (det < EPSILON)
+        {
+            m_matrix.worldVal = XMMatrixInverse(&determinant, {
+                XMVectorSet(EPSILON, 0, 0, 0),
+                XMVectorSet(0, EPSILON, 0, 0),
+                XMVectorSet(0, 0, EPSILON, 0),
+                m_matrix.localVal.r[3]
+            });
+        }
 
         m_hasOddNegativeScale = det < 0;
 

@@ -63,6 +63,8 @@ namespace dt
         m_renderObject->shader = m_material->GetShader();
         m_renderObject->perObjectCbuffer = msp<Cbuffer>(GR()->GetPredefinedCbuffer(PER_OBJECT_CBUFFER)->GetLayout());
 
+        LoadTransformInfo();
+
         if (m_enableBatch)
         {
             BatchRenderer::Ins()->Register(m_renderObject);
@@ -105,6 +107,18 @@ namespace dt
         return GetOwner()->transform->HasOddNegativeScale();
     }
 
+    void RenderComp::LoadTransformInfo()
+    {
+        if (!m_renderObject)
+        {
+            return;
+        }
+        
+        m_renderObject->localToWorld = Store(GetOwner()->transform->GetLocalToWorld());
+        m_renderObject->worldToLocal = Store(GetOwner()->transform->GetWorldToLocal());
+        m_renderObject->hasOddNegativeScale = XMVectorGetX(XMMatrixDeterminant(Load(m_renderObject->localToWorld))) < 0.0f;
+    }
+
     void RenderComp::OnTransformDirty()
     {
         m_transformDirty = true;
@@ -134,20 +148,17 @@ namespace dt
         {
             return;
         }
-        
-        auto m = Transpose(Store(GetOwner()->transform->GetLocalToWorld()));
-        auto im = Transpose(Store(GetOwner()->transform->GetWorldToLocal()));
+
+        LoadTransformInfo();
 
         if (m_enableBatch)
         {
-            BatchRenderer::Ins()->UpdateMatrix(m_renderObject, {
-                m, im
-            });
+            BatchRenderer::Ins()->UpdateMatrix(m_renderObject);
         }
         else
         {
-            m_renderObject->perObjectCbuffer->Write(M, m);
-            m_renderObject->perObjectCbuffer->Write(IM, im);
+            m_renderObject->perObjectCbuffer->Write(M, Transpose(m_renderObject->localToWorld));
+            m_renderObject->perObjectCbuffer->Write(IM, Transpose(m_renderObject->worldToLocal));
         }
     }
 }

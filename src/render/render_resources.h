@@ -21,6 +21,10 @@ namespace dt
         sp<Material> material;
         sp<Mesh> mesh;
         sp<Cbuffer> perObjectCbuffer;
+
+        bool hasOddNegativeScale;
+        XMFLOAT4X4 localToWorld;
+        XMFLOAT4X4 worldToLocal;
     };
     
     struct RenderResources

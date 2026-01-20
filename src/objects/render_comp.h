@@ -43,6 +43,7 @@ namespace dt
         Bounds m_worldBounds;
         EventHandler m_onTransformDirtyHandler = 0;
 
+        void LoadTransformInfo();
         void OnTransformDirty();
 
         void UpdateWorldBounds();
