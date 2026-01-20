@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <DirectXMath.h>
 #include <imgui.h>
 
@@ -13,6 +13,7 @@ namespace dt
     class IGui
     {
     public:
+        IGui() = default;
         virtual ~IGui() = default;
         virtual void OnGui() = 0;
     };
@@ -31,7 +32,21 @@ namespace dt
         static bool InputFloat3(crstr label, XMFLOAT3& val, crstr format = "%.2f");
         static bool DragFloat3(crstr label, XMFLOAT3& val, float speed = 1.0f, crstr format = "%.2f");
         
-        static void ImGuiDrawLine(cr<XMVECTOR> worldStart, cr<XMVECTOR> worldEnd, ImU32 color, float thickness);
+        static void DrawLine(
+            const XMFLOAT3& position0WS,
+            const XMFLOAT3& position1WS,
+            const XMFLOAT4X4& vpMatrix,
+            const XMUINT2& screenSize,
+            ImU32 color = IM_COL32(255, 255, 255, 255),
+            float thickness = 1.0f);
+
+        static void DrawAabb(
+            const XMFLOAT3& centerWS,
+            const XMFLOAT3& extentsWS,
+            const XMFLOAT4X4& vpMatrix,
+            const XMUINT2& screenSize,
+            ImU32 color = IM_COL32(255, 255, 255, 255),
+            float thickness = 1.0f);
 
         Event<> drawGuiEvent;
 

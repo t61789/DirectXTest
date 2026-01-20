@@ -1,4 +1,7 @@
-﻿#include "gui.h"
+#include "gui.h"
+
+#include <array>
+#include <utility>
 
 #include "imgui_impl_dx12.h"
 #include "imgui_impl_win32.h"
@@ -10,6 +13,127 @@
 
 namespace dt
 {
+    namespace
+    {
+        struct ClipPlane
+        {
+            float a, b, c, d;
+        };
+
+        inline float EvalPlane(const ClipPlane& plane, const XMFLOAT4& p)
+        {
+            return plane.a * p.x + plane.b * p.y + plane.c * p.z + plane.d * p.w;
+        }
+
+        inline XMFLOAT4 LerpClip(const XMFLOAT4& a, const XMFLOAT4& b, const float t)
+        {
+            return XMFLOAT4(
+                a.x + (b.x - a.x) * t,
+                a.y + (b.y - a.y) * t,
+                a.z + (b.z - a.z) * t,
+                a.w + (b.w - a.w) * t);
+        }
+
+        inline XMFLOAT4 WSPosToClip(const XMFLOAT3& positionWS, const XMFLOAT4X4& vpMatrix)
+        {
+            auto vp = Load(vpMatrix);
+            XMVECTOR ws = XMVectorSet(positionWS.x, positionWS.y, positionWS.z, 1.0f);
+            XMFLOAT4 clip;
+            XMStoreFloat4(&clip, XMVector4Transform(ws, vp));
+            return clip;
+        }
+
+        // Clip a clip-space segment against D3D clip volume:
+        //  -w <= x <= w
+        //  -w <= y <= w
+        //   0 <= z <= w
+        inline bool ClipLineSegmentToFrustumD3D(XMFLOAT4& p0, XMFLOAT4& p1)
+        {
+            // Planes are expressed as: f(p) = a*x + b*y + c*z + d*w >= 0
+            static constexpr ClipPlane planes[6] = {
+                {  1.0f,  0.0f,  0.0f, 1.0f }, // left:   x + w >= 0
+                { -1.0f,  0.0f,  0.0f, 1.0f }, // right: -x + w >= 0
+                {  0.0f,  1.0f,  0.0f, 1.0f }, // bottom: y + w >= 0
+                {  0.0f, -1.0f,  0.0f, 1.0f }, // top:   -y + w >= 0
+                {  0.0f,  0.0f,  1.0f, 0.0f }, // near:   z >= 0
+                {  0.0f,  0.0f, -1.0f, 1.0f }, // far:   -z + w >= 0
+            };
+
+            constexpr float kEps = 1e-6f;
+
+            const XMFLOAT4 a = p0;
+            const XMFLOAT4 b = p1;
+            float t0 = 0.0f;
+            float t1 = 1.0f;
+
+            for (const auto& plane : planes)
+            {
+                const float f0 = EvalPlane(plane, a);
+                const float f1 = EvalPlane(plane, b);
+
+                if (f0 < 0.0f && f1 < 0.0f)
+                {
+                    return false;
+                }
+
+                if (f0 < 0.0f || f1 < 0.0f)
+                {
+                    const float denom = f0 - f1;
+                    if (denom > -kEps && denom < kEps)
+                    {
+                        // Segment is (almost) parallel to this plane; keep previous interval.
+                        continue;
+                    }
+
+                    const float t = f0 / denom; // intersection parameter along original segment [0,1]
+                    if (f0 < 0.0f)
+                    {
+                        // Entering the volume.
+                        if (t > t0) t0 = t;
+                    }
+                    else
+                    {
+                        // Leaving the volume.
+                        if (t < t1) t1 = t;
+                    }
+
+                    if (t0 > t1)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            p0 = LerpClip(a, b, t0);
+            p1 = LerpClip(a, b, t1);
+            return true;
+        }
+
+        inline bool ClipToPixel(const XMFLOAT4& clipPos, const XMUINT2& screenSize, ImVec2& outPixel)
+        {
+            constexpr float kEps = 1e-6f;
+            if (screenSize.x == 0 || screenSize.y == 0)
+            {
+                return false;
+            }
+
+            if (clipPos.w > -kEps && clipPos.w < kEps)
+            {
+                return false;
+            }
+
+            const float invW = 1.0f / clipPos.w;
+            const float ndcX = clipPos.x * invW;
+            const float ndcY = clipPos.y * invW;
+
+            const float sx = (ndcX * 0.5f + 0.5f) * static_cast<float>(screenSize.x);
+            const float sy = (0.5f - ndcY * 0.5f) * static_cast<float>(screenSize.y);
+
+            outPixel = ImVec2(sx, sy);
+            return true;
+        }
+    }
+
     Gui::Gui()
     {
         m_mainThreadContext = ImGui::CreateContext();
@@ -221,35 +345,60 @@ namespace dt
     //     }
     //     m_drawLineCmds.clear();
     // }
-    
-    void Gui::ImGuiDrawLine(cr<XMVECTOR> worldStart, cr<XMVECTOR> worldEnd, const ImU32 color, const float thickness)
+
+    void Gui::DrawLine(
+        const XMFLOAT3& position0WS,
+        const XMFLOAT3& position1WS,
+        const XMFLOAT4X4& vpMatrix,
+        const XMUINT2& screenSize,
+        const ImU32 color,
+        const float thickness)
     {
-        auto vpMatrix = Load(RenderRes()->mainCameraVp->vpMatrix);
-        auto screenSize = RenderRes()->screenSize;
-        
-        auto drawList = ImGui::GetBackgroundDrawList();
-        
-        // 转换世界坐标到屏幕坐标
-        auto screenStart = Store3(WorldToScreen01(worldStart, vpMatrix));
-        auto screenEnd = Store3(WorldToScreen01(worldEnd, vpMatrix));
+        XMFLOAT4 clip0 = WSPosToClip(position0WS, vpMatrix);
+        XMFLOAT4 clip1 = WSPosToClip(position1WS, vpMatrix);
 
-        if(screenStart.z < 0 || screenEnd.z < 0)
+        if (!ClipLineSegmentToFrustumD3D(clip0, clip1))
         {
             return;
         }
 
-        XMFLOAT2 p0 = { screenStart.x, screenStart.y };
-        XMFLOAT2 p1 = { screenEnd.x, screenEnd.y };
-        const XMFLOAT2 rectMin = { 0, 0 };
-        const XMFLOAT2 rectMax = XMFLOAT2(screenSize.x, screenSize.y);
-
-        auto inScreen = CohenSutherlandClip(p0, p1, rectMin, rectMax);
-        if(!inScreen)
+        ImVec2 p0, p1;
+        if (!ClipToPixel(clip0, screenSize, p0) || !ClipToPixel(clip1, screenSize, p1))
         {
             return;
         }
 
-        // 使用 ImGui 的绘图 API 绘制线条
-        drawList->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y), color, thickness);
+        ImGui::GetBackgroundDrawList()->AddLine(p0, p1, color, thickness);
+    }
+
+    void Gui::DrawAabb(
+        const XMFLOAT3& centerWS,
+        const XMFLOAT3& extentsWS,
+        const XMFLOAT4X4& vpMatrix,
+        const XMUINT2& screenSize,
+        const ImU32 color,
+        const float thickness)
+    {
+        const std::array<XMFLOAT3, 8> vertices = {
+            XMFLOAT3(centerWS.x - extentsWS.x, centerWS.y - extentsWS.y, centerWS.z - extentsWS.z),
+            XMFLOAT3(centerWS.x + extentsWS.x, centerWS.y - extentsWS.y, centerWS.z - extentsWS.z),
+            XMFLOAT3(centerWS.x + extentsWS.x, centerWS.y + extentsWS.y, centerWS.z - extentsWS.z),
+            XMFLOAT3(centerWS.x - extentsWS.x, centerWS.y + extentsWS.y, centerWS.z - extentsWS.z),
+            XMFLOAT3(centerWS.x - extentsWS.x, centerWS.y - extentsWS.y, centerWS.z + extentsWS.z),
+            XMFLOAT3(centerWS.x + extentsWS.x, centerWS.y - extentsWS.y, centerWS.z + extentsWS.z),
+            XMFLOAT3(centerWS.x + extentsWS.x, centerWS.y + extentsWS.y, centerWS.z + extentsWS.z),
+            XMFLOAT3(centerWS.x - extentsWS.x, centerWS.y + extentsWS.y, centerWS.z + extentsWS.z),
+        };
+
+        static constexpr std::pair<int, int> edges[12] = {
+            {0,1}, {1,2}, {2,3}, {3,0}, // bottom face
+            {4,5}, {5,6}, {6,7}, {7,4}, // top face
+            {0,4}, {1,5}, {2,6}, {3,7}, // sides
+        };
+
+        for (const auto& [s, e] : edges)
+        {
+            DrawLine(vertices[s], vertices[e], vpMatrix, screenSize, color, thickness);
+        }
     }
 }
