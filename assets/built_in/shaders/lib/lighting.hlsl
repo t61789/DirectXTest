@@ -177,7 +177,7 @@
 
         float3 diffuse = IndirectRadiance(normalWS) * albedo * kD;
 
-        float MAX_LOD = 5.0f;
+        float MAX_LOD = 11.0f;
         float3 iblColor = SampleCubeTextureLod(_SkyboxTex, reflect(-viewDirWS, normalWS), roughness * MAX_LOD).rgb;
         float2 envBRDF = ApproximateSpecularBRDF(ndv, roughness);
         float3 specular = iblColor * (F * envBRDF.x + envBRDF.y);

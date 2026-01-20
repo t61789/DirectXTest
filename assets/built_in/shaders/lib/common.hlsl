@@ -163,6 +163,14 @@
         return _Bindless2dTextures[srvIndex].Sample(_BindlessSamplers[samplerIndex], uv);
     }
 
+    float4 SampleTextureLod(uint textureIndex, float2 uv, float lod)
+    {
+        uv.y = 1.0f - uv.y;
+        uint srvIndex = textureIndex & 0xFFFF;
+        uint samplerIndex = (textureIndex >> 20) & 0xFF;
+        return _Bindless2dTextures[srvIndex].SampleLevel(_BindlessSamplers[samplerIndex], uv, lod);
+    }
+
     float4 SampleCubeTexture(uint textureIndex, float3 direction)
     {
         uint srvIndex = textureIndex & 0xFFFF;
@@ -179,20 +187,20 @@
 
     void ReadGBuffer0(float2 screenUV, out float3 albedo)
     {
-        float4 color = SampleTexture(_GBuffer0Tex, screenUV);
+        float4 color = SampleTextureLod(_GBuffer0Tex, screenUV, 0.0f);
         albedo = color.xyz;
     }
 
     void ReadGBuffer0(float2 screenUV, out float3 albedo, out float pixelType)
     {
-        float4 color = SampleTexture(_GBuffer0Tex, screenUV);
+        float4 color = SampleTextureLod(_GBuffer0Tex, screenUV, 0.0f);
         albedo = color.xyz;
         pixelType = color.w;
     }
 
     void ReadGBuffer1(float2 screenUV, out float3 normalWS, out float metallic, out float roughness)
     {
-        float4 color = SampleTexture(_GBuffer1Tex, screenUV);
+        float4 color = SampleTextureLod(_GBuffer1Tex, screenUV, 0.0f);
         normalWS = DecompressNormal(color.xy);
 
         float2 metallicRoughness = UnpackTwoFloats(color.z);
@@ -202,7 +210,7 @@
 
     void ReadGBuffer2(float2 screenUV, out float depth)
     {
-        float4 color = SampleTexture(_GBuffer2Tex, screenUV);
+        float4 color = SampleTextureLod(_GBuffer2Tex, screenUV, 0.0f);
         depth = color.r;
     }
 

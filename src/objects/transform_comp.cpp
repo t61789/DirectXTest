@@ -199,7 +199,7 @@ namespace dt
 
         XMVECTOR determinant;
         m_matrix.worldVal = XMMatrixInverse(&determinant, m_matrix.localVal);
-        auto det = XMVectorGetX(determinant);
+        auto det = std::abs(XMVectorGetX(determinant));
         if (det < EPSILON)
         {
             m_matrix.worldVal = XMMatrixInverse(&determinant, {

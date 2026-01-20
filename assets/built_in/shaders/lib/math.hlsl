@@ -23,19 +23,25 @@
         n.y += n.y >= 0.0f ? -t : t;
         return normalize(n);
     }
-    
+
     float PackTwoFloats(float f0, float f1)
     {
-        float m = floor(saturate(f0) * 255.0f);
-        float r = saturate(f1);
-        return m + r;
+        uint m = (uint)(saturate(f0) * 255.0f);
+        uint r = (uint)(saturate(f1) * 255.0f);
+
+        uint packedInt = (m << 8) | r;
+
+        return (float)packedInt / 65535.0f;
     }
 
-    float2 UnpackTwoFloats(float packed)
+    float2 UnpackTwoFloats(float packedValue)
     {
-        float f0 = floor(packed) / 255.0f;
-        float f1 = frac(packed);
-        return float2(f0, f1);
+        uint packedInt = (uint)(packedValue * 65535.0f + 0.5f);
+
+        float2 result;
+        result.x = (float)((packedInt >> 8) & 0xFF) / 255.0f;
+        result.y = (float)(packedInt & 0xFF) / 255.0f;
+        return result;
     }
 
-#endif
+#endif // !defined(__MATH_HLSL_INCLUDED__)
