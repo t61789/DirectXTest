@@ -185,12 +185,6 @@
         return _BindlessCubeTextures[srvIndex].SampleLevel(_BindlessSamplers[samplerIndex], direction, lod);
     }
 
-    void ReadGBuffer0(float2 screenUV, out float3 albedo)
-    {
-        float4 color = SampleTextureLod(_GBuffer0Tex, screenUV, 0.0f);
-        albedo = color.xyz;
-    }
-
     void ReadGBuffer0(float2 screenUV, out float3 albedo, out float pixelType)
     {
         float4 color = SampleTextureLod(_GBuffer0Tex, screenUV, 0.0f);
