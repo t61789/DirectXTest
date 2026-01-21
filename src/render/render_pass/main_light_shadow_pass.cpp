@@ -3,6 +3,9 @@
 #include "common/material.h"
 #include "common/render_texture.h"
 #include "objects/camera_comp.h"
+#include "objects/scene.h"
+#include "objects/test_comp.h"
+#include "objects/transform_comp.h"
 #include "render/cbuffer.h"
 #include "render/dx_helper.h"
 #include "render/render_pipeline.h"
@@ -35,21 +38,28 @@ namespace dt
     void MainLightShadowPass::PrepareContext(RenderResources* context)
     {
         context->shadowmapRt = m_shadowmapRt;
+        context->shadowVp = CameraComp::GetMainCamera()->CreateShadowVPMatrix(
+            RenderRes()->mainLightDir,
+            static_cast<float>(RenderRes()->screenSize.x) / static_cast<float>(RenderRes()->screenSize.y),
+            RenderRes()->shadowRange,
+            m_shadowmapRt->GetSize().x);
+        // context->shadowVp = CameraComp::GetMainCamera()->CreateShadowVPMatrix(
+        //     GR()->mainScene->GetRegistry()->GetCompStorage()->GetComps<TestComp>()[0].lock()->GetOwner()->transform->GetLocalToWorld(),
+        //     45, 1.0f, 10.0f,
+        //     RenderRes()->mainLightDir,
+        //     static_cast<float>(RenderRes()->screenSize.x) / static_cast<float>(RenderRes()->screenSize.y),
+        //     20,
+        //     m_shadowmapRt->GetSize().x);
     }
 
     void MainLightShadowPass::ExecuteMainThread()
     {
-        auto shadowVp = CameraComp::GetMainCamera()->CreateShadowVPMatrix(
-            RenderRes()->mainLightDir,
-            static_cast<float>(RenderRes()->screenSize.x) / static_cast<float>(RenderRes()->screenSize.y),
-            20,
-            m_shadowmapRt->GetSize().x);
-
-        shadowVp->WriteToCbuffer(m_shadowViewCbuffer.get());
+        RenderRes()->shadowVp->WriteToCbuffer(m_shadowViewCbuffer.get());
 
         auto globalCbuffer = GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER);
-        globalCbuffer->Write(MAIN_LIGHT_SHADOW_VP, Transpose(shadowVp->vpMatrix));
+        globalCbuffer->Write(MAIN_LIGHT_SHADOW_VP, Transpose(RenderRes()->shadowVp->vpMatrix));
         globalCbuffer->Write(MAIN_LIGHT_SHADOW_TEX, m_shadowmapRt->GetTextureIndex());
+        globalCbuffer->Write(MAIN_LIGHT_SHADOW_RANGE, RenderRes()->shadowRange);
         
         BatchRenderer::Ins()->GetShadowRenderGroup()->EncodeCmd();
     }

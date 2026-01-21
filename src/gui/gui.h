@@ -48,6 +48,13 @@ namespace dt
             ImU32 color = IM_COL32(255, 255, 255, 255),
             float thickness = 1.0f);
 
+        static void DrawFrustum(
+            const XMFLOAT4X4& targetVP,
+            const XMFLOAT4X4& drawVP,
+            const XMUINT2& screenSize,
+            ImU32 color = IM_COL32(255, 255, 255, 255),
+            float thickness = 1.0f);
+
         Event<> drawGuiEvent;
 
     private:

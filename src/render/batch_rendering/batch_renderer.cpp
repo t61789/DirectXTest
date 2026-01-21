@@ -16,13 +16,13 @@ namespace dt
     BatchRenderGroup::BatchRenderGroup(
         crsp<Material> replaceMaterial,
         crsp<BatchMesh> batchMesh,
-        crsp<BatchMatrixBuffer> batchMatrix,
-        crsp<DxBuffer> batchIndices)
+        crsp<BatchMatrixBuffer> batchMatrix)
     {
         m_batchMesh = batchMesh;
         m_batchMatrix = batchMatrix;
-        m_batchIndices = batchIndices;
         m_replaceMaterial = replaceMaterial;
+
+        m_batchIndices = DxBuffer::Create(128 * sizeof(uint32_t), L"Batch Indices Buffer");
     }
 
     void BatchRenderGroup::Register(cr<BatchRenderObject> batchRo, crsp<CmdSigPool> cmdSigPool)
@@ -154,7 +154,7 @@ namespace dt
             }
         }
 
-        GetGlobalCbuffer()->Write(BATCH_INDICES, m_batchIndices->GetShaderResource()->GetSrvIndex());
+        m_batchIndicesBufferIndex = m_batchIndices->GetShaderResource()->GetSrvIndex();
     }
 
     func<void(ID3D12GraphicsCommandList*)> BatchRenderGroup::CreateCmd(crsp<Cbuffer> viewCbuffer, crsp<RenderTarget> renderTarget)
@@ -179,6 +179,8 @@ namespace dt
                 DxHelper::BindRootSignature(cmdList, shader);
                 DxHelper::BindPso(cmdList, material, shader, batchRenderCmd.hasOddNegativeScale);
                 DxHelper::BindBindlessTextures(cmdList, shader);
+
+                cmdList->SetGraphicsRoot32BitConstant(shader->GetRootConstantCbufferRootParamIndex(), self->m_batchIndicesBufferIndex, ROOT_CONSTANTS_BATCH_INDICES_BUFFER_DWORD);
                 
                 self->m_batchMesh->BindMesh(cmdList);
                 DxHelper::BindCbuffer(cmdList, shader, GR()->GetPredefinedCbuffer(GLOBAL_CBUFFER).get());
@@ -244,13 +246,12 @@ namespace dt
         m_batchMesh = msp<BatchMesh>(500000, 100000);
         
         m_batchMatrix = msp<BatchMatrixBuffer>();
-        m_batchIndices = DxBuffer::Create(128 * sizeof(uint32_t), L"Batch Indices Buffer");
         m_cmdSigPool = msp<CmdSigPool>();
 
         m_shadowMaterial = Material::CreateFromShader("shaders/draw_shadow.shader", {});
 
-        m_commonGroup = msp<BatchRenderGroup>(nullptr, m_batchMesh, m_batchMatrix, m_batchIndices);
-        m_shadowGroup = msp<BatchRenderGroup>(m_shadowMaterial, m_batchMesh, m_batchMatrix, m_batchIndices);
+        m_commonGroup = msp<BatchRenderGroup>(nullptr, m_batchMesh, m_batchMatrix);
+        m_shadowGroup = msp<BatchRenderGroup>(m_shadowMaterial, m_batchMesh, m_batchMatrix);
     }
 
     void BatchRenderer::Register(crsp<RenderObject> renderObject)

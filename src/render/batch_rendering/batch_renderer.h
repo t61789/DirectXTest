@@ -86,8 +86,7 @@ namespace dt
         explicit BatchRenderGroup(
             crsp<Material> replaceMaterial,
             crsp<BatchMesh> batchMesh,
-            crsp<BatchMatrixBuffer> batchMatrix,
-            crsp<DxBuffer> batchIndices);
+            crsp<BatchMatrixBuffer> batchMatrix);
 
         void Register(cr<BatchRenderObject> batchRo, crsp<CmdSigPool> cmdSigPool);
         void Unregister(cr<BatchRenderObject> batchRo);
@@ -99,6 +98,7 @@ namespace dt
         sp<BatchMesh> m_batchMesh;
         sp<BatchMatrixBuffer> m_batchMatrix;
         sp<DxBuffer> m_batchIndices;
+        uint32_t m_batchIndicesBufferIndex;
         sp<Material> m_replaceMaterial;
         vec<BatchRenderCmd> m_batchRenderCmds;
     };
@@ -128,7 +128,6 @@ namespace dt
         vec<BatchRenderObject> m_renderObjects;
         sp<BatchMesh> m_batchMesh;
         sp<BatchMatrixBuffer> m_batchMatrix;
-        sp<DxBuffer> m_batchIndices;
 
         sp<CmdSigPool> m_cmdSigPool;
 

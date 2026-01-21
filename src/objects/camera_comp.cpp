@@ -40,7 +40,7 @@ namespace dt
 
         auto deltaTime = GR()->GetDeltaTime();
 
-        if (Keyboard::Ins()->KeyPressed(KeyCode::LeftShift))
+        if (Keyboard::Ins()->KeyPressed(KeyCode::Shift))
         {
             m_curSpeedAdd += deltaTime * accleration;
             moveSpeed += m_curSpeedAdd;
@@ -125,17 +125,7 @@ namespace dt
         return m_cameras[0];
     }
 
-    sp<ViewProjInfo> CameraComp::CreateVPMatrix(const float aspect)
-    {
-        auto& localToWorld = GetOwner()->transform->GetLocalToWorld();
-        auto viewCenter = GetPosition(localToWorld);
-        auto viewMatrix = XMMatrixLookToLH(GetPosition(localToWorld), GetForward(localToWorld), GetUp(localToWorld));
-        auto projMatrix = XMMatrixPerspectiveFovLH(fov * DEG2RAD, aspect, nearClip, farClip);
-
-        return ViewProjInfo::Create(viewMatrix, projMatrix, viewCenter, true);
-    }
-    
-    sp<ViewProjInfo> CameraComp::CreateShadowVPMatrix(const XMFLOAT3 lightDirection, float screenAspect, float shadowRange, uint32_t shadowTexSize)
+    sp<ViewProjInfo> CameraComp::CreateShadowVPMatrix(cr<XMMATRIX> localToWorld, float fov, float nearClip, float farClip, XMFLOAT3 lightDirection, float screenAspect, float shadowRange, uint32_t shadowTexSize)
     {
         shadowRange = std::min(shadowRange, farClip);
         
@@ -150,7 +140,7 @@ namespace dt
             up,
             forward);
 
-        auto& cameraL2W = GetOwner()->transform->GetLocalToWorld();
+        auto& cameraL2W = localToWorld;
         auto cameraRight = cameraL2W.r[0];
         auto cameraUp = cameraL2W.r[1];
         auto cameraForward = cameraL2W.r[2];
@@ -158,8 +148,6 @@ namespace dt
         
         XMVECTOR corners[8];
         GetFrustumCorners(cameraRight, cameraUp, cameraForward, cameraPos, fov, nearClip, shadowRange, screenAspect, corners);
-
-        // Gui::Ins()->DrawFrustumPlanes(corners, IM_COL32(0, 255, 0, 255));
 
         auto shadowWidth = Length3(corners[6] - corners[0]) * 0.5f;
         shadowWidth = std::max(shadowWidth, Length3(corners[4] - corners[5]) * 0.5f);
@@ -202,5 +190,15 @@ namespace dt
         auto proj = XMMatrixOrthographicLH(shadowWidth * 2, shadowWidth * 2, 0, depthRange);
 
         return ViewProjInfo::Create(view, proj, shadowCameraPos);
+    }
+
+    sp<ViewProjInfo> CameraComp::CreateVPMatrix(const float aspect)
+    {
+        return ViewProjInfo::Create(GetOwner()->transform->GetLocalToWorld(), fov, aspect, nearClip, farClip);
+    }
+    
+    sp<ViewProjInfo> CameraComp::CreateShadowVPMatrix(const XMFLOAT3 lightDirection, const float screenAspect, const float shadowRange, const uint32_t shadowTexSize)
+    {
+        return CreateShadowVPMatrix(GetOwner()->transform->GetLocalToWorld(), fov, nearClip, farClip, lightDirection, screenAspect, shadowRange, shadowTexSize);
     }
 }

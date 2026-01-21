@@ -15,12 +15,12 @@ namespace dt
         void Update() override;
 
         sp<ViewProjInfo> CreateVPMatrix(float aspect);
-        sp<ViewProjInfo> CreateShadowVPMatrix(XMFLOAT3 lightDirection, float screenAspect, float shadowRange,
-                                              uint32_t shadowTexSize);
+        sp<ViewProjInfo> CreateShadowVPMatrix(XMFLOAT3 lightDirection, float screenAspect, float shadowRange, uint32_t shadowTexSize);
 
         void LoadFromJson(cr<nlohmann::json> objJson) override;
         
         static CameraComp* GetMainCamera();
+        static sp<ViewProjInfo> CreateShadowVPMatrix(cr<XMMATRIX> localToWorld, float fov, float nearClip, float farClip, XMFLOAT3 lightDirection, float screenAspect, float shadowRange, uint32_t shadowTexSize);
         
         float fov = 45.0f;
         float nearClip = 0.1f;

@@ -10,6 +10,7 @@
 #include "objects/camera_comp.h"
 #include "objects/light_comp.h"
 #include "objects/scene.h"
+#include "objects/test_comp.h"
 #include "objects/transform_comp.h"
 #include "render/cbuffer.h"
 #include "render/directx.h"
@@ -35,6 +36,7 @@ namespace dt
         RenderRes()->mainCameraViewCbuffer = m_mainCameraViewCbuffer;
         RenderRes()->mainCameraVp->WriteToCbuffer(RenderRes()->mainCameraViewCbuffer.get());
         RenderRes()->mainCameraVp->WriteToCbuffer(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
+        RenderRes()->shadowRange = 100.0f;
         RenderRes()->renderObjects = GR()->mainScene->GetRenderTree()->GetRenderObjects();
         GetGlobalCbuffer()->Write(SKYBOX_TEX, GR()->skyboxTex->GetTextureIndex());
 

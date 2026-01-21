@@ -27,8 +27,8 @@ namespace dt
 
         m_renderPipeline = msp<RenderPipeline>();
 
-        m_scene = Scene::LoadScene("scenes/test_scene/test_scene.json");
-        // m_scene = Scene::LoadScene("scenes/Scene_A/scene.json");
+        // m_scene = Scene::LoadScene("scenes/test_scene/test_scene.json");
+        m_scene = Scene::LoadScene("scenes/Scene_A/scene.json");
     }
 
     Game::~Game()

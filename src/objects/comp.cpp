@@ -7,6 +7,7 @@
 #include "camera_comp.h"
 #include "light_comp.h"
 #include "skybox_comp.h"
+#include "test_comp.h"
 #include "common/utils.h"
 
 namespace dt
@@ -35,6 +36,7 @@ namespace dt
             REGISTER_COMP(CameraComp)
             REGISTER_COMP(LightComp)
             REGISTER_COMP(SkyboxComp)
+            REGISTER_COMP(TestComp)
 
             #undef REGISTER_COMP
         }

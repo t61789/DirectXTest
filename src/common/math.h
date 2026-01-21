@@ -248,6 +248,9 @@ namespace dt
         auto nearWidth = nearHeight * aspect;
         auto farWidth = farHeight * aspect;
 
+        nearWidth = farWidth;
+        nearHeight = farHeight;
+
         corners[0] = nearCenter - cameraRight * nearWidth - cameraUp * nearHeight; // nlb
         corners[1] = nearCenter - cameraRight * nearWidth + cameraUp * nearHeight; // nlt
         corners[2] = nearCenter + cameraRight * nearWidth + cameraUp * nearHeight; // nrt

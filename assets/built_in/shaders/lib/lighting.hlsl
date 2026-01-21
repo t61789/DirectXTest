@@ -54,16 +54,22 @@
         float bias = 0.001f;
         shadowDepth += bias;
 
+        float distanceFade = saturate((length(positionWS - _CameraPositionWS.xyz) - _MainLightShadowRange + 5.0f) / 5.0f);
+
+        float result;
         if (currentDepth < shadowDepth || 
             shadowPos.x < 0.0f || shadowPos.x > 1.0f ||
-            shadowPos.y < 0.0f || shadowPos.y > 1.0f)
+            shadowPos.y < 0.0f || shadowPos.y > 1.0f ||
+            shadowPos.z < 0.0f || shadowPos.z > 1.0f)
         {
-            return 1.0f;
+            result = 1.0f;
         }
         else
         {
-            return 0.0f;
+            result = 0.0f;
         }
+
+        return lerp(result, 1.0f, distanceFade);
     }
 
     LightData GetMainLight()

@@ -5,11 +5,16 @@
 #include <tracy/Tracy.hpp>
 
 #include "object.h"
+#include "test_comp.h"
+#include "transform_comp.h"
 #include "game/game_resource.h"
 #include "gui/gui.h"
 #include "gui/scene_hierarchy_panel.h"
 #include "nlohmann/json.hpp"
 #include "objects/comp.h"
+#include "render/render_context.h"
+#include "render/render_pipeline.h"
+#include "render/render_resources.h"
 
 namespace dt
 {
@@ -32,6 +37,15 @@ namespace dt
     {
         m_drawGuiEventHandler = Gui::Ins()->drawGuiEvent.Add([this]{ DrawSceneGui(); });
         m_hierarchyPanel = msp<SceneHierarchyPanel>(this);
+        
+        auto testLocalToWorld = XMMatrixTransformation(
+            XMVectorZero(),
+            XMQuaternionIdentity(),
+            XMVectorReplicate(1.0f),
+            XMVectorZero(),
+            XMQuaternionIdentity(),
+            XMVectorZero());
+        m_viewProjInfo = ViewProjInfo::Create(testLocalToWorld, 45, 1.77777f, 1.0f, 10.0f);
     }
 
     Scene::~Scene()
@@ -112,5 +126,7 @@ namespace dt
     void Scene::DrawSceneGui()
     {
         m_hierarchyPanel->DrawSceneGui();
+
+        Gui::Ins()->DrawFrustum(RenderRes()->shadowVp->vpMatrix, RenderRes()->mainCameraVp->vpMatrix, RenderRes()->screenSize, 0xFF0000FF, 3.0f);
     }
 }

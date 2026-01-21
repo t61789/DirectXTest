@@ -36,11 +36,13 @@ namespace dt
         sp<RenderTexture> gBufferRt1 = nullptr;
         sp<RenderTarget> gBufferRenderTarget = nullptr;
         sp<ViewProjInfo> mainCameraVp = nullptr;
+        sp<ViewProjInfo> shadowVp = nullptr;
         sp<Cbuffer> mainCameraViewCbuffer = nullptr;
         vecsp<RenderObject> renderObjects;
         sp<RenderTexture> litResultRt = nullptr;
         sp<RenderTexture> shadowmapRt = nullptr;
         XMFLOAT3 mainLightDir = { 1.0f, 1.0f, 1.0f };
+        float shadowRange = 20.0f;
 
         // Render States
         sp<ViewProjInfo> curVp = nullptr;

@@ -49,6 +49,15 @@ namespace dt
         return info;
     }
 
+    sp<ViewProjInfo> ViewProjInfo::Create(cr<XMMATRIX> localToWorld, const float fov, const float aspect, const float nearClip, const float farClip)
+    {
+        auto viewCenter = GetPosition(localToWorld);
+        auto viewMatrix = XMMatrixLookToLH(GetPosition(localToWorld), GetForward(localToWorld), GetUp(localToWorld));
+        auto projMatrix = XMMatrixPerspectiveFovLH(fov * DEG2RAD, aspect, nearClip, farClip);
+
+        return Create(viewMatrix, projMatrix, viewCenter, true);
+    }
+
     void RenderContext::PushViewProjMatrix(crsp<ViewProjInfo> viewProjInfo)
     {
         m_vpMatrixStack.push_back(viewProjInfo);

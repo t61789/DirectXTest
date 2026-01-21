@@ -68,6 +68,7 @@ namespace dt
     STRING_HANDLE(SHC, _Shc)
     STRING_HANDLE(MAIN_LIGHT_SHADOW_TEX, _MainLightShadowTex)
     STRING_HANDLE(MAIN_LIGHT_SHADOW_VP, _MainLightShadowVP)
+    STRING_HANDLE(MAIN_LIGHT_SHADOW_RANGE, _MainLightShadowRange)
     STRING_HANDLE(BATCH_MATRICES, _BatchMatrices)
     STRING_HANDLE(BATCH_INDICES, _BatchIndices)
     STRING_HANDLE(BASE_INSTANCE_ID, _BaseInstanceId)
@@ -77,8 +78,9 @@ namespace dt
     static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_REGISTER_INDEX = 3;
     static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_REGISTER_SPACE = 1;
     
-    static constexpr uint32_t ROOT_CONSTANTS_BATCH_INDICES_OFFSET_DWORD = 0;
-    static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_SIZE_DWORD = 1;
+    static constexpr uint32_t ROOT_CONSTANTS_BATCH_INDICES_BUFFER_DWORD = 0;
+    static constexpr uint32_t ROOT_CONSTANTS_BATCH_INDICES_OFFSET_DWORD = 1;
+    static constexpr uint32_t ROOT_CONSTANTS_CBUFFER_SIZE_DWORD = 2;
     
     static const auto UNNAMED_OBJECT = StringHandle("Unnamed Object");
     

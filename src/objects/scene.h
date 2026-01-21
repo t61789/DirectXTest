@@ -10,6 +10,7 @@
 
 namespace dt
 {
+    struct ViewProjInfo;
     class SceneHierarchyPanel;
     class CameraComp;
     class Object;
@@ -53,5 +54,7 @@ namespace dt
 
         EventHandler m_drawGuiEventHandler;
         sp<SceneHierarchyPanel> m_hierarchyPanel;
+        
+        sp<ViewProjInfo> m_viewProjInfo;
     };
 }

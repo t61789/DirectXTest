@@ -33,6 +33,7 @@ namespace dt
 
         static sp<ViewProjInfo> Create(cr<XMMATRIX> vMatrix, cr<XMMATRIX> pMatrix, bool useIVP = false);
         static sp<ViewProjInfo> Create(cr<XMMATRIX> vMatrix, cr<XMMATRIX> pMatrix, cr<XMVECTOR> viewCenter, bool useIVP = false);
+        static sp<ViewProjInfo> Create(cr<XMMATRIX> localToWorld, float fov, float aspect, float nearClip, float farClip);
     };
 
     class RenderContext : public Singleton<RenderContext>
