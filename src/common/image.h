@@ -15,6 +15,7 @@ namespace dt
         {
             bool needFlipVertical = false;
             bool needMipmap = false;
+            bool srgb = true;
             TextureWrapMode wrapMode = TextureWrapMode::CLAMP;
             TextureFilterMode filterMode = TextureFilterMode::BILINEAR;
 
@@ -62,6 +63,7 @@ namespace dt
     {
         ar & needFlipVertical;
         ar & needMipmap;
+        ar & srgb;
 
         auto w = static_cast<uint8_t>(wrapMode);
         ar & w;

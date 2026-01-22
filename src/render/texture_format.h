@@ -66,22 +66,22 @@ namespace dt
         if (kTextureFormatInfo.empty())
         {
             TextureFormatInfo info;
-
-            info.format = TextureFormat::RGBA_S;
-            info.dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-            info.rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-            info.dsvFormat = DXGI_FORMAT_UNKNOWN;
-            info.srvFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-            info.clearFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-            info.initState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-            info.renderTargetResourceFlag = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-            kTextureFormatInfo.emplace(info.format, info);
             
             info.format = TextureFormat::RGBA;
             info.dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
             info.rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
             info.dsvFormat = DXGI_FORMAT_UNKNOWN;
             info.srvFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+            info.clearFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+            info.initState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+            info.renderTargetResourceFlag = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+            kTextureFormatInfo.emplace(info.format, info);
+
+            info.format = TextureFormat::RGBA_S;
+            info.dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+            info.rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+            info.dsvFormat = DXGI_FORMAT_UNKNOWN;
+            info.srvFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
             info.clearFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
             info.initState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
             info.renderTargetResourceFlag = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;

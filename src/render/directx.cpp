@@ -261,7 +261,7 @@ namespace dt
 
     void DirectX::CreateSwapChain()
     {
-        auto format = TextureFormat::RGBA;
+        auto format = TextureFormat::RGBA_S;
         
         m_swapChainDesc1 = {};
         m_swapChainDesc1.Width = 1600;
@@ -310,7 +310,7 @@ namespace dt
             rtDesc.dxDesc.width = m_swapChainDesc1.Width;
             rtDesc.dxDesc.height = m_swapChainDesc1.Height;
             rtDesc.dxDesc.channelCount = 4;
-            rtDesc.dxDesc.format = TextureFormat::RGBA;
+            rtDesc.dxDesc.format = TextureFormat::RGBA_S;
             rtDesc.dxDesc.wrapMode = TextureWrapMode::CLAMP;
             rtDesc.dxDesc.filterMode = TextureFilterMode::BILINEAR;
             rtDesc.dxDesc.hasMipmap = false;

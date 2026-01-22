@@ -209,7 +209,17 @@ namespace dt
     {
         return ImGui::DragFloat3(label.c_str(), &val.x, speed, 0, 0, format.c_str());
     }
-    
+
+    bool Gui::SliderFloat(crstr label, float& val, const float vMin, const float vMax, crstr format)
+    {
+        return ImGui::SliderFloat(label.c_str(), &val, vMin, vMax, format.c_str());
+    }
+
+    bool Gui::DragFloat(crstr label, float& val, const float vMin, const float vMax, const float speed, crstr format)
+    {
+        return ImGui::DragFloat(label.c_str(), &val, speed, vMin, vMax, format.c_str());
+    }
+
     void Gui::DrawLine(
         const XMFLOAT3& position0WS,
         const XMFLOAT3& position1WS,

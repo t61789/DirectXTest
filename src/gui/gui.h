@@ -31,6 +31,8 @@ namespace dt
         static bool SliderFloat3(crstr label, XMFLOAT3& val, float vMin, float vMax, crstr format = "%.2f");
         static bool InputFloat3(crstr label, XMFLOAT3& val, crstr format = "%.2f");
         static bool DragFloat3(crstr label, XMFLOAT3& val, float speed = 1.0f, crstr format = "%.2f");
+        static bool SliderFloat(crstr label, float& val, float vMin, float vMax, crstr format = "%.2f");
+        static bool DragFloat(crstr label, float& val, float vMin, float vMax, float speed = 1.0f, crstr format = "%.2f");
         
         static void DrawLine(
             const XMFLOAT3& position0WS,

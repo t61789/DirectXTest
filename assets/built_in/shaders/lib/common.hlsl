@@ -62,6 +62,10 @@
         float _MainLightShadowRange;
 
         uint _BatchMatrices;
+
+        float4 _ScreenSize; // x: width, y: height, z: 1/width, w: 1/height
+
+        float _Exposure;
     };
 
     cbuffer PerViewCBuffer : register(b1, space1)

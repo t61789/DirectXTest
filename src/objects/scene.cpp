@@ -127,6 +127,8 @@ namespace dt
     {
         m_hierarchyPanel->DrawSceneGui();
 
-        Gui::Ins()->DrawFrustum(RenderRes()->shadowVp->vpMatrix, RenderRes()->mainCameraVp->vpMatrix, 0xFF0000FF, 3.0f);
+        Gui::Ins()->SliderFloat("Exposure", tonemappingExposureMultiplier, 0.0f, 5.0f);
+
+        // Gui::Ins()->DrawFrustum(RenderRes()->shadowVp->vpMatrix, RenderRes()->mainCameraVp->vpMatrix, 0xFF0000FF, 3.0f);
     }
 }

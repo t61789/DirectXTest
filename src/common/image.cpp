@@ -73,6 +73,8 @@ namespace dt
         try_get_val(config, "need_flip_vertical", importConfig.needFlipVertical);
         
         try_get_val(config, "need_mipmap", importConfig.needMipmap);
+        
+        try_get_val(config, "srgb", importConfig.srgb);
 
         try_get_val(config, "wrap_mode", importConfig.wrapMode);
 
@@ -200,9 +202,11 @@ namespace dt
             THROW_ERROR("Unsupported texture type");
         }
 
+        auto format = importConfig.srgb ? TextureFormat::RGBA_S : TextureFormat::RGBA;
+
         DxTextureDesc dxTextureDesc;
         dxTextureDesc.type = type;
-        dxTextureDesc.format = TextureFormat::RGBA;
+        dxTextureDesc.format = format;
         dxTextureDesc.width = width;
         dxTextureDesc.height = height;
         dxTextureDesc.channelCount = 4;

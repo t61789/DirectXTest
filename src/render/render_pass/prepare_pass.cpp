@@ -38,6 +38,14 @@ namespace dt
         RenderRes()->mainCameraVp->WriteToCbuffer(GR()->GetPredefinedCbuffer(PER_VIEW_CBUFFER).get());
         RenderRes()->shadowRange = 100.0f;
         RenderRes()->renderObjects = GR()->mainScene->GetRenderTree()->GetRenderObjects();
+
+        XMFLOAT4 screenSize;
+        screenSize.x = RenderRes()->screenSize.x;
+        screenSize.y = RenderRes()->screenSize.y;
+        screenSize.z = 1.0f / screenSize.x;
+        screenSize.w = 1.0f / screenSize.y;
+        GetGlobalCbuffer()->Write(SCREEN_SIZE, screenSize);
+        GetGlobalCbuffer()->Write(EXPOSURE, GR()->mainScene->tonemappingExposureMultiplier);
         GetGlobalCbuffer()->Write(SKYBOX_TEX, GR()->skyboxTex->GetTextureIndex());
 
         PrepareLights();

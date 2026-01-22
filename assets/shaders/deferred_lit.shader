@@ -41,11 +41,16 @@ float4 PS_Main(PSInput input) : SV_TARGET
     {
         // litColor = SimpleLit(normalWS);
         litColor = Lit(albedo, positionWS, normalWS, viewDirWS, metallic, roughness);
+        // litColor = albedo;
         // litColor = float3(metallic, metallic, metallic);
         // litColor = float3(roughness, roughness, roughness);
         // litColor = normalWS * 0.5f + 0.5f;
     }
 
     float4 finalColor = float4(litColor, 1.0f);
+
+    finalColor.rgb *= _Exposure;
+    finalColor.rgb = ACESFilm(finalColor.rgb);
+
     return finalColor;
 }
