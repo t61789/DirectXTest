@@ -1,4 +1,4 @@
-﻿#include "scene.h"
+#include "scene.h"
 
 #include <filesystem>
 #include <imgui.h>
@@ -127,6 +127,6 @@ namespace dt
     {
         m_hierarchyPanel->DrawSceneGui();
 
-        Gui::Ins()->DrawFrustum(RenderRes()->shadowVp->vpMatrix, RenderRes()->mainCameraVp->vpMatrix, RenderRes()->screenSize, 0xFF0000FF, 3.0f);
+        Gui::Ins()->DrawFrustum(RenderRes()->shadowVp->vpMatrix, RenderRes()->mainCameraVp->vpMatrix, 0xFF0000FF, 3.0f);
     }
 }

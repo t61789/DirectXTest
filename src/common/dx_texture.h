@@ -5,6 +5,7 @@
 #include <wrl/client.h>
 
 #include "const.h"
+#include "render/texture_format.h"
 
 namespace dt
 {
@@ -12,34 +13,6 @@ namespace dt
     struct SrvDesc;
     using namespace Microsoft::WRL;
     using namespace DirectX;
-    
-    enum class TextureType : uint8_t
-    {
-        TEXTURE_2D,
-        TEXTURE_CUBE
-    };
-
-    enum class TextureFormat : uint8_t
-    {
-        RGBA,
-        RGBA16,
-        R32,
-        DEPTH,
-        DEPTH_STENCIL,
-        SHADOW_MAP
-    };
-
-    enum class TextureWrapMode : uint8_t
-    {
-        REPEAT,
-        CLAMP
-    };
-
-    enum class TextureFilterMode : uint8_t
-    {
-        NEAREST,
-        BILINEAR
-    };
     
     struct DxTextureDesc
     {
@@ -68,14 +41,6 @@ namespace dt
         
         static sp<DxTexture> CreateImage(cr<DxTextureDesc> desc);
         static sp<DxTexture> CreateRenderTexture(cr<DxTextureDesc> desc, cr<XMFLOAT4> clearColor, crsp<DxResource> dxResource = nullptr);
-        
-        static DXGI_FORMAT GetDxgiFormat(TextureFormat format);
-        static D3D12_RESOURCE_STATES GetInitState(TextureFormat format);
-        static D3D12_RESOURCE_FLAGS GetRenderTargetResourceFlag(TextureFormat format);
-        static D3D12_SRV_DIMENSION GetSrvDimension(TextureType type);
-        static DXGI_FORMAT GetDsvFormat(TextureFormat format);
-        static DXGI_FORMAT GetSrvFormat(TextureFormat format);
-        static DXGI_FORMAT GetClearFormat(TextureFormat format);
 
     private:
         DxTextureDesc m_desc;

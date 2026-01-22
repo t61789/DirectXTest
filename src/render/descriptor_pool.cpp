@@ -5,6 +5,7 @@
 #include "directx.h"
 #include "dx_helper.h"
 #include "dx_resource.h"
+#include "texture_format.h"
 #include "common/shader.h"
 
 namespace
@@ -88,8 +89,8 @@ namespace dt
         auto srvHandle = AllocEmptySrvHandle();
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Format = DxTexture::GetSrvFormat(dxTexture->GetDesc().format);
-        srvDesc.ViewDimension = DxTexture::GetSrvDimension(dxTexture->GetDesc().type);
+        srvDesc.Format = GetTextureFormatInfo(dxTexture->GetDesc().format).srvFormat;
+        srvDesc.ViewDimension = GetTextureTypeInfo(dxTexture->GetDesc().type).srvDimension;
         srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         srvDesc.Texture2D.MipLevels = dxTexture->GetDesc().GetMipmapCount();
         srvDesc.Texture2D.PlaneSlice = 0;
@@ -203,10 +204,24 @@ namespace dt
                     static_cast<INT>(rtvHandle->GetIndex()),
                     m_rtvDescSizeB
                 };
+
+                auto textureFormat = colorAttachments[i]->GetDesc().format;
+                auto textureType = colorAttachments[i]->GetDesc().type;
+                auto& textureFormatInfo = GetTextureFormatInfo(textureFormat);
+                auto& textureTypeInfo = GetTextureTypeInfo(textureType);
+
+                D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+                rtvDesc.Format = textureFormatInfo.rtvFormat;
+                rtvDesc.ViewDimension = textureTypeInfo.rtvDimension;
+                if (textureType == TextureType::TEXTURE_2D)
+                {
+                    rtvDesc.Texture2D.MipSlice = 0;
+                    rtvDesc.Texture2D.PlaneSlice = 0;
+                }
                 
                 Dx()->GetDevice()->CreateRenderTargetView(
                     colorAttachments[i]->GetDxResource()->GetResource(),
-                    nullptr,
+                    &rtvDesc,
                     rtvCpuHandle);
                 rtvHandle->data = rtvCpuHandle;
                 rtvHandles[i] = rtvHandle;
@@ -221,12 +236,20 @@ namespace dt
                 static_cast<INT>(dsvHandle->GetIndex()),
                 m_dsvDescSizeB
             };
+            
+            auto textureFormat = depthAttachment->GetDesc().format;
+            auto textureType = depthAttachment->GetDesc().type;
+            auto& textureFormatInfo = GetTextureFormatInfo(textureFormat);
+            auto& textureTypeInfo = GetTextureTypeInfo(textureType);
 
             D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
-            desc.Format = DxTexture::GetDsvFormat(depthAttachment->GetDesc().format);
+            desc.Format = textureFormatInfo.dsvFormat;
             desc.Flags = D3D12_DSV_FLAG_NONE;
-            desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-            desc.Texture2D.MipSlice = 0;
+            desc.ViewDimension = textureTypeInfo.dsvDimension;
+            if (textureType == TextureType::TEXTURE_2D)
+            {
+                desc.Texture2D.MipSlice = 0;
+            }
 
             Dx()->GetDevice()->CreateDepthStencilView(
                 depthAttachment->GetDxResource()->GetResource(),

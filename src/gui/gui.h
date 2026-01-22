@@ -36,7 +36,6 @@ namespace dt
             const XMFLOAT3& position0WS,
             const XMFLOAT3& position1WS,
             const XMFLOAT4X4& vpMatrix,
-            const XMUINT2& screenSize,
             ImU32 color = IM_COL32(255, 255, 255, 255),
             float thickness = 1.0f);
 
@@ -44,14 +43,12 @@ namespace dt
             const XMFLOAT3& centerWS,
             const XMFLOAT3& extentsWS,
             const XMFLOAT4X4& vpMatrix,
-            const XMUINT2& screenSize,
             ImU32 color = IM_COL32(255, 255, 255, 255),
             float thickness = 1.0f);
 
         static void DrawFrustum(
             const XMFLOAT4X4& targetVP,
             const XMFLOAT4X4& drawVP,
-            const XMUINT2& screenSize,
             ImU32 color = IM_COL32(255, 255, 255, 255),
             float thickness = 1.0f);
 

@@ -118,7 +118,7 @@ namespace dt
         {
             if (i < colorAttachments.size())
             {
-                m_desc.RTVFormats[i] = DxTexture::GetDxgiFormat(colorAttachments[i]->GetDxTexture()->GetDesc().format);
+                m_desc.RTVFormats[i] = GetTextureFormatInfo(colorAttachments[i]->GetDxTexture()->GetDesc().format).rtvFormat;
             }
             else
             {
@@ -129,7 +129,7 @@ namespace dt
 
         if (auto depthAttachment = renderTarget->GetDepthAttachment())
         {
-            m_desc.DSVFormat = DxTexture::GetDsvFormat(depthAttachment->GetDxTexture()->GetDesc().format);
+            m_desc.DSVFormat = GetTextureFormatInfo(depthAttachment->GetDxTexture()->GetDesc().format).dsvFormat;
         }
         else
         {

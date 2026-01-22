@@ -262,12 +262,11 @@ namespace dt
     void DirectX::CreateSwapChain()
     {
         auto format = TextureFormat::RGBA;
-        auto dxFormat = DxTexture::GetDxgiFormat(format);
         
         m_swapChainDesc1 = {};
         m_swapChainDesc1.Width = 1600;
         m_swapChainDesc1.Height = 900;
-        m_swapChainDesc1.Format = dxFormat;
+        m_swapChainDesc1.Format = GetTextureFormatInfo(format).dxgiFormat;
         m_swapChainDesc1.Stereo = FALSE;
         m_swapChainDesc1.SampleDesc.Count = 1;
         m_swapChainDesc1.SampleDesc.Quality = 0;

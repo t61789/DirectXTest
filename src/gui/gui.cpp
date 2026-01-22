@@ -11,6 +11,7 @@
 #include "game/game_resource.h"
 #include "objects/scene.h"
 #include "render/render_pipeline.h"
+#include "render/render_resources.h"
 
 namespace dt
 {
@@ -213,10 +214,11 @@ namespace dt
         const XMFLOAT3& position0WS,
         const XMFLOAT3& position1WS,
         const XMFLOAT4X4& vpMatrix,
-        const XMUINT2& screenSize,
         const ImU32 color,
         const float thickness)
     {
+        const XMUINT2& screenSize = RenderRes()->screenSize;
+
         XMFLOAT4 clip0 = WSPosToClip(position0WS, vpMatrix);
         XMFLOAT4 clip1 = WSPosToClip(position1WS, vpMatrix);
 
@@ -238,7 +240,6 @@ namespace dt
         const XMFLOAT3& centerWS,
         const XMFLOAT3& extentsWS,
         const XMFLOAT4X4& vpMatrix,
-        const XMUINT2& screenSize,
         const ImU32 color,
         const float thickness)
     {
@@ -261,14 +262,13 @@ namespace dt
 
         for (const auto& [s, e] : edges)
         {
-            DrawLine(vertices[s], vertices[e], vpMatrix, screenSize, color, thickness);
+            DrawLine(vertices[s], vertices[e], vpMatrix, color, thickness);
         }
     }
 
     void Gui::DrawFrustum(
         const XMFLOAT4X4& targetVP,
         const XMFLOAT4X4& drawVP,
-        const XMUINT2& screenSize,
         const ImU32 color,
         const float thickness)
     {
@@ -319,7 +319,7 @@ namespace dt
 
         for (const auto& [s, e] : EDGES)
         {
-            DrawLine(cornersWS[s], cornersWS[e], drawVP, screenSize, color, thickness);
+            DrawLine(cornersWS[s], cornersWS[e], drawVP, color, thickness);
         }
     }
 }
